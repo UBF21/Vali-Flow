@@ -3,123 +3,123 @@ using System.Linq.Expressions;
 namespace vali_flow.Interfaces.Types;
 
 /// <summary>
-/// Define las operaciones para construir, agregar condiciones y evaluar expresiones lógicas para una entidad de tipo <typeparamref name="T"/>.
+/// Defines operations for building, adding conditions, and evaluating logical expressions for an entity of type <typeparamref name="T"/>.
 /// </summary>
-/// <typeparam name="TBuilder">Tipo del builder específico que implementa esta interfaz.</typeparam>
-/// <typeparam name="T">Tipo de la entidad que se está evaluando.</typeparam>
+/// <typeparam name="TBuilder">The specific builder type that implements this interface.</typeparam>
+/// <typeparam name="T">The type of the entity being evaluated.</typeparam>
 public interface IExpression<out TBuilder,T>
 {
     /// <summary>
-    /// Construye una expresión booleana a partir de las condiciones añadidas.
+    /// Builds a boolean expression from the added conditions.
     /// </summary>
-    /// <returns>Una expresión booleana que representa la evaluación de las condiciones agregadas.</returns>
+    /// <returns>A boolean expression representing the evaluation of the added conditions.</returns>
     /// <example>
     /// <code>
     /// var builder = new ConditionBuilder();
     /// builder.Add(x => x.Age > 18).Add(x => x.Name == "John");
-    /// var expression = builder.Build(); // La expresión resultante representará la condición (Age > 18) AND (Name == "John")
+    /// var expression = builder.Build(); // The resulting expression represents the condition (Age > 18) AND (Name == "John")
     /// </code>
     /// </example>
     Expression<Func<T, bool>> Build();
 
     /// <summary>
-    /// Agrega una condición a la lista de condiciones, basándose en una expresión booleana.
+    /// Adds a condition to the list of conditions based on a boolean expression.
     /// </summary>
-    /// <param name="condition">La condición a agregar representada por una expresión booleana.</param>
-    /// <returns>El builder actual para permitir el encadenamiento de métodos.</returns>
-    /// <exception cref="ArgumentNullException">Lanza una excepción si la condición es nula.</exception>
+    /// <param name="expression">The expression to add, represented as a boolean expression.</param>
+    /// <returns>The current builder to allow method chaining.</returns>
+    /// <exception cref="ArgumentNullException">Throws an exception if the condition is null.</exception>
     /// <example>
     /// <code>
     /// var builder = new ConditionBuilder();
-    /// builder.Add(x => x.Age > 18); // Agrega una condición que verifica si la edad es mayor que 18
+    /// builder.Add(x => x.Age > 18); // Adds a condition to check if the age is greater than 18
     /// </code>
     /// </example>
-    TBuilder Add(Expression<Func<T, bool>> condition);
+    TBuilder Add(Expression<Func<T, bool>> expression);
 
     /// <summary>
-    /// Agrega una condición a la lista de condiciones basándose en una propiedad específica de la entidad de tipo <typeparamref name="T"/>
-    /// y un predicado que evalúa un valor de tipo <typeparamref name="TValue"/>.
+    /// Adds a condition to the list of conditions based on a specific property of the entity of type <typeparamref name="T"/>
+    /// and a predicate that evaluates a value of type <typeparamref name="TValue"/>.
     /// </summary>
-    /// <typeparam name="TValue">El tipo del valor a evaluar.</typeparam>
-    /// <param name="selector">Una expresión que selecciona la propiedad o valor de tipo <typeparamref name="TValue"/> de la entidad de tipo <typeparamref name="T"/>.</param>
-    /// <param name="predicate">Una expresión booleana que evalúa el valor seleccionado por el <paramref name="selector"/>.</param>
-    /// <returns>El builder actual para permitir el encadenamiento de métodos.</returns>
-    /// <exception cref="ArgumentNullException">Lanza una excepción si cualquiera de los parámetros es nulo.</exception>
+    /// <typeparam name="TValue">The type of the value to be evaluated.</typeparam>
+    /// <param name="selector">Expression to select the attribute to work with</param>
+    /// <param name="predicate">A boolean expression that evaluates the value selected by the <paramref name="predicate"/>.</param>
+    /// <returns>The current builder to allow method chaining.</returns>
+    /// <exception cref="ArgumentNullException">Throws an exception if any parameter is null.</exception>
     /// <example>
     /// <code>
-    /// builder.Add(x => x.Age, age => age >= 18 );
+    /// builder.Add(x => x.Age, age => age >= 18);
     /// </code>
     /// </example>
     TBuilder Add<TValue>(Expression<Func<T, TValue>> selector, Expression<Func<TValue, bool>> predicate);
 
     /// <summary>
-    /// Agrega un grupo de condiciones que se evaluarán como una sub-expresión. 
-    /// Este grupo se puede agregar con otras condiciones lógicas, como AND u OR.
+    /// Adds a group of conditions that will be evaluated as a sub-expression.
+    /// This group can be combined with other logical conditions such as AND or OR.
     /// </summary>
-    /// <param name="groupBuilder">La acción que construye el grupo de condiciones.</param>
-    /// <returns>El builder actual para permitir el encadenamiento de métodos.</returns>
+    /// <param name="group">The action that builds the group of conditions.</param>
+    /// <returns>The current builder to allow method chaining.</returns>
     /// <example>
     /// <code>
     /// var builder = new ConditionBuilder();
     /// builder.AddSubGroup(group => group.Add(x => x.Age > 18).Add(x => x.Name == "John"));
-    /// // Este ejemplo agrega un subgrupo con las condiciones (Age > 18) AND (Name == "John")
+    /// // This example adds a subgroup with conditions (Age > 18) AND (Name == "John")
     /// </code>
     /// </example>
-    TBuilder AddSubGroup(Action<TBuilder> groupBuilder);
+    TBuilder AddSubGroup(Action<TBuilder> group);
 
     /// <summary>
-    /// Evalúa una condición específica sobre un objeto de tipo <typeparamref name="T"/>.
+    /// Evaluates a specific condition on an object of type <typeparamref name="T"/>.
     /// </summary>
-    /// <param name="obj">El objeto a evaluar.</param>
-    /// <returns>El valor booleano resultante de la evaluación de las condiciones.</returns>
-    /// <exception cref="InvalidOperationException">Lanza una excepción si hay un error al evaluar las condiciones.</exception>
+    /// <param name="entity">The object to evaluate.</param>
+    /// <returns>The boolean result of evaluating the conditions.</returns>
+    /// <exception cref="InvalidOperationException">Throws an exception if there is an error evaluating the conditions.</exception>
     /// <example>
     /// <code>
     /// var builder = new ConditionBuilder();
     /// builder.Add(x => x.Age > 18);
-    /// bool result = builder.Evaluate(new Person { Age = 25 }); // Devuelve true
+    /// bool result = builder.Evaluate(new Person { Age = 25 }); // Returns true
     /// </code>
     /// </example>
-    public bool Evaluate(T obj);
+    public bool Evaluate(T entity);
 
     /// <summary>
-    /// Evalúa una condición sobre cada elemento de una colección de objetos de tipo <typeparamref name="T"/>.
+    /// Evaluates a condition on each element of a collection of objects of type <typeparamref name="T"/>.
     /// </summary>
-    /// <param name="collection">La colección de elementos a evaluar.</param>
-    /// <returns>Una lista de elementos de la colección que cumplen con las condiciones especificadas.</returns>
-    /// <exception cref="ArgumentException">Lanza una excepción si la colección es nula o vacía.</exception>
+    /// <param name="entities">The collection of elements to evaluate.</param>
+    /// <returns>A list of elements from the collection that meet the specified conditions.</returns>
+    /// <exception cref="ArgumentException">Throws an exception if the collection is null or empty.</exception>
     /// <example>
     /// <code>
     /// var builder = new ConditionBuilder();
     /// builder.Add(x => x.Age > 18);
-    /// var result = builder.EvaluateAll(new List() { new Person { Age = 25 }, new Person { Age = 15 } });
-    /// // Devuelve una lista que solo contiene la persona con edad 25
+    /// var result = builder.EvaluateAll(new List { new Person { Age = 25 }, new Person { Age = 15 } });
+    /// // Returns a list containing only the person with age 25
     /// </code>
     /// </example>
-    public IEnumerable<T> EvaluateAll(IEnumerable<T> collection);
+    public IEnumerable<T> EvaluateAll(IEnumerable<T> entities);
 
     /// <summary>
-    /// Define una operación lógica "AND" entre las condiciones.
+    /// Defines a logical "AND" operation between conditions.
     /// </summary>
-    /// <returns>El builder actual para permitir el encadenamiento de métodos.</returns>
+    /// <returns>The current builder to allow method chaining.</returns>
     /// <example>
     /// <code>
     /// var builder = new ConditionBuilder();
     /// builder.Add(x => x.Age > 18).And().Add(x => x.Name == "John");
-    /// // La expresión resultante será (Age > 18) AND (Name == "John")
+    /// // The resulting expression will be (Age > 18) AND (Name == "John")
     /// </code>
-    /// </example>
+    /// </example>  
     TBuilder And();
 
     /// <summary>
-    /// Define una operación lógica "OR" entre las condiciones.
+    /// Defines a logical "OR" operation between conditions.
     /// </summary>
-    /// <returns>El builder actual para permitir el encadenamiento de métodos.</returns>
+    /// <returns>The current builder to allow method chaining.</returns>
     /// <example>
     /// <code>
     /// var builder = new ConditionBuilder();
     /// builder.Add(x => x.Age > 18).Or().Add(x => x.Name == "John");
-    /// // La expresión resultante será (Age > 18) OR (Name == "John")
+    /// // The resulting expression will be (Age > 18) OR (Name == "John")
     /// </code>
     /// </example>
     TBuilder Or();

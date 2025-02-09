@@ -12,4 +12,8 @@
       <ProjectReference Include="..\vali-flow\vali-flow.csproj" />
     </ItemGroup>
 
+    <ItemGroup>
+      <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    </ItemGroup>
+
 </Project>

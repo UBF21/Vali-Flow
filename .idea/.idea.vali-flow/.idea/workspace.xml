@@ -8,14 +8,26 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="aa4fc315-c37b-4ab3-b9cc-02a55a2255c8" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/vali-flow-test/Models/User.cs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/vali-flow-test/JsonConvert/ExpressionConverter.cs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/.idea.vali-flow/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.vali-flow/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/vali-flow.sln" beforeDir="false" afterPath="$PROJECT_DIR$/vali-flow.sln" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/vali-flow-test/Models/User.cs" beforeDir="false" afterPath="$PROJECT_DIR$/vali-flow-test/Models/User.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/vali-flow-test/Program.cs" beforeDir="false" afterPath="$PROJECT_DIR$/vali-flow-test/Program.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/vali-flow-test/vali-flow-test.csproj" beforeDir="false" afterPath="$PROJECT_DIR$/vali-flow-test/vali-flow-test.csproj" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/vali-flow/Classes/Base/BaseExpression.cs" beforeDir="false" afterPath="$PROJECT_DIR$/vali-flow/Classes/Base/BaseExpression.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/vali-flow/Interfaces/Types/IBooleanExpression.cs" beforeDir="false" afterPath="$PROJECT_DIR$/vali-flow/Interfaces/Types/IBooleanExpression.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/vali-flow/Interfaces/Types/ICollectionExpression.cs" beforeDir="false" afterPath="$PROJECT_DIR$/vali-flow/Interfaces/Types/ICollectionExpression.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/vali-flow/Interfaces/Types/IDateTimeExpression.cs" beforeDir="false" afterPath="$PROJECT_DIR$/vali-flow/Interfaces/Types/IDateTimeExpression.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/vali-flow/Interfaces/Types/IExpression.cs" beforeDir="false" afterPath="$PROJECT_DIR$/vali-flow/Interfaces/Types/IExpression.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/vali-flow/RegularExpressions/RegularExpression.cs" beforeDir="false" afterPath="$PROJECT_DIR$/vali-flow/RegularExpressions/RegularExpression.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/vali-flow/Utils/ValidationHelper.cs" beforeDir="false" afterPath="$PROJECT_DIR$/vali-flow/Utils/ValidationHelper.cs" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
     <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="DpaMonitoringSettings">
+    <option name="firstShow" value="false" />
   </component>
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />

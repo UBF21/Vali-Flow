@@ -24,20 +24,20 @@ public  class BaseExpression<TBuilder, T> : IExpression<TBuilder, T>
         return _orCondition is null ? andCondition : Or(andCondition, _orCondition);
     }
 
-    public TBuilder Add(Expression<Func<T, bool>> condition)
+    public TBuilder Add(Expression<Func<T, bool>> expression)
     {
-        if (condition == null) throw new ArgumentNullException(nameof(condition));
-        EnsureValidCondition(condition);
+        if (expression == null) throw new ArgumentNullException(nameof(expression));
+        EnsureValidCondition(expression);
 
         if (_isAnd)
         {
-            _conditions.Add(condition);
+            _conditions.Add(expression);
         }
         else
         {
             _orCondition = _orCondition is null
-                ? condition
-                : Or(_orCondition, condition);
+                ? expression
+                : Or(_orCondition, expression);
         }
 
         return (TBuilder)this;
@@ -59,10 +59,10 @@ public  class BaseExpression<TBuilder, T> : IExpression<TBuilder, T>
         return Add(combinedCondition);
     }
 
-    public TBuilder AddSubGroup(Action<TBuilder> groupBuilder)
+    public TBuilder AddSubGroup(Action<TBuilder> group)
     {
         TBuilder groupBuilderInstance = new TBuilder();
-        groupBuilder(groupBuilderInstance);
+        group(groupBuilderInstance);
 
         // Construir la condición del grupo
         Expression<Func<T, bool>> groupCondition = groupBuilderInstance.Build();
@@ -77,12 +77,12 @@ public  class BaseExpression<TBuilder, T> : IExpression<TBuilder, T>
         return Add(groupCondition);
     }
 
-    public bool Evaluate(T obj)
+    public bool Evaluate(T entity)
     {
         try
         {
             Func<T, bool> compiledCondition = Build().Compile(); // Compila la expresión internamente.
-            return compiledCondition(obj);
+            return compiledCondition(entity);
         }
         catch (Exception ex)
         {
@@ -90,15 +90,15 @@ public  class BaseExpression<TBuilder, T> : IExpression<TBuilder, T>
         }
     }
 
-    public IEnumerable<T> EvaluateAll(IEnumerable<T> collection)
+    public IEnumerable<T> EvaluateAll(IEnumerable<T> entities)
     {
-        if (collection == null || !collection.Any())
+        if (entities == null || !entities.Any())
         {
-            throw new ArgumentException("La colección no puede ser nula o vacía.", nameof(collection));
+            throw new ArgumentException("La colección no puede ser nula o vacía.", nameof(entities));
         }
 
         Func<T, bool> compiledCondition = Build().Compile();
-        return collection.Where(compiledCondition);
+        return entities.Where(compiledCondition);
     }
 
     public TBuilder And()
