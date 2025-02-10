@@ -5,6 +5,26 @@
         <RootNamespace>vali_flow</RootNamespace>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
+        <Title>Vali-Flow</Title>
+        <Authors>Felipe Rafael Montenegro Morriberon</Authors>
+        <Description>vali_flow is a library for managing validations in .NET in a fluent and expressive way. It allows developers to define data validations using chained expressions, making code writing and maintenance easier. Compatible with multiple data types, it provides intuitive methods for validating strings, dates, collections, and general comparisons.</Description>
+        <PackageProjectUrl>Copyright © 2025 - FRMM. Todos los derechos reservados. </PackageProjectUrl>
+        <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+        <PackageIcon>vali-flow.png</PackageIcon>
+        <RepositoryUrl>https://github.com/UBF21/vali-flow</RepositoryUrl>
+        <RepositoryType>git </RepositoryType>
+        <PackageReleaseNotes>Initial release of the data validation library.  
+- Implemented expressions for string, number, date, and collection validations.  
+- Support for comparison expressions (equality, inequality, null values, etc.).  
+- Designed to be extensible and easy to use in .NET applications.  </PackageReleaseNotes>
+        <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
     </PropertyGroup>
+
+    <ItemGroup>
+      <None Update="vali-flow.png">
+        <Pack>True</Pack>
+        <PackagePath></PackagePath>
+      </None>
+    </ItemGroup>
 
 </Project>
