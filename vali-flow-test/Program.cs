@@ -1,11 +1,9 @@
 ﻿// See https://aka.ms/new-console-template for more information
 
 using System.Text;
-using System.Text.Json;
 using vali_flow_test.Models;
 using vali_flow.Builder;
 using Newtonsoft.Json;
-using vali_flow_test.JsonConvert;
 
 //source of data (Database,Collections,etc)
 List<User> users = new List<User>
