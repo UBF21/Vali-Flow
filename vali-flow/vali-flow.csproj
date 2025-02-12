@@ -7,21 +7,22 @@
         <Nullable>enable</Nullable>
         <Title>Vali-Flow</Title>
         <Authors>Felipe Rafael Montenegro Morriberon</Authors>
-        <Description>vali_flow is a library for managing validations in .NET in a fluent and expressive way. It allows developers to define data validations using chained expressions, making code writing and maintenance easier. Compatible with multiple data types, it provides intuitive methods for validating strings, dates, collections, and general comparisons.</Description>
-        <PackageProjectUrl>Copyright © 2025 - FRMM. Todos los derechos reservados. </PackageProjectUrl>
+        <Description>Vali-Flow is a library for managing validations in .NET in a fluent and expressive way. It allows developers to define data validations using chained expressions, making code writing and maintenance easier. Compatible with multiple data types, it provides intuitive methods for validating strings, dates, collections, and general comparisons.</Description>
+        <PackageProjectUrl>#</PackageProjectUrl>
         <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
-        <PackageIcon>vali-flow.png</PackageIcon>
         <RepositoryUrl>https://github.com/UBF21/vali-flow</RepositoryUrl>
-        <RepositoryType>git </RepositoryType>
-        <PackageReleaseNotes>Initial release of the data validation library.  
-- Implemented expressions for string, number, date, and collection validations.  
-- Support for comparison expressions (equality, inequality, null values, etc.).  
-- Designed to be extensible and easy to use in .NET applications.  </PackageReleaseNotes>
+        <RepositoryType>git</RepositoryType>
+        <PackageReleaseNotes>-New Method for string that allows to filter a n number of properties based on a value.
+            -Improved AddSubGroup() validation.
+        </PackageReleaseNotes>
         <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
+        <Copyright>Copyright © 2025 - FM. Todos los derechos reservados.</Copyright>
+        <Version>1.0.1</Version>
+        <PackageIcon>logo.png</PackageIcon>
     </PropertyGroup>
 
     <ItemGroup>
-      <None Update="vali-flow.png">
+      <None Update="logo.png">
         <Pack>True</Pack>
         <PackagePath></PackagePath>
       </None>

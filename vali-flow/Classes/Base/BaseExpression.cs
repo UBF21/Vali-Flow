@@ -68,11 +68,8 @@ public  class BaseExpression<TBuilder, T> : IExpression<TBuilder, T>
         Expression<Func<T, bool>> groupCondition = groupBuilderInstance.Build();
 
         // Verificar si la condición es trivial (si es null o una constante true)
-        if (groupCondition.Body is ConstantExpression constant && constant.Value is bool value && value)
-        {
-            return (TBuilder)this; // No agrega condiciones triviales (si la condición es true o null).
-        }
-
+        EnsureValidCondition(groupCondition);
+        
         // Si la condición no es trivial, agregarla
         return Add(groupCondition);
     }

@@ -8,18 +8,13 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="aa4fc315-c37b-4ab3-b9cc-02a55a2255c8" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/vali-flow-test/JsonConvert/ExpressionConverter.cs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/.idea.vali-flow/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.vali-flow/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/vali-flow-test/Models/User.cs" beforeDir="false" afterPath="$PROJECT_DIR$/vali-flow-test/Models/User.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/vali-flow-test/Program.cs" beforeDir="false" afterPath="$PROJECT_DIR$/vali-flow-test/Program.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/vali-flow-test/vali-flow-test.csproj" beforeDir="false" afterPath="$PROJECT_DIR$/vali-flow-test/vali-flow-test.csproj" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/vali-flow/Builder/ValiFlow.cs" beforeDir="false" afterPath="$PROJECT_DIR$/vali-flow/Builder/ValiFlow.cs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/vali-flow/Classes/Base/BaseExpression.cs" beforeDir="false" afterPath="$PROJECT_DIR$/vali-flow/Classes/Base/BaseExpression.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/vali-flow/Interfaces/Types/IBooleanExpression.cs" beforeDir="false" afterPath="$PROJECT_DIR$/vali-flow/Interfaces/Types/IBooleanExpression.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/vali-flow/Interfaces/Types/ICollectionExpression.cs" beforeDir="false" afterPath="$PROJECT_DIR$/vali-flow/Interfaces/Types/ICollectionExpression.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/vali-flow/Interfaces/Types/IDateTimeExpression.cs" beforeDir="false" afterPath="$PROJECT_DIR$/vali-flow/Interfaces/Types/IDateTimeExpression.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/vali-flow/Interfaces/Types/IExpression.cs" beforeDir="false" afterPath="$PROJECT_DIR$/vali-flow/Interfaces/Types/IExpression.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/vali-flow/RegularExpressions/RegularExpression.cs" beforeDir="false" afterPath="$PROJECT_DIR$/vali-flow/RegularExpressions/RegularExpression.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/vali-flow/Utils/ValidationHelper.cs" beforeDir="false" afterPath="$PROJECT_DIR$/vali-flow/Utils/ValidationHelper.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/vali-flow/Classes/Types/StringExpression.cs" beforeDir="false" afterPath="$PROJECT_DIR$/vali-flow/Classes/Types/StringExpression.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/vali-flow/Interfaces/Types/IStringExpression.cs" beforeDir="false" afterPath="$PROJECT_DIR$/vali-flow/Interfaces/Types/IStringExpression.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/vali-flow/vali-flow.csproj" beforeDir="false" afterPath="$PROJECT_DIR$/vali-flow/vali-flow.csproj" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/vali-flow/vali-flow.png" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -44,6 +39,13 @@
     &quot;accountId&quot;: &quot;0dfbef2b-d0f6-4540-8e93-2f88dc95410a&quot;
   }
 }</component>
+  <component name="HighlightingSettingsPerFile">
+    <setting file="mock:///Users/isw21/RiderProjects/vali-flow/vali-flow-test/Program.cs" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///Users/isw21/RiderProjects/vali-flow/vali-flow/Interfaces/General/IComparisonExpression.cs" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///Users/isw21/RiderProjects/vali-flow/vali-flow/Interfaces/Types/IStringExpression.cs" root0="SKIP_HIGHLIGHTING" />
+    <setting file="file:///usr/local/share/dotnet/sdk/7.0.410/Sdks/Microsoft.NET.Sdk/Sdk/Sdk.props" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file:///usr/local/share/dotnet/sdk/7.0.410/Sdks/Microsoft.NET.Sdk/Sdk/Sdk.targets" root0="FORCE_HIGHLIGHTING" />
+  </component>
   <component name="MetaFilesCheckinStateConfiguration" checkMetaFiles="true" />
   <component name="ProjectColorInfo">{
   &quot;associatedIndex&quot;: 0
@@ -100,6 +102,7 @@
       <updated>1738860454861</updated>
       <workItem from="1738860456547" duration="299000" />
       <workItem from="1738861336018" duration="9686000" />
+      <workItem from="1739377263298" duration="2996000" />
     </task>
     <task id="LOCAL-00001" summary="-Creación de nueva estructura para el builder de expresiones para linq o fuentes de datos en general (ValiFlow).">
       <option name="closed" value="true" />
@@ -109,7 +112,23 @@
       <option name="project" value="LOCAL" />
       <updated>1738873484310</updated>
     </task>
-    <option name="localTasksCounter" value="2" />
+    <task id="LOCAL-00002" summary="- Terminando de documentar la librería.">
+      <option name="closed" value="true" />
+      <created>1739221770090</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1739221770090</updated>
+    </task>
+    <task id="LOCAL-00003" summary="-Agregando la configuración para documentación e información del paquete nugget vali-flow.&#10;&#10;-Agregando logo del paquete nuget.">
+      <option name="closed" value="true" />
+      <created>1739227190207</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1739227190207</updated>
+    </task>
+    <option name="localTasksCounter" value="4" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -120,6 +139,8 @@
   <component name="VcsManagerConfiguration">
     <option name="CLEAR_INITIAL_COMMIT_MESSAGE" value="true" />
     <MESSAGE value="-Creación de nueva estructura para el builder de expresiones para linq o fuentes de datos en general (ValiFlow)." />
-    <option name="LAST_COMMIT_MESSAGE" value="-Creación de nueva estructura para el builder de expresiones para linq o fuentes de datos en general (ValiFlow)." />
+    <MESSAGE value="- Terminando de documentar la librería." />
+    <MESSAGE value="-Agregando la configuración para documentación e información del paquete nugget vali-flow.&#10;&#10;-Agregando logo del paquete nuget." />
+    <option name="LAST_COMMIT_MESSAGE" value="-Agregando la configuración para documentación e información del paquete nugget vali-flow.&#10;&#10;-Agregando logo del paquete nuget." />
   </component>
 </project>

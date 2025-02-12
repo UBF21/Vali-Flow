@@ -128,7 +128,39 @@ public class StringExpression<TBuilder, T> : IStringExpression<TBuilder, T>
 
     public TBuilder IsBase64(Expression<Func<T, string?>> selector)
     {
-        Expression<Func<string?,bool>> predicate = val => !string.IsNullOrEmpty(val) && val.Length % 4 == 0 && RegularExpression.FormatBase64.IsMatch(val);
+        Expression<Func<string?, bool>> predicate = val =>
+            !string.IsNullOrEmpty(val) && val.Length % 4 == 0 && RegularExpression.FormatBase64.IsMatch(val);
         return _builder.Add(selector, predicate);
+    }
+
+    public TBuilder IsNotJson(Expression<Func<T, string?>> selector)
+    {
+        Expression<Func<string?, bool>> predicate = val => !ValidationHelper.IsValidJson(val);
+        return _builder.Add(selector, predicate);
+    }
+
+    public TBuilder IsNotBase64(Expression<Func<T, string?>> selector)
+    {
+        Expression<Func<string?, bool>> predicate = val =>
+            !string.IsNullOrEmpty(val) && val.Length % 4 != 0 && !RegularExpression.FormatBase64.IsMatch(val);
+        return _builder.Add(selector, predicate);
+    }
+
+    public TBuilder Contains(string value, params Expression<Func<T, string>>[] selectors)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            throw new ArgumentNullException($"{nameof(value)} is null or empty or contains whitespace.");
+        if (selectors.Length == 0) throw new ArgumentNullException($"'{nameof(selectors)}' is empty.");
+
+        string[] searchTerms = value.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+
+        foreach (Expression<Func<T, string>> selector in selectors)
+        {
+            Expression<Func<string, bool>> predicate = val =>
+                searchTerms.Any(term => val.ToUpper().Contains(term.ToUpper()));
+            _builder.Add(selector, predicate);
+        }
+
+        return (TBuilder)_builder;
     }
 }
