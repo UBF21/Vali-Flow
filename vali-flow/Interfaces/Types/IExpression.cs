@@ -169,7 +169,6 @@ public interface IExpression<out TBuilder,T>
     /// Thrown if there is an error evaluating the conditions.
     /// </exception>
     public IEnumerable<T> EvaluatePaged(IEnumerable<T> entities, int page, int pageSize);
-    public IEnumerable<T> EvaluatePaged(IQueryable<T> entities, int page, int pageSize);
     
     /// <summary>
     /// Defines a logical "AND" operation between conditions.

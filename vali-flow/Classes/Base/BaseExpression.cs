@@ -208,14 +208,29 @@ public class BaseExpression<TBuilder, T> : IExpression<TBuilder, T>
 
     public IEnumerable<T> EvaluatePaged(IEnumerable<T> entities, int page, int pageSize)
     {
-        throw new NotImplementedException();
-    }
+        if (entities == null || !entities.Any())
+        {
+            throw new ArgumentException("Collection is empty or null", nameof(entities));
+        }
 
-    public IEnumerable<T> EvaluatePaged(IQueryable<T> entities, int page, int pageSize)
-    {
-        throw new NotImplementedException();
-    }
+        if (page < 1 || pageSize < 1)
+        {
+            throw new ArgumentException("Page and pageSize must be greater than zero.");
+        }
 
+        try
+        {
+            Func<T, bool> compiledCondition = Build().Compile(); // Compiles the validation expression
+            return entities.Where(compiledCondition) // Filters valid elements
+                .Skip((page - 1) * pageSize) // Skips previous pages
+                .Take(pageSize); // Takes elements for the current page
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException("Error in evaluating the conditions.", ex);
+        }
+    }
+    
     public TBuilder And()
     {
         _isAnd = true;

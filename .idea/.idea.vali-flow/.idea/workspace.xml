@@ -8,9 +8,12 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="aa4fc315-c37b-4ab3-b9cc-02a55a2255c8" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/vali-flow/Classes/Evaluators/IDatabaseEvaluator.cs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/vali-flow/Classes/Evaluators/IInMemoryEvaluator.cs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/.idea.vali-flow/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.vali-flow/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/vali-flow/Classes/Base/BaseExpression.cs" beforeDir="false" afterPath="$PROJECT_DIR$/vali-flow/Classes/Base/BaseExpression.cs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/vali-flow/Interfaces/Types/IExpression.cs" beforeDir="false" afterPath="$PROJECT_DIR$/vali-flow/Interfaces/Types/IExpression.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/vali-flow/vali-flow.csproj" beforeDir="false" afterPath="$PROJECT_DIR$/vali-flow/vali-flow.csproj" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -29,12 +32,12 @@
     &quot;assignee&quot;: &quot;FelipeMontenegro-IDS&quot;
   }
 }</component>
-  <component name="GithubPullRequestsUISettings">{
-  &quot;selectedUrlAndAccountId&quot;: {
-    &quot;url&quot;: &quot;https://github.com/UBF21/vali-flow.git&quot;,
-    &quot;accountId&quot;: &quot;0dfbef2b-d0f6-4540-8e93-2f88dc95410a&quot;
+  <component name="GithubPullRequestsUISettings"><![CDATA[{
+  "selectedUrlAndAccountId": {
+    "url": "https://github.com/UBF21/vali-flow.git",
+    "accountId": "7276f141-500b-4f40-ab3e-097cc210c82c"
   }
-}</component>
+}]]></component>
   <component name="HighlightingSettingsPerFile">
     <setting file="file://$PROJECT_DIR$/vali-flow/Builder/ValiFlow.cs" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/vali-flow/Classes/Base/BaseExpression.cs" root0="FORCE_HIGHLIGHTING" />
