@@ -31,4 +31,12 @@ public static class ValidationHelper
     {
         if (query == null) throw new ArgumentNullException(nameof(query));
     }
+
+    public static void ValidatePagination(int? page, int? pageSize)
+    {
+        
+        if (page != null && page.Value <= 0) throw new ArgumentOutOfRangeException(nameof(page), "Page must be greater than zero.");
+
+        if (pageSize != null && pageSize.Value <= 0) throw new ArgumentOutOfRangeException(nameof(pageSize), "Page size must be greater than zero.");
+    }
 }

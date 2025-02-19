@@ -10,26 +10,37 @@ public interface IDatabaseEvaluator<T>
 
     Task<bool> EvaluateAnyAsync<TProperty>(
         IQueryable<T> query,
-        IEnumerable<Expression<Func<T, TProperty>>>? includes = null);
+        IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
+        bool asNoTracking = false,
+        CancellationToken cancellationToken = default);
 
     Task<int> EvaluateCountAsync<TProperty>(
         IQueryable<T> query,
-        IEnumerable<Expression<Func<T, TProperty>>>? includes = null);
+        IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
+        bool asNoTracking = false,
+        CancellationToken cancellationToken = default);
 
     Task<T?> GetFirstFailedAsync<TProperty>(
         IQueryable<T> query,
-        IEnumerable<Expression<Func<T, TProperty>>>? includes = null);
+        IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
+        bool asNoTracking = false,
+        CancellationToken cancellationToken = default);
 
     Task<T?> GetFirstAsync<TProperty>(
         IQueryable<T> query,
-        IEnumerable<Expression<Func<T, TProperty>>>? includes = null);
+        IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
+        bool asNoTracking = false,
+        CancellationToken cancellationToken = default);
 
     Task<IQueryable<T>> EvaluateAllFailedAsync<TKey, TProperty>(
         IQueryable<T> query,
+        int? page = null,
+        int? pageSize = null,
         Expression<Func<T, TKey>>? orderBy = null,
         bool ascending = true,
         Expression<Func<T, TKey>>? thenBy = null,
         bool thenAscending = true,
+        bool asNoTracking = false,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null);
 
     Task<IQueryable<T>> EvaluateAllAsync<TKey, TProperty>(
@@ -38,6 +49,7 @@ public interface IDatabaseEvaluator<T>
         bool ascending = true,
         Expression<Func<T, TKey>>? thenBy = null,
         bool thenAscending = true,
+        bool asNoTracking = false,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null);
 
     Task<IQueryable<T>> EvaluatePagedAsync<TKey, TProperty>(
@@ -48,6 +60,7 @@ public interface IDatabaseEvaluator<T>
         bool ascending = true,
         Expression<Func<T, TKey>>? thenBy = null,
         bool thenAscending = true,
+        bool asNoTracking = false,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null);
 
     Task<IQueryable<T>> EvaluateTopAsync<TKey, TProperty>(
@@ -57,6 +70,7 @@ public interface IDatabaseEvaluator<T>
         bool ascending = true,
         Expression<Func<T, TKey>>? thenBy = null,
         bool thenAscending = true,
+        bool asNoTracking = false,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null);
 
     Task<IQueryable<T>> EvaluateDistinctAsync<TKey, TProperty>(
@@ -68,6 +82,7 @@ public interface IDatabaseEvaluator<T>
         bool ascending = true,
         Expression<Func<T, TKey>>? thenBy = null,
         bool thenAscending = true,
+        bool asNoTracking = false,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null);
 
     Task<IQueryable<T>> EvaluateDuplicatesAsync<TKey, TProperty>(
@@ -79,122 +94,179 @@ public interface IDatabaseEvaluator<T>
         bool ascending = true,
         Expression<Func<T, TKey>>? thenBy = null,
         bool thenAscending = true,
+        bool asNoTracking = false,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null);
 
-    Task<int> GetFirstMatchIndexAsync<TProperty>(
+    Task<T?> GetLastFailedAsync<TKey, TProperty>(
         IQueryable<T> query,
-        IEnumerable<Expression<Func<T, TProperty>>>? includes = null);
-
-    Task<int> GetLastMatchIndexAsync<TProperty>(
-        IQueryable<T> query,
-        IEnumerable<Expression<Func<T, TProperty>>>? includes = null);
-
-    Task<T?> GetLastFailedAsync<TProperty>(
-        IQueryable<T> query,
-        IEnumerable<Expression<Func<T, TProperty>>>? includes = null);
+        IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
+        bool asNoTracking = false,
+        CancellationToken cancellationToken = default);
 
     Task<T?> GetLastAsync<TProperty>(
         IQueryable<T> query,
-        IEnumerable<Expression<Func<T, TProperty>>>? includes = null);
+        IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
+        bool asNoTracking = false,
+        CancellationToken cancellationToken = default);
 
     Task<TResult> EvaluateMinAsync<TResult, TProperty>(
         IQueryable<T> query,
-        Func<T, TResult> selector,
-        IEnumerable<Expression<Func<T, TProperty>>>? includes = null
+        Expression<Func<T, TResult>> selector,
+        IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
+        bool asNoTracking = false,
+        CancellationToken cancellationToken = default
     ) where TResult : INumber<TResult>;
 
     Task<TResult> EvaluateMaxAsync<TResult, TProperty>(
         IQueryable<T> query,
-        Func<T, TResult> selector,
-        IEnumerable<Expression<Func<T, TProperty>>>? includes = null
+        Expression<Func<T, TResult>> selector,
+        IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
+        bool asNoTracking = false,
+        CancellationToken cancellationToken = default
     ) where TResult : INumber<TResult>;
 
-    Task<TResult> EvaluateAverageAsync<TResult, TProperty>(
+    Task<decimal> EvaluateAverageAsync<TResult, TProperty>(
         IQueryable<T> query,
-        Func<T, TResult> selector,
-        IEnumerable<Expression<Func<T, TProperty>>>? includes = null
+        Expression<Func<T, TResult>> selector,
+        IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
+        bool asNoTracking = false,
+        CancellationToken cancellationToken = default
     ) where TResult : INumber<TResult>;
 
-    Task<TResult> EvaluateSumAsync<TResult, TProperty>(
+    Task<int> EvaluateSumAsync<TProperty>(
         IQueryable<T> query,
-        Func<T, TResult> selector,
-        IEnumerable<Expression<Func<T, TProperty>>>? includes = null
-    ) where TResult : INumber<TResult>;
+        Expression<Func<T, int>> selector,
+        IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
+        bool asNoTracking = false,
+        CancellationToken cancellationToken = default
+    );
+
+    Task<long> EvaluateSumAsync<TProperty>(
+        IQueryable<T> query,
+        Expression<Func<T, long>> selector,
+        IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
+        bool asNoTracking = false,
+        CancellationToken cancellationToken = default
+    );
+
+    Task<double> EvaluateSumAsync<TProperty>(
+        IQueryable<T> query,
+        Expression<Func<T, double>> selector,
+        IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
+        bool asNoTracking = false,
+        CancellationToken cancellationToken = default
+    );
+
+    Task<decimal> EvaluateSumAsync<TProperty>(
+        IQueryable<T> query,
+        Expression<Func<T, decimal>> selector,
+        IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
+        bool asNoTracking = false,
+        CancellationToken cancellationToken = default
+    );
+
+    Task<float> EvaluateSumAsync<TProperty>(
+        IQueryable<T> query,
+        Expression<Func<T, float>> selector,
+        IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
+        bool asNoTracking = false,
+        CancellationToken cancellationToken = default
+    );
 
     Task<TResult> EvaluateAggregateAsync<TResult, TProperty>(
         IQueryable<T> query,
-        Func<T, TResult> selector,
+        Expression<Func<T, TResult>> selector,
         Func<TResult, TResult, TResult> aggregator,
-        IEnumerable<Expression<Func<T, TProperty>>>? includes = null
+        IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
+        bool asNoTracking = false,
+        CancellationToken cancellationToken = default
     ) where TResult : INumber<TResult>;
 
     // Evalúa y agrupa los elementos que cumplen la condición
-    Task<IEnumerable<Dictionary<TKey, T>>> EvaluateGroupedAsync<TKey, TProperty>(
+    Task<Dictionary<TKey, List<T>>> EvaluateGroupedAsync<TKey, TProperty>(
         IQueryable<T> query,
         Func<T, TKey> keySelector,
-        IEnumerable<Expression<Func<T, TProperty>>>? includes = null
+        IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
+        bool asNoTracking = false,
+        CancellationToken cancellationToken = default
     ) where TKey : notnull;
 
     // Evalúa y agrupa los elementos con agregación de conteo
-    IEnumerable<Dictionary<TKey, int>> EvaluateCountByGroupAsync<TKey, TProperty>(
+    Task<Dictionary<TKey, int>> EvaluateCountByGroupAsync<TKey, TProperty>(
         IQueryable<T> query,
         Func<T, TKey> keySelector,
-        IEnumerable<Expression<Func<T, TProperty>>>? includes = null
+        IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
+        bool asNoTracking = false,
+        CancellationToken cancellationToken = default
     ) where TKey : notnull;
 
     // Evalúa y agrupa los elementos con suma de un campo seleccionado
-    Task<IEnumerable<Dictionary<TKey, T>>> EvaluateSumByGroupAsync<TKey, TResult, TProperty>(
+    Task<Dictionary<TKey, TResult>> EvaluateSumByGroupAsync<TKey, TResult, TProperty>(
         IQueryable<T> query,
         Func<T, TKey> keySelector,
         Func<T, TResult> selector,
-        IEnumerable<Expression<Func<T, TProperty>>>? includes = null
+        IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
+        bool asNoTracking = false,
+        CancellationToken cancellationToken = default
     ) where TResult : INumber<TResult> where TKey : notnull;
 
     // Evalúa y agrupa los elementos con el valor mínimo por grupo
-    Task<IEnumerable<Dictionary<TKey, T>>> EvaluateMinByGroupAsync<TKey, TResult, TProperty>(
+    Task<Dictionary<TKey, TResult>> EvaluateMinByGroupAsync<TKey, TResult, TProperty>(
         IQueryable<T> query,
         Func<T, TKey> keySelector,
         Func<T, TResult> selector,
-        IEnumerable<Expression<Func<T, TProperty>>>? includes = null
+        IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
+        bool asNoTracking = false,
+        CancellationToken cancellationToken = default
     ) where TResult : INumber<TResult> where TKey : notnull;
 
     // Evalúa y agrupa los elementos con el valor máximo por grupo
-    Task<IEnumerable<Dictionary<TKey, T>>> EvaluateMaxByGroupAsync<TKey, TResult, TProperty>(
+    Task<Dictionary<TKey, TResult>> EvaluateMaxByGroupAsync<TKey, TResult, TProperty>(
         IQueryable<T> query,
         Func<T, TKey> keySelector,
         Func<T, TResult> selector,
-        IEnumerable<Expression<Func<T, TProperty>>>? includes = null
+        IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
+        bool asNoTracking = false,
+        CancellationToken cancellationToken = default
     ) where TResult : INumber<TResult> where TKey : notnull;
 
     // Evalúa y agrupa los elementos con el promedio de un campo por grupo
-    Task<IEnumerable<Dictionary<TKey, T>>> EvaluateAverageByGroupAsync<TKey, TResult, TProperty>(
+    Task<Dictionary<TKey, decimal>> EvaluateAverageByGroupAsync<TKey, TResult, TProperty>(
         IQueryable<T> query,
         Func<T, TKey> keySelector,
         Func<T, TResult> selector,
-        IEnumerable<Expression<Func<T, TProperty>>>? includes = null
+        IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
+        bool asNoTracking = false,
+        CancellationToken cancellationToken = default
     ) where TResult : INumber<TResult> where TKey : notnull;
 
     // Evalúa y devuelve los grupos que tienen más de un elemento (duplicados)
-    Task<IEnumerable<Dictionary<TKey, T>>> EvaluateDuplicatesByGroupAsync<TKey, TProperty>(
+    Task<Dictionary<TKey, List<T>>> EvaluateDuplicatesByGroupAsync<TKey, TProperty>(
         IQueryable<T> query,
         Func<T, TKey> keySelector,
-        IEnumerable<Expression<Func<T, TProperty>>>? includes = null
+        IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
+        bool asNoTracking = false,
+        CancellationToken cancellationToken = default
     ) where TKey : notnull;
 
     // Evalúa y devuelve los grupos que contienen solo un elemento (únicos)
-    Task<IEnumerable<Dictionary<TKey, T>>> EvaluateUniquesByGroupAsync<TKey, TProperty>(
+    Task<Dictionary<TKey, T>> EvaluateUniquesByGroupAsync<TKey, TProperty>(
         IQueryable<T> query,
         Func<T, TKey> keySelector,
-        IEnumerable<Expression<Func<T, TProperty>>>? includes = null
+        IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
+        bool asNoTracking = false,
+        CancellationToken cancellationToken = default
     ) where TKey : notnull;
 
     // Evalúa y devuelve los N primeros elementos de cada grupo ordenados
-    Task<IEnumerable<Dictionary<TKey, T>>> EvaluateTopByGroupAsync<TKey, TProperty>(
+    Task<Dictionary<TKey, List<T>>> EvaluateTopByGroupAsync<TKey, TProperty>(
         IQueryable<T> query,
         Func<T, TKey> keySelector,
         int count,
         Func<T, object>? orderBy = null,
         bool ascending = true,
-        IEnumerable<Expression<Func<T, TProperty>>>? includes = null
+        IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
+        bool asNoTracking = false,
+        CancellationToken cancellationToken = default
     ) where TKey : notnull;
 }

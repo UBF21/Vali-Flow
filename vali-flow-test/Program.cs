@@ -49,3 +49,4 @@ foreach (var user in users)
     string value = result ? $" {user.Name} es válido" : $" {user.Name} no es válido";
     Console.WriteLine(value);
 }
+

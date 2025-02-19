@@ -315,9 +315,9 @@ public class InMemoryEvaluator<TBuilder, T> : IInMemoryEvaluator<T>
     {
         try
         {
-            Func<T, bool> compiledCondition = _builder.Build().Compile();
+            Func<T, bool> compiledCondition = _builder.BuildNegated().Compile();
 
-            return entities.Reverse().FirstOrDefault(entity => !compiledCondition(entity));
+            return entities.LastOrDefault(compiledCondition);
         }
         catch (Exception ex)
         {
@@ -329,9 +329,9 @@ public class InMemoryEvaluator<TBuilder, T> : IInMemoryEvaluator<T>
     {
         try
         {
-            Func<T, bool> compiledCondition = _builder.Build().Compile();
+            Func<T, bool> compiledCondition = _builder.BuildNegated().Compile();
 
-            return entities.Reverse().FirstOrDefault(entity => compiledCondition(entity));
+            return entities.LastOrDefault(compiledCondition);
         }
         catch (Exception ex)
         {
@@ -622,7 +622,7 @@ public class InMemoryEvaluator<TBuilder, T> : IInMemoryEvaluator<T>
         {
             Func<T, bool> compiledCondition = _builder.Build().Compile();
             return entities
-                .Where(e => compiledCondition(e))
+                .Where(compiledCondition)
                 .GroupBy(keySelector)
                 .Where(g => g.Count() == 1)
                 .ToDictionary(g => g.Key, g => g.First());
@@ -642,12 +642,12 @@ public class InMemoryEvaluator<TBuilder, T> : IInMemoryEvaluator<T>
     {
         try
         {
-            if (count <= 0)
-                throw new ArgumentOutOfRangeException(nameof(count), "Count must be greater than zero.");
+            if (count <= 0) throw new ArgumentOutOfRangeException(nameof(count), "Count must be greater than zero.");
 
             Func<T, bool> compiledCondition = _builder.Build().Compile();
+            
             return entities
-                .Where(e => compiledCondition(e))
+                .Where(compiledCondition)
                 .GroupBy(keySelector)
                 .ToDictionary(g => g.Key, g =>
                 {
