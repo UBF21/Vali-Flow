@@ -7,7 +7,6 @@ namespace vali_flow.Utils;
 /// </summary>
 public static class ValidationHelper
 {
-    
     /// <summary>
     /// Checks whether a given string is a valid JSON.
     /// </summary>
@@ -26,5 +25,10 @@ public static class ValidationHelper
         {
             return false;
         }
+    }
+    
+    public static void ValidateQueryNotNull<T>(IQueryable<T> query)
+    {
+        if (query == null) throw new ArgumentNullException(nameof(query));
     }
 }

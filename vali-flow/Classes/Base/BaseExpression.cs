@@ -24,6 +24,19 @@ public class BaseExpression<TBuilder, T> : IExpression<TBuilder, T>
         return _orCondition is null ? andCondition : Or(andCondition, _orCondition);
     }
 
+    public Expression<Func<T, bool>> BuildNegated()
+    {
+        Expression<Func<T, bool>> condition = Build();
+        
+        ParameterExpression parameter = condition.Parameters.First();
+        UnaryExpression negatedBody = Expression.Not(condition.Body);
+        
+        Expression<Func<T, bool>> negatedCondition = Expression.Lambda<Func<T, bool>>(negatedBody, parameter);
+        
+        return negatedCondition;
+
+    }
+
     public TBuilder Add(Expression<Func<T, bool>> expression)
     {
         if (expression == null) throw new ArgumentNullException(nameof(expression));

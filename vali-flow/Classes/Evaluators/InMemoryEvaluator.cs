@@ -1,3 +1,4 @@
+using System.Numerics;
 using vali_flow.Classes.Base;
 using vali_flow.Interfaces.Evaluators;
 
@@ -11,7 +12,7 @@ public class InMemoryEvaluator<TBuilder, T> : IInMemoryEvaluator<T>
 
     public InMemoryEvaluator(BaseExpression<TBuilder, T> builder)
     {
-        _builder = builder;
+        _builder = builder ?? throw new ArgumentNullException(nameof(builder));
     }
 
     public bool Evaluate(T entity)
@@ -86,10 +87,10 @@ public class InMemoryEvaluator<TBuilder, T> : IInMemoryEvaluator<T>
         Func<T, TKey>? thenBy = null,
         bool thenAscending = true)
     {
-        Func<T, bool> compiledCondition = _builder.Build().Compile();
+        Func<T, bool> compiledCondition = _builder.BuildNegated().Compile();
 
-        var failedEntities =
-            entities.Where(entity => !compiledCondition(entity)).ToList(); // .ToList() evita múltiples enumeraciones
+        List<T> failedEntities =
+            entities.Where(compiledCondition).ToList(); // .ToList() evita múltiples enumeraciones
 
         IOrderedEnumerable<T> orderedEntities;
 
@@ -101,11 +102,10 @@ public class InMemoryEvaluator<TBuilder, T> : IInMemoryEvaluator<T>
         }
         else
         {
-            // Si no se proporciona orderBy, simplemente usamos los elementos como están
-            orderedEntities = failedEntities.OrderBy(x => x); // Esto puede ser un criterio predeterminado
+            orderedEntities = failedEntities.OrderBy(x => x);
         }
 
-        // Aplicar ThenBy si existe un segundo criterio de ordenación
+        
         if (thenBy != null)
         {
             orderedEntities = thenAscending
@@ -113,7 +113,6 @@ public class InMemoryEvaluator<TBuilder, T> : IInMemoryEvaluator<T>
                 : orderedEntities.ThenByDescending(thenBy);
         }
 
-        // Retornar los elementos que fallaron
         return orderedEntities;
     }
 
@@ -127,7 +126,7 @@ public class InMemoryEvaluator<TBuilder, T> : IInMemoryEvaluator<T>
         Func<T, bool> compiledCondition = _builder.Build().Compile();
 
         List<T> passedEntities =
-            entities.Where(entity => compiledCondition(entity)).ToList(); // .ToList() evita múltiples enumeraciones
+            entities.Where(entity => compiledCondition(entity)).ToList();
 
         IOrderedEnumerable<T> orderedEntities;
 
@@ -139,11 +138,9 @@ public class InMemoryEvaluator<TBuilder, T> : IInMemoryEvaluator<T>
         }
         else
         {
-            // Si no se proporciona orderBy, simplemente usamos los elementos como están
-            orderedEntities = passedEntities.OrderBy(x => x); // Esto puede ser un criterio predeterminado
+            orderedEntities = passedEntities.OrderBy(x => x); 
         }
 
-        // Aplicar ThenBy si existe un segundo criterio de ordenación
         if (thenBy != null)
         {
             orderedEntities = thenAscending
@@ -163,10 +160,10 @@ public class InMemoryEvaluator<TBuilder, T> : IInMemoryEvaluator<T>
         Func<T, TKey>? thenBy = null,
         bool thenAscending = true)
     {
-        if (page <= 0 || pageSize <= 0)
-        {
-            throw new ArgumentOutOfRangeException(null, "Page and pageSize must be greater than 0.");
-        }
+        if (page <= 0)
+            throw new ArgumentOutOfRangeException(nameof(page), "Page must be greater than zero.");
+        if (pageSize <= 0)
+            throw new ArgumentOutOfRangeException(nameof(pageSize), "PageSize must be greater than zero.");
 
         Func<T, bool> compiledCondition = _builder.Build().Compile();
 
@@ -182,8 +179,7 @@ public class InMemoryEvaluator<TBuilder, T> : IInMemoryEvaluator<T>
         }
         else
         {
-            // Fallback to default sorting
-            orderedEntities = filteredEntities.OrderBy(x => x); // Default sorting logic
+            orderedEntities = filteredEntities.OrderBy(x => x);
         }
 
         if (thenBy != null)
@@ -193,12 +189,10 @@ public class InMemoryEvaluator<TBuilder, T> : IInMemoryEvaluator<T>
                 : orderedEntities.ThenByDescending(thenBy);
         }
 
-        // Step 4: Apply pagination using Skip and Take
-        var pagedEntities = orderedEntities
-            .Skip((page - 1) * pageSize) // Skip previous pages
-            .Take(pageSize); // Take the requested number of entities
+        IEnumerable<T> pagedEntities = orderedEntities
+            .Skip((page - 1) * pageSize) 
+            .Take(pageSize); 
 
-        // Step 5: Return the paged and sorted entities
         return pagedEntities;
     }
 
@@ -217,7 +211,7 @@ public class InMemoryEvaluator<TBuilder, T> : IInMemoryEvaluator<T>
 
         Func<T, bool> compiledCondition = _builder.Build().Compile();
 
-        var filteredEntities = entities.Where(entity => compiledCondition(entity));
+        IEnumerable<T> filteredEntities = entities.Where(entity => compiledCondition(entity));
 
         IOrderedEnumerable<T> orderedEntities;
 
@@ -229,8 +223,7 @@ public class InMemoryEvaluator<TBuilder, T> : IInMemoryEvaluator<T>
         }
         else
         {
-            // Fallback to default sorting
-            orderedEntities = filteredEntities.OrderBy(x => x); // Default sorting logic
+            orderedEntities = filteredEntities.OrderBy(x => x);
         }
 
         if (thenBy != null)
@@ -253,7 +246,7 @@ public class InMemoryEvaluator<TBuilder, T> : IInMemoryEvaluator<T>
 
         Func<T, bool> compiledCondition = _builder.Build().Compile();
 
-        var filteredEntities = entities.Where(compiledCondition);
+        IEnumerable<T> filteredEntities = entities.Where(compiledCondition);
 
         return filteredEntities
             .GroupBy(selector)
@@ -270,7 +263,7 @@ public class InMemoryEvaluator<TBuilder, T> : IInMemoryEvaluator<T>
 
         return entities
             .GroupBy(selector)
-            .Where(group => group.Count() > 1) // Selecciona solo los grupos con más de un elemento
+            .Where(group => group.Count() > 1)
             .SelectMany(group => group);
     }
 
@@ -278,17 +271,15 @@ public class InMemoryEvaluator<TBuilder, T> : IInMemoryEvaluator<T>
     {
         try
         {
-            // Compila la condición
             Func<T, bool> compiledCondition = _builder.Build().Compile();
 
             int index = 0;
-            foreach (var entity in entities)
+            foreach (T entity in entities)
             {
                 if (compiledCondition(entity)) return index;
                 index++;
             }
-
-            // Si ningún elemento cumple la condición, se devuelve -1.
+            
             return -1;
         }
         catch (Exception ex)
@@ -301,12 +292,11 @@ public class InMemoryEvaluator<TBuilder, T> : IInMemoryEvaluator<T>
     {
         try
         {
-            // Compila la condición
             Func<T, bool> compiledCondition = _builder.Build().Compile();
 
             int index = 0;
             int lastIndex = -1;
-            foreach (var entity in entities)
+            foreach (T entity in entities)
             {
                 if (compiledCondition(entity)) lastIndex = index;
 
@@ -325,10 +315,8 @@ public class InMemoryEvaluator<TBuilder, T> : IInMemoryEvaluator<T>
     {
         try
         {
-            // Compila la condición
             Func<T, bool> compiledCondition = _builder.Build().Compile();
 
-            // Se invierte la secuencia y se busca el primer elemento que cumple la condición
             return entities.Reverse().FirstOrDefault(entity => !compiledCondition(entity));
         }
         catch (Exception ex)
@@ -341,10 +329,8 @@ public class InMemoryEvaluator<TBuilder, T> : IInMemoryEvaluator<T>
     {
         try
         {
-            // Compila la condición
             Func<T, bool> compiledCondition = _builder.Build().Compile();
 
-            // Se invierte la secuencia y se busca el primer elemento que cumple la condición
             return entities.Reverse().FirstOrDefault(entity => compiledCondition(entity));
         }
         catch (Exception ex)
@@ -354,12 +340,13 @@ public class InMemoryEvaluator<TBuilder, T> : IInMemoryEvaluator<T>
     }
 
     public TResult EvaluateMin<TResult>(IEnumerable<T> entities, Func<T, TResult> selector)
+        where TResult : INumber<TResult>
     {
         try
         {
             Func<T, bool> compiledCondition = _builder.Build().Compile();
 
-            var projectedValues = entities
+            List<TResult> projectedValues = entities
                 .Where(entity => compiledCondition(entity))
                 .Select(selector)
                 .ToList();
@@ -367,10 +354,7 @@ public class InMemoryEvaluator<TBuilder, T> : IInMemoryEvaluator<T>
             if (!projectedValues.Any())
                 throw new InvalidOperationException("No elements found to evaluate the minimum value.");
 
-            var minValue = projectedValues.Min();
-
-            if (minValue == null)
-                throw new InvalidOperationException("The minimum value evaluated is null.");
+            TResult minValue = projectedValues.Min() ?? TResult.Zero;
 
             return minValue;
         }
@@ -381,57 +365,8 @@ public class InMemoryEvaluator<TBuilder, T> : IInMemoryEvaluator<T>
     }
 
     public TResult EvaluateMax<TResult>(IEnumerable<T> entities, Func<T, TResult> selector)
-    {
-        try
-        {
-            Func<T, bool> compiledCondition = _builder.Build().Compile();
+        where TResult : INumber<TResult>
 
-            var projectedValues = entities
-                .Where(entity => compiledCondition(entity))
-                .Select(selector)
-                .ToList();
-
-            if (!projectedValues.Any())
-                throw new InvalidOperationException("No elements found to evaluate the maximum value.");
-
-            var minValue = projectedValues.Max();
-
-            if (minValue == null)
-                throw new InvalidOperationException("The maximum value evaluated is null.");
-
-            return minValue;
-        }
-        catch (Exception ex)
-        {
-            throw new InvalidOperationException("Error in evaluating the maximum value.", ex);
-        }
-    }
-
-    public TResult EvaluateAverage<TResult>(IEnumerable<T> entities, Func<T, TResult> selector)
-    {
-        try
-        {
-            Func<T, bool> compiledCondition = _builder.Build().Compile();
-
-            var projectedValues = entities
-                .Where(entity => compiledCondition(entity))
-                .Select(selector)
-                .ToList();
-
-            if (!projectedValues.Any())
-                throw new InvalidOperationException("No elements found to evaluate the average value.");
-
-            decimal averageValue = projectedValues.Average(x => Convert.ToDecimal(x));
-
-            return (TResult)Convert.ChangeType(averageValue, typeof(TResult));
-        }
-        catch (Exception ex)
-        {
-            throw new InvalidOperationException("Error in evaluating the average value.", ex);
-        }
-    }
-
-    public TResult EvaluateSum<TResult>(IEnumerable<T> entities, Func<T, TResult> selector)
     {
         try
         {
@@ -445,9 +380,9 @@ public class InMemoryEvaluator<TBuilder, T> : IInMemoryEvaluator<T>
             if (!projectedValues.Any())
                 throw new InvalidOperationException("No elements found to evaluate the maximum value.");
 
-            decimal minValue = projectedValues.Sum(x => Convert.ToDecimal(x));
+            TResult minValue = projectedValues.Max() ?? TResult.Zero;
 
-            return (TResult)Convert.ChangeType(minValue, typeof(TResult));
+            return minValue;
         }
         catch (Exception ex)
         {
@@ -455,14 +390,67 @@ public class InMemoryEvaluator<TBuilder, T> : IInMemoryEvaluator<T>
         }
     }
 
-    public TResult EvaluateAggregate<TResult>(IEnumerable<T> entities, Func<T, TResult> selector,
-        Func<TResult, TResult, TResult> aggregator)
+    public decimal EvaluateAverage<TResult>(IEnumerable<T> entities, Func<T, TResult> selector)
+        where TResult : INumber<TResult>
     {
         try
         {
             Func<T, bool> compiledCondition = _builder.Build().Compile();
 
-            var projectedValues = entities
+            List<TResult> projectedValues = entities
+                .Where(entity => compiledCondition(entity))
+                .Select(selector)
+                .ToList();
+
+            if (!projectedValues.Any())
+                throw new InvalidOperationException("No elements found to evaluate the average value.");
+
+            decimal averageValue = projectedValues.Average(x => Convert.ToDecimal(x));
+
+            return averageValue;
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException("Error in evaluating the average value.", ex);
+        }
+    }
+
+    public TResult EvaluateSum<TResult>(IEnumerable<T> entities, Func<T, TResult> selector)
+        where TResult : INumber<TResult>
+    {
+        try
+        {
+            Func<T, bool> compiledCondition = _builder.Build().Compile();
+
+            List<TResult> projectedValues = entities
+                .Where(entity => compiledCondition(entity))
+                .Select(selector)
+                .ToList();
+
+            if (!projectedValues.Any())
+                throw new InvalidOperationException("No elements found to evaluate the maximum value.");
+
+            TResult sumValue = projectedValues.Aggregate(TResult.Zero, (acc, x) => acc + x);
+
+            return sumValue;
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException("Error in evaluating the maximum value.", ex);
+        }
+    }
+
+    public TResult EvaluateAggregate<TResult>(
+        IEnumerable<T> entities,
+        Func<T, TResult> selector,
+        Func<TResult, TResult, TResult> aggregator)
+        where TResult : INumber<TResult>
+    {
+        try
+        {
+            Func<T, bool> compiledCondition = _builder.Build().Compile();
+
+            List<TResult> projectedValues = entities
                 .Where(entity => compiledCondition(entity))
                 .Select(selector)
                 .ToList();
@@ -484,55 +472,197 @@ public class InMemoryEvaluator<TBuilder, T> : IInMemoryEvaluator<T>
     }
 
     public Dictionary<TKey, List<T>> EvaluateGrouped<TKey>(
-        IEnumerable<T> entities, 
+        IEnumerable<T> entities,
         Func<T, TKey> keySelector) where TKey : notnull
     {
-        throw new NotImplementedException();
+        try
+        {
+            Func<T, bool> compiledCondition = _builder.Build().Compile();
+            return entities
+                .Where(e => compiledCondition(e))
+                .GroupBy(keySelector)
+                .ToDictionary(g => g.Key, g => g.ToList());
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException("Error in evaluating grouped elements.", ex);
+        }
     }
 
     public Dictionary<TKey, int> EvaluateCountByGroup<TKey>(
-        IEnumerable<T> entities, 
+        IEnumerable<T> entities,
         Func<T, TKey> keySelector) where TKey : notnull
     {
-        throw new NotImplementedException();
+        try
+        {
+            Func<T, bool> compiledCondition = _builder.Build().Compile();
+            return entities
+                .Where(e => compiledCondition(e))
+                .GroupBy(keySelector)
+                .ToDictionary(g => g.Key, g => g.Count());
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException("Error in evaluating count by group.", ex);
+        }
     }
 
     public Dictionary<TKey, TResult> EvaluateSumByGroup<TKey, TResult>(
-        IEnumerable<T> entities, 
-        Func<T, TKey> keySelector, 
-        Func<T, TResult> selector) where TKey : notnull where TResult : struct
+        IEnumerable<T> entities,
+        Func<T, TKey> keySelector,
+        Func<T, TResult> selector) where TKey : notnull where TResult : INumber<TResult>
     {
-        throw new NotImplementedException();
+        try
+        {
+            Func<T, bool> compiledCondition = _builder.Build().Compile();
+            return entities
+                .Where(e => compiledCondition(e))
+                .GroupBy(keySelector)
+                .ToDictionary(
+                    g => g.Key,
+                    g => g.Select(selector).Aggregate(TResult.Zero, (acc, x) => acc + x)
+                );
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException("Error in evaluating sum by group.", ex);
+        }
     }
 
-    public Dictionary<TKey, TResult> EvaluateMinByGroup<TKey, TResult>(IEnumerable<T> entities, Func<T, TKey> keySelector, Func<T, TResult> selector) where TKey : notnull where TResult : struct, IComparable<TResult>
+    public Dictionary<TKey, TResult> EvaluateMinByGroup<TKey, TResult>(
+        IEnumerable<T> entities,
+        Func<T, TKey> keySelector,
+        Func<T, TResult> selector)
+        where TKey : notnull where TResult : INumber<TResult>
     {
-        throw new NotImplementedException();
+        try
+        {
+            Func<T, bool> compiledCondition = _builder.Build().Compile();
+            return entities
+                .Where(e => compiledCondition(e))
+                .GroupBy(keySelector)
+                .ToDictionary(g =>
+                        g.Key,
+                    g => g.Select(selector).Min() ?? TResult.Zero);
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException("Error in evaluating minimum by group.", ex);
+        }
     }
 
-    public Dictionary<TKey, TResult> EvaluateMaxByGroup<TKey, TResult>(IEnumerable<T> entities, Func<T, TKey> keySelector, Func<T, TResult> selector) where TKey : notnull where TResult : struct, IComparable<TResult>
+    public Dictionary<TKey, TResult> EvaluateMaxByGroup<TKey, TResult>(
+        IEnumerable<T> entities,
+        Func<T, TKey> keySelector,
+        Func<T, TResult> selector)
+        where TKey : notnull where TResult : INumber<TResult>
     {
-        throw new NotImplementedException();
+        try
+        {
+            Func<T, bool> compiledCondition = _builder.Build().Compile();
+            return entities
+                .Where(e => compiledCondition(e))
+                .GroupBy(keySelector)
+                .ToDictionary(g =>
+                        g.Key,
+                    g => g.Select(selector).Max() ?? TResult.Zero);
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException("Error in evaluating maximum by group.", ex);
+        }
     }
 
-    public Dictionary<TKey, double> EvaluateAverageByGroup<TKey, TResult>(IEnumerable<T> entities, Func<T, TKey> keySelector, Func<T, TResult> selector) where TKey : notnull where TResult : struct
+    public Dictionary<TKey, decimal> EvaluateAverageByGroup<TKey, TResult>(
+        IEnumerable<T> entities,
+        Func<T, TKey> keySelector,
+        Func<T, TResult> selector) where TKey : notnull where TResult : INumber<TResult>
+
     {
-        throw new NotImplementedException();
+        try
+        {
+            Func<T, bool> compiledCondition = _builder.Build().Compile();
+            return entities
+                .Where(e => compiledCondition(e))
+                .GroupBy(keySelector)
+                .ToDictionary(g => g.Key, g => g.Average(e => Convert.ToDecimal(selector(e))));
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException("Error in evaluating average by group.", ex);
+        }
     }
 
-    public Dictionary<TKey, List<T>> EvaluateDuplicatesByGroup<TKey>(IEnumerable<T> entities, Func<T, TKey> keySelector) where TKey : notnull
+    public Dictionary<TKey, List<T>> EvaluateDuplicatesByGroup<TKey>(
+        IEnumerable<T> entities,
+        Func<T, TKey> keySelector)
+        where TKey : notnull
     {
-        throw new NotImplementedException();
+        try
+        {
+            Func<T, bool> compiledCondition = _builder.Build().Compile();
+            return entities
+                .Where(e => compiledCondition(e))
+                .GroupBy(keySelector)
+                .Where(g => g.Count() > 1)
+                .ToDictionary(g => g.Key, g => g.ToList());
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException("Error in evaluating duplicates by group.", ex);
+        }
     }
 
-    public Dictionary<TKey, T> EvaluateUniquesByGroup<TKey>(IEnumerable<T> entities, Func<T, TKey> keySelector) where TKey : notnull
+    public Dictionary<TKey, T> EvaluateUniquesByGroup<TKey>(
+        IEnumerable<T> entities,
+        Func<T, TKey> keySelector)
+        where TKey : notnull
     {
-        throw new NotImplementedException();
+        try
+        {
+            Func<T, bool> compiledCondition = _builder.Build().Compile();
+            return entities
+                .Where(e => compiledCondition(e))
+                .GroupBy(keySelector)
+                .Where(g => g.Count() == 1)
+                .ToDictionary(g => g.Key, g => g.First());
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException("Error in evaluating uniques by group.", ex);
+        }
     }
 
-    public Dictionary<TKey, List<T>> EvaluateTopByGroup<TKey>(IEnumerable<T> entities, Func<T, TKey> keySelector, int count, Func<T, object>? orderBy = null,
+    public Dictionary<TKey, List<T>> EvaluateTopByGroup<TKey>(
+        IEnumerable<T> entities,
+        Func<T, TKey> keySelector,
+        int count,
+        Func<T, object>? orderBy = null,
         bool ascending = true) where TKey : notnull
     {
-        throw new NotImplementedException();
+        try
+        {
+            if (count <= 0)
+                throw new ArgumentOutOfRangeException(nameof(count), "Count must be greater than zero.");
+
+            Func<T, bool> compiledCondition = _builder.Build().Compile();
+            return entities
+                .Where(e => compiledCondition(e))
+                .GroupBy(keySelector)
+                .ToDictionary(g => g.Key, g =>
+                {
+                    IEnumerable<T> group = g;
+                    if (orderBy != null)
+                    {
+                        group = ascending ? group.OrderBy(orderBy) : group.OrderByDescending(orderBy);
+                    }
+
+                    return group.Take(count).ToList();
+                });
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException("Error in evaluating top elements by group.", ex);
+        }
     }
 }

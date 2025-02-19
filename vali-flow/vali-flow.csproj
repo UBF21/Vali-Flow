@@ -21,6 +21,12 @@
         <PackageIcon>logo.png</PackageIcon>
     </PropertyGroup>
 
+    
+<!--    Quitar al publicar -->
+    <ItemGroup>
+        <PackageReference Include="Microsoft.EntityFrameworkCore" Version="7.0.20" />
+    </ItemGroup>
+    
     <ItemGroup>
       <None Update="logo.png">
         <Pack>True</Pack>
