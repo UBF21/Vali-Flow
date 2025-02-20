@@ -19,9 +19,7 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
 
     public async Task<bool> EvaluateAsync(T entity)
     {
-        if (entity == null)
-            throw new ArgumentNullException(nameof(entity));
-
+        ValidationHelper.ValidateEntityNotNull(entity);
         try
         {
             Func<T, bool> condition = _builder.Build().Compile();
@@ -29,7 +27,7 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         }
         catch (Exception ex)
         {
-            throw new InvalidOperationException("Error evaluating the entity.", ex);
+            throw new InvalidOperationException($"Error evaluating {UtilHelper.GetCurrentMethodName()}.", ex);
         }
     }
 
@@ -52,7 +50,7 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         }
         catch (Exception ex)
         {
-            throw new InvalidOperationException("Error evaluating AnyAsync.", ex);
+            throw new InvalidOperationException($"Error evaluating {UtilHelper.GetCurrentMethodName()}.", ex);
         }
     }
 
@@ -75,7 +73,7 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         }
         catch (Exception ex)
         {
-            throw new InvalidOperationException("Error evaluating CountAsync.", ex);
+            throw new InvalidOperationException($"Error evaluating {UtilHelper.GetCurrentMethodName()}.", ex);
         }
     }
 
@@ -98,7 +96,7 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         }
         catch (Exception ex)
         {
-            throw new InvalidOperationException("Error evaluating GetFirstFailedAsync.", ex);
+            throw new InvalidOperationException($"Error evaluating {UtilHelper.GetCurrentMethodName()}.", ex);
         }
     }
 
@@ -121,7 +119,7 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         }
         catch (Exception ex)
         {
-            throw new InvalidOperationException("Error evaluating GetFirstAsync.", ex);
+            throw new InvalidOperationException($"Error evaluating {UtilHelper.GetCurrentMethodName()}.", ex);
         }
     }
 
@@ -152,7 +150,7 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         }
         catch (Exception ex)
         {
-            throw new InvalidOperationException("Error evaluating EvaluateAllFailedAsync.", ex);
+            throw new InvalidOperationException($"Error evaluating {UtilHelper.GetCurrentMethodName()}.", ex);
         }
     }
 
@@ -180,7 +178,7 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         }
         catch (Exception ex)
         {
-            throw new InvalidOperationException("Error evaluating EvaluateAllAsync.", ex);
+            throw new InvalidOperationException($"Error evaluating {UtilHelper.GetCurrentMethodName()}.", ex);
         }
     }
 
@@ -196,12 +194,8 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null)
     {
         ValidationHelper.ValidateQueryNotNull(query);
-
-        if (page <= ConstantsHelper.Zero)
-            throw new ArgumentOutOfRangeException(nameof(page), "Page must be greater than zero.");
-
-        if (pageSize <= ConstantsHelper.Zero)
-            throw new ArgumentOutOfRangeException(nameof(pageSize), "PageSize must be greater than zero.");
+        ValidationHelper.ValidatePageZero(page);
+        ValidationHelper.ValidatePageSizeZero(pageSize);
 
         try
         {
@@ -217,7 +211,7 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         }
         catch (Exception ex)
         {
-            throw new InvalidOperationException("Error evaluating EvaluatePagedAsync.", ex);
+            throw new InvalidOperationException($"Error evaluating {UtilHelper.GetCurrentMethodName()}.", ex);
         }
     }
 
@@ -232,9 +226,7 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null)
     {
         ValidationHelper.ValidateQueryNotNull(query);
-
-        if (count <= ConstantsHelper.Zero)
-            throw new ArgumentOutOfRangeException(nameof(count), "Count must be greater than zero.");
+        ValidationHelper.ValidateCountZero(count);
 
         try
         {
@@ -250,7 +242,7 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         }
         catch (Exception ex)
         {
-            throw new InvalidOperationException("Error evaluating EvaluateTopAsync.", ex);
+            throw new InvalidOperationException($"Error evaluating {UtilHelper.GetCurrentMethodName()}.", ex);
         }
     }
 
@@ -277,6 +269,7 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
             query = query.Where(condition);
 
             IQueryable<T> distinctQuery = query.GroupBy(selector).Select(g => g.First());
+
             distinctQuery = ApplyOrdering(distinctQuery, orderBy, ascending, thenBy, thenAscending);
             distinctQuery = ApplyPagination(distinctQuery, page, pageSize);
 
@@ -284,7 +277,7 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         }
         catch (Exception ex)
         {
-            throw new InvalidOperationException("Error evaluating EvaluateDistinctAsync.", ex);
+            throw new InvalidOperationException($"Error evaluating {UtilHelper.GetCurrentMethodName()}.", ex);
         }
     }
 
@@ -321,7 +314,7 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         }
         catch (Exception ex)
         {
-            throw new InvalidOperationException("Error evaluating EvaluateDuplicatesAsync.", ex);
+            throw new InvalidOperationException($"Error evaluating {UtilHelper.GetCurrentMethodName()}.", ex);
         }
     }
 
@@ -345,7 +338,7 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         }
         catch (Exception ex)
         {
-            throw new InvalidOperationException("Error evaluating GetLastFailedAsync.", ex);
+            throw new InvalidOperationException($"Error evaluating {UtilHelper.GetCurrentMethodName()}.", ex);
         }
     }
 
@@ -368,7 +361,7 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         }
         catch (Exception ex)
         {
-            throw new InvalidOperationException("Error evaluating GetLastAsync.", ex);
+            throw new InvalidOperationException($"Error evaluating {UtilHelper.GetCurrentMethodName()}.", ex);
         }
     }
 
@@ -394,7 +387,7 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         }
         catch (Exception ex)
         {
-            throw new InvalidOperationException("Error evaluating EvaluateMinAsync.", ex);
+            throw new InvalidOperationException($"Error evaluating {UtilHelper.GetCurrentMethodName()}.", ex);
         }
     }
 
@@ -421,7 +414,7 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         }
         catch (Exception ex)
         {
-            throw new InvalidOperationException("Error evaluating EvaluateMaxAsync.", ex);
+            throw new InvalidOperationException($"Error evaluating {UtilHelper.GetCurrentMethodName()}.", ex);
         }
     }
 
@@ -447,7 +440,7 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         }
         catch (Exception ex)
         {
-            throw new InvalidOperationException("Error evaluating EvaluateMinAsync.", ex);
+            throw new InvalidOperationException($"Error evaluating {UtilHelper.GetCurrentMethodName()}.", ex);
         }
     }
 
@@ -473,7 +466,7 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         }
         catch (Exception ex)
         {
-            throw new InvalidOperationException("Error evaluating EvaluateSumAsync.", ex);
+            throw new InvalidOperationException($"Error evaluating {UtilHelper.GetCurrentMethodName()}.", ex);
         }
     }
 
@@ -499,7 +492,7 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         }
         catch (Exception ex)
         {
-            throw new InvalidOperationException("Error evaluating EvaluateSumAsync.", ex);
+            throw new InvalidOperationException($"Error evaluating {UtilHelper.GetCurrentMethodName()}.", ex);
         }
     }
 
@@ -525,7 +518,7 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         }
         catch (Exception ex)
         {
-            throw new InvalidOperationException("Error evaluating EvaluateSumAsync.", ex);
+            throw new InvalidOperationException($"Error evaluating {UtilHelper.GetCurrentMethodName()}.", ex);
         }
     }
 
@@ -551,7 +544,7 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         }
         catch (Exception ex)
         {
-            throw new InvalidOperationException("Error evaluating EvaluateSumAsync.", ex);
+            throw new InvalidOperationException($"Error evaluating {UtilHelper.GetCurrentMethodName()}.", ex);
         }
     }
 
@@ -577,7 +570,7 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         }
         catch (Exception ex)
         {
-            throw new InvalidOperationException("Error evaluating EvaluateSumAsync.", ex);
+            throw new InvalidOperationException($"Error evaluating {UtilHelper.GetCurrentMethodName()}.", ex);
         }
     }
 
@@ -608,7 +601,7 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         }
         catch (Exception ex)
         {
-            throw new InvalidOperationException("Error evaluating EvaluateAggregateAsync.", ex);
+            throw new InvalidOperationException($"Error evaluating {UtilHelper.GetCurrentMethodName()}.", ex);
         }
     }
 
@@ -640,7 +633,7 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         }
         catch (Exception ex)
         {
-            throw new InvalidOperationException("Error evaluating EvaluateGroupedAsync.", ex);
+            throw new InvalidOperationException($"Error evaluating {UtilHelper.GetCurrentMethodName()}.", ex);
         }
     }
 
@@ -672,7 +665,7 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         }
         catch (Exception ex)
         {
-            throw new InvalidOperationException("Error evaluating EvaluateCountByGroupAsync.", ex);
+            throw new InvalidOperationException($"Error evaluating {UtilHelper.GetCurrentMethodName()}.", ex);
         }
     }
 
@@ -709,7 +702,7 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         }
         catch (Exception ex)
         {
-            throw new InvalidOperationException("Error evaluating EvaluateSumByGroupAsync.", ex);
+            throw new InvalidOperationException($"Error evaluating {UtilHelper.GetCurrentMethodName()}.", ex);
         }
     }
 
@@ -746,7 +739,7 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         }
         catch (Exception ex)
         {
-            throw new InvalidOperationException("Error evaluating EvaluateMinByGroupAsync.", ex);
+            throw new InvalidOperationException($"Error evaluating {UtilHelper.GetCurrentMethodName()}.", ex);
         }
     }
 
@@ -783,7 +776,7 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         }
         catch (Exception ex)
         {
-            throw new InvalidOperationException("Error evaluating EvaluateMaxByGroupAsync.", ex);
+            throw new InvalidOperationException($"Error evaluating {UtilHelper.GetCurrentMethodName()}.", ex);
         }
     }
 
@@ -820,7 +813,7 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         }
         catch (Exception ex)
         {
-            throw new InvalidOperationException("Error evaluating EvaluateAverageByGroupAsync.", ex);
+            throw new InvalidOperationException($"Error evaluating {UtilHelper.GetCurrentMethodName()}.", ex);
         }
     }
 
@@ -853,7 +846,7 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         }
         catch (Exception ex)
         {
-            throw new InvalidOperationException("Error evaluating EvaluateDuplicatesByGroupAsync.", ex);
+            throw new InvalidOperationException($"Error evaluating {UtilHelper.GetCurrentMethodName()}.", ex);
         }
     }
 
@@ -887,7 +880,7 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         }
         catch (Exception ex)
         {
-            throw new InvalidOperationException("Error evaluating EvaluateUniquesByGroupAsync.", ex);
+            throw new InvalidOperationException($"Error evaluating {UtilHelper.GetCurrentMethodName()}.", ex);
         }
     }
 
@@ -902,6 +895,9 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         CancellationToken cancellationToken = default
     ) where TKey : notnull
     {
+        ValidationHelper.ValidateQueryNotNull(query);
+        ValidationHelper.ValidateCountZero(count);
+
         try
         {
             Expression<Func<T, bool>> condition = _builder.Build();
@@ -929,7 +925,7 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         }
         catch (Exception ex)
         {
-            throw new InvalidOperationException("Error evaluating EvaluateTopByGroupAsync.", ex);
+            throw new InvalidOperationException($"Error evaluating {UtilHelper.GetCurrentMethodName()}.", ex);
         }
     }
 
