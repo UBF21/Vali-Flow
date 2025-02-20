@@ -8,15 +8,14 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="aa4fc315-c37b-4ab3-b9cc-02a55a2255c8" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/vali-flow/Classes/Base/Grouping.cs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/vali-flow/Classes/Evaluators/InMemoryEvaluator.cs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/vali-flow/Interfaces/Evaluators/IInMemoryEvaluator.cs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/vali-flow/Classes/Options/ThenByDataBaseExpression.cs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/vali-flow/Classes/Options/ThenByInMemoryExpression.cs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/.idea.vali-flow/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.vali-flow/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/vali-flow/Classes/Evaluators/IDatabaseEvaluator.cs" beforeDir="false" afterPath="$PROJECT_DIR$/vali-flow/Interfaces/Evaluators/IDatabaseEvaluator.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/vali-flow/Classes/Evaluators/IInMemoryEvaluator.cs" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/vali-flow/Interfaces/General/IComparisonExpression.cs" beforeDir="false" afterPath="$PROJECT_DIR$/vali-flow/Interfaces/General/IComparisonExpression.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/vali-flow/Interfaces/Types/IBooleanExpression.cs" beforeDir="false" afterPath="$PROJECT_DIR$/vali-flow/Interfaces/Types/IBooleanExpression.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/vali-flow/vali-flow.csproj" beforeDir="false" afterPath="$PROJECT_DIR$/vali-flow/vali-flow.csproj" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/vali-flow/Classes/Base/Grouping.cs" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/vali-flow/Classes/Evaluators/DatabaseEvaluator.cs" beforeDir="false" afterPath="$PROJECT_DIR$/vali-flow/Classes/Evaluators/DatabaseEvaluator.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/vali-flow/Classes/Evaluators/InMemoryEvaluator.cs" beforeDir="false" afterPath="$PROJECT_DIR$/vali-flow/Classes/Evaluators/InMemoryEvaluator.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/vali-flow/Interfaces/Evaluators/IDatabaseEvaluator.cs" beforeDir="false" afterPath="$PROJECT_DIR$/vali-flow/Interfaces/Evaluators/IDatabaseEvaluator.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/vali-flow/Utils/Utils.cs" beforeDir="false" afterPath="$PROJECT_DIR$/vali-flow/Utils/UtilHelper.cs" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -38,13 +37,13 @@
   <component name="GithubPullRequestsUISettings">{
   &quot;selectedUrlAndAccountId&quot;: {
     &quot;url&quot;: &quot;https://github.com/UBF21/vali-flow.git&quot;,
-    &quot;accountId&quot;: &quot;7276f141-500b-4f40-ab3e-097cc210c82c&quot;
+    &quot;accountId&quot;: &quot;0dfbef2b-d0f6-4540-8e93-2f88dc95410a&quot;
   }
 }</component>
   <component name="HighlightingSettingsPerFile">
+    <setting file="file://$APPLICATION_CONFIG_DIR$/resharper-host/DecompilerCache/decompiler/a11fb02b10e04f8883113b5389cc1b4fb85f8/11/84988e72/EntityFrameworkQueryableExtensions.cs" root0="SKIP_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/vali-flow/Builder/ValiFlow.cs" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/vali-flow/Classes/Base/BaseExpression.cs" root0="FORCE_HIGHLIGHTING" />
-    <setting file="mock:///Users/isw21/RiderProjects/vali-flow/vali-flow/Classes/Base/BaseExpression.cs" root0="SKIP_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/vali-flow/Classes/Types/StringExpression.cs" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/vali-flow/Interfaces/Types/IStringExpression.cs" root0="FORCE_HIGHLIGHTING" />
     <setting file="file:///usr/local/share/dotnet/sdk/7.0.410/Sdks/Microsoft.NET.Sdk/Sdk/Sdk.props" root0="FORCE_HIGHLIGHTING" />
@@ -110,6 +109,7 @@
       <workItem from="1739380275219" duration="1371000" />
       <workItem from="1739400518702" duration="883000" />
       <workItem from="1739570593135" duration="5031000" />
+      <workItem from="1740065391905" duration="8611000" />
     </task>
     <task id="LOCAL-00001" summary="-Creación de nueva estructura para el builder de expresiones para linq o fuentes de datos en general (ValiFlow).">
       <option name="closed" value="true" />
