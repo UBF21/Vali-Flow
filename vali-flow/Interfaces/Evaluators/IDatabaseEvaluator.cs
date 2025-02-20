@@ -1,5 +1,6 @@
 using System.Linq.Expressions;
 using System.Numerics;
+using vali_flow.Classes.Options;
 
 namespace vali_flow.Interfaces.Evaluators;
 
@@ -18,6 +19,7 @@ public interface IDatabaseEvaluator<T>
         IQueryable<T> query,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
         bool asNoTracking = false,
+        bool applyDynamicWhere = false,
         CancellationToken cancellationToken = default);
 
     Task<T?> GetFirstFailedAsync<TProperty>(
@@ -38,19 +40,19 @@ public interface IDatabaseEvaluator<T>
         int? pageSize = null,
         Expression<Func<T, TKey>>? orderBy = null,
         bool ascending = true,
-        Expression<Func<T, TKey>>? thenBy = null,
-        bool thenAscending = true,
+        List<ThenByDataBaseExpression<T, TKey>>? thenBys = null,
         bool asNoTracking = false,
-        IEnumerable<Expression<Func<T, TProperty>>>? includes = null);
+        IEnumerable<Expression<Func<T, TProperty>>>? includes = null)
+        where TKey : notnull;
 
     Task<IQueryable<T>> EvaluateAllAsync<TKey, TProperty>(
         IQueryable<T> query,
         Expression<Func<T, TKey>>? orderBy = null,
         bool ascending = true,
-        Expression<Func<T, TKey>>? thenBy = null,
-        bool thenAscending = true,
+        List<ThenByDataBaseExpression<T, TKey>>? thenBys = null,
         bool asNoTracking = false,
-        IEnumerable<Expression<Func<T, TProperty>>>? includes = null);
+        IEnumerable<Expression<Func<T, TProperty>>>? includes = null)
+        where TKey : notnull;
 
     Task<IQueryable<T>> EvaluatePagedAsync<TKey, TProperty>(
         IQueryable<T> query,
@@ -58,20 +60,20 @@ public interface IDatabaseEvaluator<T>
         int pageSize,
         Expression<Func<T, TKey>>? orderBy = null,
         bool ascending = true,
-        Expression<Func<T, TKey>>? thenBy = null,
-        bool thenAscending = true,
+        List<ThenByDataBaseExpression<T, TKey>>? thenBys = null,
         bool asNoTracking = false,
-        IEnumerable<Expression<Func<T, TProperty>>>? includes = null);
+        IEnumerable<Expression<Func<T, TProperty>>>? includes = null)
+        where TKey : notnull;
 
     Task<IQueryable<T>> EvaluateTopAsync<TKey, TProperty>(
         IQueryable<T> query,
         int count,
         Expression<Func<T, TKey>>? orderBy = null,
         bool ascending = true,
-        Expression<Func<T, TKey>>? thenBy = null,
-        bool thenAscending = true,
+        List<ThenByDataBaseExpression<T, TKey>>? thenBys = null,
         bool asNoTracking = false,
-        IEnumerable<Expression<Func<T, TProperty>>>? includes = null);
+        IEnumerable<Expression<Func<T, TProperty>>>? includes = null)
+        where TKey : notnull;
 
     Task<IQueryable<T>> EvaluateDistinctAsync<TKey, TProperty>(
         IQueryable<T> query,
@@ -80,10 +82,10 @@ public interface IDatabaseEvaluator<T>
         int? pageSize = null,
         Expression<Func<T, TKey>>? orderBy = null,
         bool ascending = true,
-        Expression<Func<T, TKey>>? thenBy = null,
-        bool thenAscending = true,
+        List<ThenByDataBaseExpression<T, TKey>>? thenBys = null,
         bool asNoTracking = false,
-        IEnumerable<Expression<Func<T, TProperty>>>? includes = null);
+        IEnumerable<Expression<Func<T, TProperty>>>? includes = null)
+        where TKey : notnull;
 
     Task<IQueryable<T>> EvaluateDuplicatesAsync<TKey, TProperty>(
         IQueryable<T> query,
@@ -92,16 +94,17 @@ public interface IDatabaseEvaluator<T>
         int? pageSize = null,
         Expression<Func<T, TKey>>? orderBy = null,
         bool ascending = true,
-        Expression<Func<T, TKey>>? thenBy = null,
-        bool thenAscending = true,
+        List<ThenByDataBaseExpression<T, TKey>>? thenBys = null,
         bool asNoTracking = false,
-        IEnumerable<Expression<Func<T, TProperty>>>? includes = null);
+        IEnumerable<Expression<Func<T, TProperty>>>? includes = null)
+        where TKey : notnull;
 
     Task<T?> GetLastFailedAsync<TKey, TProperty>(
         IQueryable<T> query,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
         bool asNoTracking = false,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default)
+        where TKey : notnull;
 
     Task<T?> GetLastAsync<TProperty>(
         IQueryable<T> query,
@@ -269,4 +272,10 @@ public interface IDatabaseEvaluator<T>
         bool asNoTracking = false,
         CancellationToken cancellationToken = default
     ) where TKey : notnull;
+
+    Task<IQueryable<T>> EvaluateQuery(
+        IQueryable<T> query,
+        bool applyDynamicWhere = false,
+        bool asNoTracking = false
+    );
 }

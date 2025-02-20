@@ -3,6 +3,7 @@ using System.Numerics;
 using vali_flow.Classes.Base;
 using vali_flow.Interfaces.Evaluators;
 using Microsoft.EntityFrameworkCore;
+using vali_flow.Classes.Options;
 using vali_flow.Utils;
 
 namespace vali_flow.Classes.Evaluators;
@@ -58,6 +59,7 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         IQueryable<T> query,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
         bool asNoTracking = false,
+        bool applyDynamicWhere = false,
         CancellationToken cancellationToken = default)
     {
         ValidationHelper.ValidateQueryNotNull(query);
@@ -69,7 +71,11 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
             query = ApplyIncludes(query, includes);
             query = ApplyAsNoTracking(query, asNoTracking);
 
-            return await query.CountAsync(condition, cancellationToken);
+            int result = applyDynamicWhere
+                ? await query.CountAsync(condition, cancellationToken)
+                : await query.CountAsync(cancellationToken);
+
+            return result;
         }
         catch (Exception ex)
         {
@@ -123,16 +129,16 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         }
     }
 
-    public Task<IQueryable<T>> EvaluateAllFailedAsync<TKey, TProperty>(
+    public async Task<IQueryable<T>> EvaluateAllFailedAsync<TKey, TProperty>(
         IQueryable<T> query,
         int? page = null,
         int? pageSize = null,
         Expression<Func<T, TKey>>? orderBy = null,
         bool ascending = true,
-        Expression<Func<T, TKey>>? thenBy = null,
-        bool thenAscending = true,
+        List<ThenByDataBaseExpression<T, TKey>>? thenBys = null,
         bool asNoTracking = false,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null)
+        where TKey : notnull
     {
         ValidationHelper.ValidateQueryNotNull(query);
 
@@ -140,13 +146,13 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         {
             Expression<Func<T, bool>> condition = _builder.BuildNegated();
 
+            query = query.Where(condition);
             query = ApplyIncludes(query, includes);
             query = ApplyAsNoTracking(query, asNoTracking);
-            query = query.Where(condition);
-            query = ApplyOrdering(query, orderBy, ascending, thenBy, thenAscending);
+            query = ApplyOrdering(query, orderBy, ascending, thenBys);
             query = ApplyPagination(query, page, pageSize);
 
-            return Task.FromResult(query);
+            return await Task.FromResult(query);
         }
         catch (Exception ex)
         {
@@ -158,10 +164,10 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         IQueryable<T> query,
         Expression<Func<T, TKey>>? orderBy = null,
         bool ascending = true,
-        Expression<Func<T, TKey>>? thenBy = null,
-        bool thenAscending = true,
+        List<ThenByDataBaseExpression<T, TKey>>? thenBys = null,
         bool asNoTracking = false,
-        IEnumerable<Expression<Func<T, TProperty>>>? includes = null)
+        IEnumerable<Expression<Func<T, TProperty>>>? includes = null
+    ) where TKey : notnull
     {
         ValidationHelper.ValidateQueryNotNull(query);
 
@@ -169,10 +175,10 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         {
             Expression<Func<T, bool>> condition = _builder.Build();
 
+            query = query.Where(condition);
             query = ApplyIncludes(query, includes);
             query = ApplyAsNoTracking(query, asNoTracking);
-            query = query.Where(condition);
-            query = ApplyOrdering(query, orderBy, ascending, thenBy, thenAscending);
+            query = ApplyOrdering(query, orderBy, ascending, thenBys);
 
             return await Task.FromResult(query);
         }
@@ -188,10 +194,10 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         int pageSize,
         Expression<Func<T, TKey>>? orderBy = null,
         bool ascending = true,
-        Expression<Func<T, TKey>>? thenBy = null,
-        bool thenAscending = true,
+        List<ThenByDataBaseExpression<T, TKey>>? thenBys = null,
         bool asNoTracking = false,
-        IEnumerable<Expression<Func<T, TProperty>>>? includes = null)
+        IEnumerable<Expression<Func<T, TProperty>>>? includes = null
+    ) where TKey : notnull
     {
         ValidationHelper.ValidateQueryNotNull(query);
         ValidationHelper.ValidatePageZero(page);
@@ -201,10 +207,10 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         {
             Expression<Func<T, bool>> condition = _builder.Build();
 
+            query = query.Where(condition);
             query = ApplyIncludes(query, includes);
             query = ApplyAsNoTracking(query, asNoTracking);
-            query = query.Where(condition);
-            query = ApplyOrdering(query, orderBy, ascending, thenBy, thenAscending);
+            query = ApplyOrdering(query, orderBy, ascending, thenBys);
             query = query.Skip((page - ConstantsHelper.One) * pageSize).Take(pageSize);
 
             return await Task.FromResult(query);
@@ -220,10 +226,10 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         int count,
         Expression<Func<T, TKey>>? orderBy = null,
         bool ascending = true,
-        Expression<Func<T, TKey>>? thenBy = null,
-        bool thenAscending = true,
+        List<ThenByDataBaseExpression<T, TKey>>? thenBys = null,
         bool asNoTracking = false,
-        IEnumerable<Expression<Func<T, TProperty>>>? includes = null)
+        IEnumerable<Expression<Func<T, TProperty>>>? includes = null
+    ) where TKey : notnull
     {
         ValidationHelper.ValidateQueryNotNull(query);
         ValidationHelper.ValidateCountZero(count);
@@ -235,7 +241,7 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
             query = ApplyIncludes(query, includes);
             query = ApplyAsNoTracking(query, asNoTracking);
             query = query.Where(condition);
-            query = ApplyOrdering(query, orderBy, ascending, thenBy, thenAscending);
+            query = ApplyOrdering(query, orderBy, ascending, thenBys);
             query = query.Take(count);
 
             return await Task.FromResult(query);
@@ -253,10 +259,10 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         int? pageSize = null,
         Expression<Func<T, TKey>>? orderBy = null,
         bool ascending = true,
-        Expression<Func<T, TKey>>? thenBy = null,
-        bool thenAscending = true,
+        List<ThenByDataBaseExpression<T, TKey>>? thenBys = null,
         bool asNoTracking = false,
-        IEnumerable<Expression<Func<T, TProperty>>>? includes = null)
+        IEnumerable<Expression<Func<T, TProperty>>>? includes = null
+    ) where TKey : notnull
     {
         ValidationHelper.ValidateQueryNotNull(query);
 
@@ -270,7 +276,7 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
 
             IQueryable<T> distinctQuery = query.GroupBy(selector).Select(g => g.First());
 
-            distinctQuery = ApplyOrdering(distinctQuery, orderBy, ascending, thenBy, thenAscending);
+            distinctQuery = ApplyOrdering(distinctQuery, orderBy, ascending, thenBys);
             distinctQuery = ApplyPagination(distinctQuery, page, pageSize);
 
             return await Task.FromResult(distinctQuery);
@@ -288,10 +294,10 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         int? pageSize = null,
         Expression<Func<T, TKey>>? orderBy = null,
         bool ascending = true,
-        Expression<Func<T, TKey>>? thenBy = null,
-        bool thenAscending = true,
+        List<ThenByDataBaseExpression<T, TKey>>? thenBys = null,
         bool asNoTracking = false,
-        IEnumerable<Expression<Func<T, TProperty>>>? includes = null)
+        IEnumerable<Expression<Func<T, TProperty>>>? includes = null
+    ) where TKey : notnull
     {
         ValidationHelper.ValidateQueryNotNull(query);
 
@@ -307,7 +313,7 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
                 .Where(g => g.Count() > 1)
                 .SelectMany(g => g);
 
-            duplicatesQuery = ApplyOrdering(duplicatesQuery, orderBy, ascending, thenBy, thenAscending);
+            duplicatesQuery = ApplyOrdering(duplicatesQuery, orderBy, ascending, thenBys);
             duplicatesQuery = ApplyPagination(duplicatesQuery, page, pageSize);
 
             return await Task.FromResult(duplicatesQuery);
@@ -323,7 +329,8 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         IQueryable<T> query,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
         bool asNoTracking = false,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default
+    ) where TKey : notnull
     {
         ValidationHelper.ValidateQueryNotNull(query);
 
@@ -915,13 +922,36 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
                 g =>
                 {
                     List<T> items = g.ToList();
+
                     if (orderBy != null)
                         items = (ascending ? items.OrderBy(orderBy) : items.OrderByDescending(orderBy)).ToList();
+
                     return items.Take(count).ToList();
                 }
             );
 
             return result;
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException($"Error evaluating {UtilHelper.GetCurrentMethodName()}.", ex);
+        }
+    }
+
+    public async Task<IQueryable<T>> EvaluateQuery(
+        IQueryable<T> query,
+        bool applyDynamicWhere = false,
+        bool asNoTracking = false
+    )
+    {
+        ValidationHelper.ValidateQueryNotNull(query);
+
+        try
+        {
+            Expression<Func<T, bool>> condition = _builder.Build();
+            query = ApplyAsNoTracking(query, asNoTracking);
+            query = applyDynamicWhere ? query.Where(condition) : query;
+            return await Task.FromResult(query);
         }
         catch (Exception ex)
         {
@@ -981,30 +1011,29 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
     /// <param name="query">The original query.</param>
     /// <param name="orderBy">The primary ordering expression. If null, no ordering is applied.</param>
     /// <param name="ascending">Determines if the primary ordering is ascending.</param>
-    /// <param name="thenBy">The secondary ordering expression. If null, no secondary ordering is applied.</param>
-    /// <param name="thenAscending">Determines if the secondary ordering is ascending.</param>
+    /// <param name="thenBys">The secondary ordering expression. If null, no secondary ordering is applied.</param>
     /// <returns>An <see cref="IQueryable{T}"/> with the specified ordering applied.</returns>
     private IQueryable<T> ApplyOrdering<TKey>(
         IQueryable<T> query,
         Expression<Func<T, TKey>>? orderBy,
         bool ascending,
-        Expression<Func<T, TKey>>? thenBy,
-        bool thenAscending)
+        List<ThenByDataBaseExpression<T, TKey>>? thenBys)
     {
-        if (orderBy == null)
-        {
-            return query;
-        }
+        if (orderBy == null) return query;
 
         IOrderedQueryable<T> orderedQuery = ascending
             ? query.OrderBy(orderBy)
             : query.OrderByDescending(orderBy);
 
-        if (thenBy != null)
+        if (thenBys != null && thenBys.Any())
         {
-            orderedQuery = thenAscending
-                ? orderedQuery.ThenBy(thenBy)
-                : orderedQuery.ThenByDescending(thenBy);
+            orderedQuery = thenBys.Aggregate(
+                orderedQuery,
+                (currentOrderedQuery, thenByExpression) =>
+                    thenByExpression.Ascending
+                        ? currentOrderedQuery.ThenBy(thenByExpression.ThenBy)
+                        : currentOrderedQuery.ThenByDescending(thenByExpression.ThenBy)
+            );
         }
 
         return orderedQuery;

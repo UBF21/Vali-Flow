@@ -95,8 +95,7 @@ public class InMemoryEvaluator<TBuilder, T> : IInMemoryEvaluator<T>
             Func<T, bool> condition = _builder.BuildNegated().Compile();
 
             List<T> failedEntities = enumerable.Where(condition).ToList();
-            IOrderedEnumerable<T> orderedEntities =
-                ApplyOrdering(failedEntities, orderBy, ascending, thenBy, thenAscending);
+            IOrderedEnumerable<T> orderedEntities = ApplyOrdering(failedEntities, orderBy, ascending, thenBy, thenAscending);
 
             return orderedEntities;
 
@@ -120,7 +119,8 @@ public class InMemoryEvaluator<TBuilder, T> : IInMemoryEvaluator<T>
         {
             Func<T, bool> condition = _builder.Build().Compile();
 
-            List<T> passedEntities = enumerable.Where(entity => condition(entity)).ToList();
+            List<T> passedEntities = enumerable.Where(condition).ToList();
+            
             IOrderedEnumerable<T> orderedEntities = ApplyOrdering(passedEntities, orderBy, ascending, thenBy, thenAscending);
 
             return orderedEntities;
@@ -226,7 +226,10 @@ public class InMemoryEvaluator<TBuilder, T> : IInMemoryEvaluator<T>
 
         try
         {
+            Func<T, bool> condition = _builder.Build().Compile();
+
             return enumerable
+                .Where(condition)
                 .GroupBy(selector)
                 .Where(group => group.Count() > ConstantsHelper.One)
                 .SelectMany(group => group);
@@ -306,8 +309,10 @@ public class InMemoryEvaluator<TBuilder, T> : IInMemoryEvaluator<T>
         }
     }
 
-    public TResult EvaluateMin<TResult>(IEnumerable<T> entities, Func<T, TResult> selector)
-        where TResult : INumber<TResult>
+    public TResult EvaluateMin<TResult>(
+        IEnumerable<T> entities, 
+        Func<T, TResult> selector
+        ) where TResult : INumber<TResult>
     {
         try
         {
@@ -326,9 +331,10 @@ public class InMemoryEvaluator<TBuilder, T> : IInMemoryEvaluator<T>
         }
     }
 
-    public TResult EvaluateMax<TResult>(IEnumerable<T> entities, Func<T, TResult> selector)
-        where TResult : INumber<TResult>
-
+    public TResult EvaluateMax<TResult>(
+        IEnumerable<T> entities, 
+        Func<T, TResult> selector
+        ) where TResult : INumber<TResult>
     {
         try
         {
@@ -347,8 +353,10 @@ public class InMemoryEvaluator<TBuilder, T> : IInMemoryEvaluator<T>
         }
     }
 
-    public decimal EvaluateAverage<TResult>(IEnumerable<T> entities, Func<T, TResult> selector)
-        where TResult : INumber<TResult>
+    public decimal EvaluateAverage<TResult>(
+        IEnumerable<T> entities, 
+        Func<T, TResult> selector
+        ) where TResult : INumber<TResult>
     {
         try
         {
@@ -371,15 +379,17 @@ public class InMemoryEvaluator<TBuilder, T> : IInMemoryEvaluator<T>
         }
     }
 
-    public TResult EvaluateSum<TResult>(IEnumerable<T> entities, Func<T, TResult> selector)
-        where TResult : INumber<TResult>
+    public TResult EvaluateSum<TResult>(
+        IEnumerable<T> entities, 
+        Func<T, TResult> selector
+        ) where TResult : INumber<TResult>
     {
         try
         {
-            Func<T, bool> compiledCondition = _builder.Build().Compile();
+            Func<T, bool> condition = _builder.Build().Compile();
 
             List<TResult> projectedValues = entities
-                .Where(entity => compiledCondition(entity))
+                .Where(condition)
                 .Select(selector)
                 .ToList();
 
@@ -557,10 +567,10 @@ public class InMemoryEvaluator<TBuilder, T> : IInMemoryEvaluator<T>
     {
         try
         {
-            Func<T, bool> compiledCondition = _builder.Build().Compile();
+            Func<T, bool> condition = _builder.Build().Compile();
             
             return entities
-                .Where(e => compiledCondition(e))
+                .Where(condition)
                 .GroupBy(keySelector)
                 .Where(g => g.Count() > ConstantsHelper.One)
                 .ToDictionary(g => g.Key, g => g.ToList());
@@ -578,10 +588,10 @@ public class InMemoryEvaluator<TBuilder, T> : IInMemoryEvaluator<T>
     {
         try
         {
-            Func<T, bool> compiledCondition = _builder.Build().Compile();
+            Func<T, bool> condition = _builder.Build().Compile();
             
             return entities
-                .Where(compiledCondition)
+                .Where(condition)
                 .GroupBy(keySelector)
                 .Where(g => g.Count() == ConstantsHelper.One)
                 .ToDictionary(g => g.Key, g => g.First());
