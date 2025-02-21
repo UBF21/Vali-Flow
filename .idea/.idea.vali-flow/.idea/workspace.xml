@@ -9,9 +9,9 @@
   <component name="ChangeListManager">
     <list default="true" id="aa4fc315-c37b-4ab3-b9cc-02a55a2255c8" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/.idea.vali-flow/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.vali-flow/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/vali-flow/Classes/Evaluators/DatabaseEvaluator.cs" beforeDir="false" afterPath="$PROJECT_DIR$/vali-flow/Classes/Evaluators/DatabaseEvaluator.cs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/vali-flow/Classes/Evaluators/InMemoryEvaluator.cs" beforeDir="false" afterPath="$PROJECT_DIR$/vali-flow/Classes/Evaluators/InMemoryEvaluator.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/vali-flow/Interfaces/Evaluators/IDatabaseEvaluator.cs" beforeDir="false" afterPath="$PROJECT_DIR$/vali-flow/Interfaces/Evaluators/IDatabaseEvaluator.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/vali-flow/Classes/Options/ThenByDataBaseExpression.cs" beforeDir="false" afterPath="$PROJECT_DIR$/vali-flow/Classes/Options/ThenByDataBaseExpression.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/vali-flow/Classes/Options/ThenByInMemoryExpression.cs" beforeDir="false" afterPath="$PROJECT_DIR$/vali-flow/Classes/Options/ThenByInMemoryExpression.cs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/vali-flow/Interfaces/Evaluators/IInMemoryEvaluator.cs" beforeDir="false" afterPath="$PROJECT_DIR$/vali-flow/Interfaces/Evaluators/IInMemoryEvaluator.cs" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -41,7 +41,10 @@
     <setting file="file://$APPLICATION_CONFIG_DIR$/resharper-host/DecompilerCache/decompiler/a11fb02b10e04f8883113b5389cc1b4fb85f8/11/84988e72/EntityFrameworkQueryableExtensions.cs" root0="SKIP_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/vali-flow/Builder/ValiFlow.cs" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/vali-flow/Classes/Base/BaseExpression.cs" root0="FORCE_HIGHLIGHTING" />
+    <setting file="mock:///Users/isw21/RiderProjects/vali-flow/vali-flow/Classes/Evaluators/DatabaseEvaluator.cs" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///Users/isw21/RiderProjects/vali-flow/vali-flow/Classes/Evaluators/InMemoryEvaluator.cs" root0="SKIP_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/vali-flow/Classes/Types/StringExpression.cs" root0="FORCE_HIGHLIGHTING" />
+    <setting file="mock:///Users/isw21/RiderProjects/vali-flow/vali-flow/Interfaces/Evaluators/IDatabaseEvaluator.cs" root0="SKIP_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/vali-flow/Interfaces/Types/IStringExpression.cs" root0="FORCE_HIGHLIGHTING" />
     <setting file="file:///usr/local/share/dotnet/sdk/7.0.410/Sdks/Microsoft.NET.Sdk/Sdk/Sdk.props" root0="FORCE_HIGHLIGHTING" />
     <setting file="file:///usr/local/share/dotnet/sdk/7.0.410/Sdks/Microsoft.NET.Sdk/Sdk/Sdk.targets" root0="FORCE_HIGHLIGHTING" />
@@ -107,6 +110,8 @@
       <workItem from="1739400518702" duration="883000" />
       <workItem from="1739570593135" duration="5031000" />
       <workItem from="1740065391905" duration="8611000" />
+      <workItem from="1740095267838" duration="2086000" />
+      <workItem from="1740147570812" duration="4313000" />
     </task>
     <task id="LOCAL-00001" summary="-Creación de nueva estructura para el builder de expresiones para linq o fuentes de datos en general (ValiFlow).">
       <option name="closed" value="true" />
@@ -140,7 +145,23 @@
       <option name="project" value="LOCAL" />
       <updated>1739381231695</updated>
     </task>
-    <option name="localTasksCounter" value="5" />
+    <task id="LOCAL-00005" summary="- Mejora de los métodos de BD y Memoria y mejora de parámetro ThenBy para que sea una colección.&#10;&#10;-Manejar si desea usar el where creado dinámicamente o pasarle uno propio.">
+      <option name="closed" value="true" />
+      <created>1740095373570</created>
+      <option name="number" value="00005" />
+      <option name="presentableId" value="LOCAL-00005" />
+      <option name="project" value="LOCAL" />
+      <updated>1740095373570</updated>
+    </task>
+    <task id="LOCAL-00006" summary="correción.">
+      <option name="closed" value="true" />
+      <created>1740095390529</created>
+      <option name="number" value="00006" />
+      <option name="presentableId" value="LOCAL-00006" />
+      <option name="project" value="LOCAL" />
+      <updated>1740095390529</updated>
+    </task>
+    <option name="localTasksCounter" value="7" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -154,7 +175,9 @@
     <MESSAGE value="- Terminando de documentar la librería." />
     <MESSAGE value="-Agregando la configuración para documentación e información del paquete nugget vali-flow.&#10;&#10;-Agregando logo del paquete nuget." />
     <MESSAGE value="- Agregando nuevo método para IStringExpression.cs el cual permite crear n cantidad de expresiones basado a un value se buscará en una n cantidad de propiedades que se indiquen.&#10;&#10;-Nuevo logo." />
-    <option name="LAST_COMMIT_MESSAGE" value="- Agregando nuevo método para IStringExpression.cs el cual permite crear n cantidad de expresiones basado a un value se buscará en una n cantidad de propiedades que se indiquen.&#10;&#10;-Nuevo logo." />
+    <MESSAGE value="- Mejora de los métodos de BD y Memoria y mejora de parámetro ThenBy para que sea una colección.&#10;&#10;-Manejar si desea usar el where creado dinámicamente o pasarle uno propio." />
+    <MESSAGE value="correción." />
+    <option name="LAST_COMMIT_MESSAGE" value="correción." />
   </component>
   <component name="XSLT-Support.FileAssociations.UIState">
     <expand />
