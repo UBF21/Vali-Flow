@@ -8,14 +8,11 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="aa4fc315-c37b-4ab3-b9cc-02a55a2255c8" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/vali-flow/Classes/Options/ThenByDataBaseExpression.cs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/vali-flow/Classes/Options/ThenByInMemoryExpression.cs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/.idea.vali-flow/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.vali-flow/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/vali-flow/Classes/Base/Grouping.cs" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/vali-flow/Classes/Evaluators/DatabaseEvaluator.cs" beforeDir="false" afterPath="$PROJECT_DIR$/vali-flow/Classes/Evaluators/DatabaseEvaluator.cs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/vali-flow/Classes/Evaluators/InMemoryEvaluator.cs" beforeDir="false" afterPath="$PROJECT_DIR$/vali-flow/Classes/Evaluators/InMemoryEvaluator.cs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/vali-flow/Interfaces/Evaluators/IDatabaseEvaluator.cs" beforeDir="false" afterPath="$PROJECT_DIR$/vali-flow/Interfaces/Evaluators/IDatabaseEvaluator.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/vali-flow/Utils/Utils.cs" beforeDir="false" afterPath="$PROJECT_DIR$/vali-flow/Utils/UtilHelper.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/vali-flow/Interfaces/Evaluators/IInMemoryEvaluator.cs" beforeDir="false" afterPath="$PROJECT_DIR$/vali-flow/Interfaces/Evaluators/IInMemoryEvaluator.cs" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -158,5 +155,9 @@
     <MESSAGE value="-Agregando la configuración para documentación e información del paquete nugget vali-flow.&#10;&#10;-Agregando logo del paquete nuget." />
     <MESSAGE value="- Agregando nuevo método para IStringExpression.cs el cual permite crear n cantidad de expresiones basado a un value se buscará en una n cantidad de propiedades que se indiquen.&#10;&#10;-Nuevo logo." />
     <option name="LAST_COMMIT_MESSAGE" value="- Agregando nuevo método para IStringExpression.cs el cual permite crear n cantidad de expresiones basado a un value se buscará en una n cantidad de propiedades que se indiquen.&#10;&#10;-Nuevo logo." />
+  </component>
+  <component name="XSLT-Support.FileAssociations.UIState">
+    <expand />
+    <select />
   </component>
 </project>
