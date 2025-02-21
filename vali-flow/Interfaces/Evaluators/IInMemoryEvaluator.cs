@@ -16,13 +16,15 @@ public interface IInMemoryEvaluator<T>
         IEnumerable<T> entities,
         Func<T, TKey>? orderBy = null,
         bool ascending = true,
-        List<ThenByInMemoryExpression<T, TKey>>? thenBys = null);
+        List<ThenByInMemoryExpression<T, TKey>>? thenBys = null,
+        bool applyDynamicWhere = true);
 
     IEnumerable<T> EvaluateAll<TKey>(
         IEnumerable<T> entities,
         Func<T, TKey>? orderBy = null,
         bool ascending = true,
-        List<ThenByInMemoryExpression<T, TKey>>? thenBys = null);
+        List<ThenByInMemoryExpression<T, TKey>>? thenBys = null,
+        bool applyDynamicWhere = true);
 
     IEnumerable<T> EvaluatePaged<TKey>(
         IEnumerable<T> entities,
@@ -30,52 +32,60 @@ public interface IInMemoryEvaluator<T>
         int pageSize,
         Func<T, TKey>? orderBy = null,
         bool ascending = true,
-        List<ThenByInMemoryExpression<T, TKey>>? thenBys = null);
+        List<ThenByInMemoryExpression<T, TKey>>? thenBys = null,
+        bool applyDynamicWhere = true);
 
     IEnumerable<T> EvaluateTop<TKey>(
         IEnumerable<T> entities,
         int count,
         Func<T, TKey>? orderBy = null,
         bool ascending = true,
-        List<ThenByInMemoryExpression<T, TKey>>? thenBys = null);
+        List<ThenByInMemoryExpression<T, TKey>>? thenBys = null,
+        bool applyDynamicWhere = true);
 
     IEnumerable<T> EvaluateDistinct<TKey>(
-        IEnumerable<T> entities, 
+        IEnumerable<T> entities,
         Func<T, TKey> selector,
         Func<T, TKey>? orderBy = null,
         bool ascending = true,
-        List<ThenByInMemoryExpression<T, TKey>>? thenBys = null);
+        List<ThenByInMemoryExpression<T, TKey>>? thenBys = null,
+        bool applyDynamicWhere = true);
 
     IEnumerable<T> EvaluateDuplicates<TKey>(
-        IEnumerable<T> entities, 
+        IEnumerable<T> entities,
         Func<T, TKey> selector,
         Func<T, TKey>? orderBy = null,
         bool ascending = true,
-        List<ThenByInMemoryExpression<T, TKey>>? thenBys = null);
+        List<ThenByInMemoryExpression<T, TKey>>? thenBys = null,
+        bool applyDynamicWhere = true);
 
     int GetFirstMatchIndex<TKey>(
-        IEnumerable<T> entities,   
+        IEnumerable<T> entities,
         Func<T, TKey>? orderBy = null,
         bool ascending = true,
-        List<ThenByInMemoryExpression<T, TKey>>? thenBys = null);
+        List<ThenByInMemoryExpression<T, TKey>>? thenBys = null,
+        bool applyDynamicWhere = true);
 
     int GetLastMatchIndex<TKey>(
         IEnumerable<T> entities,
         Func<T, TKey>? orderBy = null,
         bool ascending = true,
-        List<ThenByInMemoryExpression<T, TKey>>? thenBys = null);
+        List<ThenByInMemoryExpression<T, TKey>>? thenBys = null,
+        bool applyDynamicWhere = true);
 
     T? GetLastFailed<TKey>(
         IEnumerable<T> entities,
         Func<T, TKey>? orderBy = null,
         bool ascending = true,
-        List<ThenByInMemoryExpression<T, TKey>>? thenBys = null);
+        List<ThenByInMemoryExpression<T, TKey>>? thenBys = null,
+        bool applyDynamicWhere = true);
 
     T? GetLast<TKey>(
         IEnumerable<T> entities,
         Func<T, TKey>? orderBy = null,
         bool ascending = true,
-        List<ThenByInMemoryExpression<T, TKey>>? thenBys = null);
+        List<ThenByInMemoryExpression<T, TKey>>? thenBys = null,
+        bool applyDynamicWhere = true);
 
     TResult EvaluateMin<TResult>(IEnumerable<T> entities, Func<T, TResult> selector)
         where TResult : INumber<TResult>;

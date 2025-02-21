@@ -103,7 +103,8 @@ public class InMemoryEvaluator<TBuilder, T> : IInMemoryEvaluator<T>
         IEnumerable<T> entities,
         Func<T, TKey>? orderBy = null,
         bool ascending = true,
-        List<ThenByInMemoryExpression<T, TKey>>? thenBys = null
+        List<ThenByInMemoryExpression<T, TKey>>? thenBys = null,
+        bool applyDynamicWhere = true
     )
     {
         List<T> enumerable = entities.ToList();
@@ -112,7 +113,7 @@ public class InMemoryEvaluator<TBuilder, T> : IInMemoryEvaluator<T>
         {
             Func<T, bool> condition = _builder.BuildNegated().Compile();
 
-            List<T> failedEntities = enumerable.Where(condition).ToList();
+            List<T> failedEntities = applyDynamicWhere ? enumerable.Where(condition).ToList() : enumerable.ToList();
             IOrderedEnumerable<T> orderedEntities = ApplyOrdering(failedEntities, orderBy, ascending, thenBys);
 
             return orderedEntities;
@@ -128,7 +129,8 @@ public class InMemoryEvaluator<TBuilder, T> : IInMemoryEvaluator<T>
         IEnumerable<T> entities,
         Func<T, TKey>? orderBy = null,
         bool ascending = true,
-        List<ThenByInMemoryExpression<T, TKey>>? thenBys = null
+        List<ThenByInMemoryExpression<T, TKey>>? thenBys = null,
+        bool applyDynamicWhere = true
     )
     {
         List<T> enumerable = entities.ToList();
@@ -137,7 +139,7 @@ public class InMemoryEvaluator<TBuilder, T> : IInMemoryEvaluator<T>
         {
             Func<T, bool> condition = _builder.Build().Compile();
 
-            List<T> passedEntities = enumerable.Where(condition).ToList();
+            List<T> passedEntities = applyDynamicWhere ? enumerable.Where(condition).ToList() : enumerable.ToList();
             IOrderedEnumerable<T> orderedEntities = ApplyOrdering(passedEntities, orderBy, ascending, thenBys);
 
             return orderedEntities;
@@ -155,7 +157,8 @@ public class InMemoryEvaluator<TBuilder, T> : IInMemoryEvaluator<T>
         int pageSize,
         Func<T, TKey>? orderBy = null,
         bool ascending = true,
-        List<ThenByInMemoryExpression<T, TKey>>? thenBys = null
+        List<ThenByInMemoryExpression<T, TKey>>? thenBys = null,
+        bool applyDynamicWhere = true
     )
     {
         List<T> enumerable = entities.ToList();
@@ -167,7 +170,7 @@ public class InMemoryEvaluator<TBuilder, T> : IInMemoryEvaluator<T>
         {
             Func<T, bool> condition = _builder.Build().Compile();
 
-            IEnumerable<T> filteredEntities = enumerable.Where(condition);
+            IEnumerable<T> filteredEntities = applyDynamicWhere ? enumerable.Where(condition) : enumerable.ToList();
             IOrderedEnumerable<T> orderedEntities = ApplyOrdering(filteredEntities, orderBy, ascending, thenBys);
 
             IEnumerable<T> pagedEntities = orderedEntities
@@ -188,7 +191,8 @@ public class InMemoryEvaluator<TBuilder, T> : IInMemoryEvaluator<T>
         int count,
         Func<T, TKey>? orderBy = null,
         bool ascending = true,
-        List<ThenByInMemoryExpression<T, TKey>>? thenBys = null
+        List<ThenByInMemoryExpression<T, TKey>>? thenBys = null,
+        bool applyDynamicWhere = true
     )
     {
         List<T> enumerable = entities.ToList();
@@ -199,7 +203,8 @@ public class InMemoryEvaluator<TBuilder, T> : IInMemoryEvaluator<T>
         {
             Func<T, bool> condition = _builder.Build().Compile();
 
-            IEnumerable<T> filteredEntities = enumerable.Where(condition).ToList();
+            IEnumerable<T> filteredEntities =
+                applyDynamicWhere ? enumerable.Where(condition).ToList() : enumerable.ToList();
             IOrderedEnumerable<T> orderedEntities = ApplyOrdering(filteredEntities, orderBy, ascending, thenBys);
 
             return orderedEntities.Take(count);
@@ -216,7 +221,8 @@ public class InMemoryEvaluator<TBuilder, T> : IInMemoryEvaluator<T>
         Func<T, TKey> selector,
         Func<T, TKey>? orderBy = null,
         bool ascending = true,
-        List<ThenByInMemoryExpression<T, TKey>>? thenBys = null
+        List<ThenByInMemoryExpression<T, TKey>>? thenBys = null,
+        bool applyDynamicWhere = true
     )
     {
         List<T> enumerable = entities.ToList();
@@ -228,7 +234,7 @@ public class InMemoryEvaluator<TBuilder, T> : IInMemoryEvaluator<T>
         {
             Func<T, bool> condition = _builder.Build().Compile();
 
-            IEnumerable<T> filteredEntities = enumerable.Where(condition);
+            IEnumerable<T> filteredEntities = applyDynamicWhere ? enumerable.Where(condition) : enumerable.ToList();
 
             IOrderedEnumerable<T> orderedEntities = ApplyOrdering(filteredEntities, orderBy, ascending, thenBys);
 
@@ -248,7 +254,8 @@ public class InMemoryEvaluator<TBuilder, T> : IInMemoryEvaluator<T>
         Func<T, TKey> selector,
         Func<T, TKey>? orderBy = null,
         bool ascending = true,
-        List<ThenByInMemoryExpression<T, TKey>>? thenBys = null
+        List<ThenByInMemoryExpression<T, TKey>>? thenBys = null,
+        bool applyDynamicWhere = true
     )
     {
         List<T> enumerable = entities.ToList();
@@ -260,7 +267,7 @@ public class InMemoryEvaluator<TBuilder, T> : IInMemoryEvaluator<T>
         {
             Func<T, bool> condition = _builder.Build().Compile();
 
-            IEnumerable<T> filteredEntities = enumerable.Where(condition);
+            IEnumerable<T> filteredEntities = applyDynamicWhere ? enumerable.Where(condition) : enumerable.ToList();
             IOrderedEnumerable<T> orderedEntities = ApplyOrdering(filteredEntities, orderBy, ascending, thenBys);
 
             return orderedEntities
@@ -279,7 +286,8 @@ public class InMemoryEvaluator<TBuilder, T> : IInMemoryEvaluator<T>
         IEnumerable<T> entities,
         Func<T, TKey>? orderBy = null,
         bool ascending = true,
-        List<ThenByInMemoryExpression<T, TKey>>? thenBys = null
+        List<ThenByInMemoryExpression<T, TKey>>? thenBys = null,
+        bool applyDynamicWhere = true
     )
     {
         try
@@ -288,11 +296,14 @@ public class InMemoryEvaluator<TBuilder, T> : IInMemoryEvaluator<T>
 
             IEnumerable<T> orderedEntities = ApplyOrdering(entities, orderBy, ascending, thenBys);
 
-            var firstMatch = orderedEntities // Use orderedEntities here
-                .Select((entity, index) => new { Entity = entity, Index = index })
-                .FirstOrDefault(x => condition(x.Entity));
+            var firstMatch = orderedEntities
+                .Select((entity, index) => new { Entity = entity, Index = index }).ToList();
 
-            return firstMatch?.Index ?? -ConstantsHelper.One;
+            var result = applyDynamicWhere
+                ? firstMatch.FirstOrDefault(x => condition(x.Entity))
+                : firstMatch.FirstOrDefault();
+
+            return result?.Index ?? -ConstantsHelper.One;
         }
         catch (Exception ex)
         {
@@ -305,7 +316,8 @@ public class InMemoryEvaluator<TBuilder, T> : IInMemoryEvaluator<T>
         IEnumerable<T> entities,
         Func<T, TKey>? orderBy = null,
         bool ascending = true,
-        List<ThenByInMemoryExpression<T, TKey>>? thenBys = null
+        List<ThenByInMemoryExpression<T, TKey>>? thenBys = null,
+        bool applyDynamicWhere = true
     )
     {
         try
@@ -315,10 +327,13 @@ public class InMemoryEvaluator<TBuilder, T> : IInMemoryEvaluator<T>
             IEnumerable<T> orderedEntities = ApplyOrdering(entities, orderBy, ascending, thenBys);
 
             var lastMatch = orderedEntities
-                .Select((entity, index) => new { Entity = entity, Index = index })
-                .LastOrDefault(x => condition(x.Entity));
+                .Select((entity, index) => new { Entity = entity, Index = index }).ToList();
 
-            return lastMatch?.Index ?? -ConstantsHelper.One;
+            var result = applyDynamicWhere
+                ? lastMatch.LastOrDefault(x => condition(x.Entity))
+                : lastMatch.LastOrDefault();
+
+            return result?.Index ?? -ConstantsHelper.One;
         }
         catch (Exception ex)
         {
@@ -331,7 +346,8 @@ public class InMemoryEvaluator<TBuilder, T> : IInMemoryEvaluator<T>
         IEnumerable<T> entities,
         Func<T, TKey>? orderBy = null,
         bool ascending = true,
-        List<ThenByInMemoryExpression<T, TKey>>? thenBys = null
+        List<ThenByInMemoryExpression<T, TKey>>? thenBys = null,
+        bool applyDynamicWhere = true
     )
     {
         List<T> enumerable = entities.ToList();
@@ -342,7 +358,7 @@ public class InMemoryEvaluator<TBuilder, T> : IInMemoryEvaluator<T>
 
             IEnumerable<T> orderedEntities = ApplyOrdering(enumerable, orderBy, ascending, thenBys);
 
-            return enumerable.LastOrDefault(condition);
+            return applyDynamicWhere ? orderedEntities.LastOrDefault(condition) : orderedEntities.LastOrDefault();
         }
         catch (Exception ex)
         {
@@ -355,7 +371,8 @@ public class InMemoryEvaluator<TBuilder, T> : IInMemoryEvaluator<T>
         IEnumerable<T> entities,
         Func<T, TKey>? orderBy = null,
         bool ascending = true,
-        List<ThenByInMemoryExpression<T, TKey>>? thenBys = null
+        List<ThenByInMemoryExpression<T, TKey>>? thenBys = null,
+        bool applyDynamicWhere = true
     )
     {
         List<T> enumerable = entities.ToList();
@@ -366,7 +383,7 @@ public class InMemoryEvaluator<TBuilder, T> : IInMemoryEvaluator<T>
 
             IEnumerable<T> orderedEntities = ApplyOrdering(enumerable, orderBy, ascending, thenBys);
 
-            return enumerable.LastOrDefault(condition);
+            return applyDynamicWhere ? orderedEntities.LastOrDefault(condition) : orderedEntities.LastOrDefault();
         }
         catch (Exception ex)
         {
