@@ -4,6 +4,7 @@ using vali_flow.Classes.Base;
 using vali_flow.Interfaces.Evaluators;
 using Microsoft.EntityFrameworkCore;
 using vali_flow.Classes.Options;
+using vali_flow.Classes.Results;
 using vali_flow.Utils;
 
 namespace vali_flow.Classes.Evaluators;
@@ -953,6 +954,22 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         {
             throw new InvalidOperationException($"Error evaluating {UtilHelper.GetCurrentMethodName()}.", ex);
         }
+    }
+
+    public Task<PaginatedBlockResult<T>> GetPaginatedBlockAsync<TKey,TProperty>(
+        IQueryable<T> query,
+        int blockSize = 10000,
+        int page = 1,
+        int pageSize = 100,
+        Expression<Func<T, TKey>>? orderBy = null,
+        bool ascending = true,
+        List<ThenByDataBaseExpression<T, TKey>>? thenBys = null,
+        bool asNoTracking = false,
+        IEnumerable<Expression<Func<T, TProperty>>>? includes = null
+    )
+        where TKey : notnull
+    {
+        throw new NotImplementedException();
     }
 
     #region Private

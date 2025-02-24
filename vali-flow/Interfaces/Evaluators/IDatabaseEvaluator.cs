@@ -1,6 +1,7 @@
 using System.Linq.Expressions;
 using System.Numerics;
 using vali_flow.Classes.Options;
+using vali_flow.Classes.Results;
 
 namespace vali_flow.Interfaces.Evaluators;
 
@@ -276,4 +277,16 @@ public interface IDatabaseEvaluator<T>
         IQueryable<T> query,
         bool asNoTracking = false
     );
+
+    public Task<PaginatedBlockResult<T>> GetPaginatedBlockAsync<TKey,TProperty>(
+        IQueryable<T> query,
+        int blockSize = 10000,
+        int page = 1,
+        int pageSize = 100,
+        Expression<Func<T, TKey>>? orderBy = null,
+        bool ascending = true,
+        List<ThenByDataBaseExpression<T, TKey>>? thenBys = null,
+        bool asNoTracking = false,
+        IEnumerable<Expression<Func<T, TProperty>>>? includes = null
+    ) where TKey : notnull;
 }
