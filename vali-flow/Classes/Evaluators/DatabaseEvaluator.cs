@@ -37,7 +37,6 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         IQueryable<T> query,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
         bool asNoTracking = false,
-        bool applyDynamicWhere = true,
         CancellationToken cancellationToken = default)
     {
         ValidationHelper.ValidateQueryNotNull(query);
@@ -49,9 +48,7 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
             query = ApplyIncludes(query, includes);
             query = ApplyAsNoTracking(query, asNoTracking);
 
-            return applyDynamicWhere
-                ? await query.AnyAsync(condition, cancellationToken)
-                : await query.AnyAsync(cancellationToken);
+            return await query.AnyAsync(condition, cancellationToken);
         }
         catch (Exception ex)
         {
@@ -63,7 +60,6 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         IQueryable<T> query,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
         bool asNoTracking = false,
-        bool applyDynamicWhere = false,
         CancellationToken cancellationToken = default)
     {
         ValidationHelper.ValidateQueryNotNull(query);
@@ -75,9 +71,7 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
             query = ApplyIncludes(query, includes);
             query = ApplyAsNoTracking(query, asNoTracking);
 
-            int result = applyDynamicWhere
-                ? await query.CountAsync(condition, cancellationToken)
-                : await query.CountAsync(cancellationToken);
+            int result = await query.CountAsync(condition, cancellationToken);
 
             return result;
         }
@@ -91,7 +85,6 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         IQueryable<T> query,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
         bool asNoTracking = false,
-        bool applyDynamicWhere = true,
         CancellationToken cancellationToken = default)
     {
         ValidationHelper.ValidateQueryNotNull(query);
@@ -103,9 +96,7 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
             query = ApplyIncludes(query, includes);
             query = ApplyAsNoTracking(query, asNoTracking);
 
-            return applyDynamicWhere
-                ? await query.FirstOrDefaultAsync(condition, cancellationToken)
-                : await query.FirstOrDefaultAsync(cancellationToken);
+            return await query.FirstOrDefaultAsync(condition, cancellationToken);
         }
         catch (Exception ex)
         {
@@ -117,7 +108,6 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         IQueryable<T> query,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
         bool asNoTracking = false,
-        bool applyDynamicWhere = true,
         CancellationToken cancellationToken = default)
     {
         ValidationHelper.ValidateQueryNotNull(query);
@@ -129,9 +119,7 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
             query = ApplyIncludes(query, includes);
             query = ApplyAsNoTracking(query, asNoTracking);
 
-            return applyDynamicWhere
-                ? await query.FirstOrDefaultAsync(condition, cancellationToken)
-                : await query.FirstOrDefaultAsync(cancellationToken);
+            return await query.FirstOrDefaultAsync(condition, cancellationToken);
         }
         catch (Exception ex)
         {
@@ -147,7 +135,6 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         bool ascending = true,
         List<ThenByDataBaseExpression<T, TKey>>? thenBys = null,
         bool asNoTracking = false,
-        bool applyDynamicWhere = true,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null)
         where TKey : notnull
     {
@@ -157,7 +144,7 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         {
             Expression<Func<T, bool>> condition = _builder.BuildNegated();
 
-            query = applyDynamicWhere ? query.Where(condition) : query;
+            query = query.Where(condition);
             query = ApplyIncludes(query, includes);
             query = ApplyAsNoTracking(query, asNoTracking);
             query = ApplyOrdering(query, orderBy, ascending, thenBys);
@@ -177,7 +164,6 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         bool ascending = true,
         List<ThenByDataBaseExpression<T, TKey>>? thenBys = null,
         bool asNoTracking = false,
-        bool applyDynamicWhere = true,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null
     ) where TKey : notnull
     {
@@ -187,7 +173,7 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         {
             Expression<Func<T, bool>> condition = _builder.Build();
 
-            query = applyDynamicWhere ? query.Where(condition) : query;
+            query = query.Where(condition);
             query = ApplyIncludes(query, includes);
             query = ApplyAsNoTracking(query, asNoTracking);
             query = ApplyOrdering(query, orderBy, ascending, thenBys);
@@ -208,7 +194,6 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         bool ascending = true,
         List<ThenByDataBaseExpression<T, TKey>>? thenBys = null,
         bool asNoTracking = false,
-        bool applyDynamicWhere = true,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null
     ) where TKey : notnull
     {
@@ -220,7 +205,7 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         {
             Expression<Func<T, bool>> condition = _builder.Build();
 
-            query = applyDynamicWhere ? query.Where(condition) : query;
+            query = query.Where(condition);
             query = ApplyIncludes(query, includes);
             query = ApplyAsNoTracking(query, asNoTracking);
             query = ApplyOrdering(query, orderBy, ascending, thenBys);
@@ -241,7 +226,6 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         bool ascending = true,
         List<ThenByDataBaseExpression<T, TKey>>? thenBys = null,
         bool asNoTracking = false,
-        bool applyDynamicWhere = true,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null
     ) where TKey : notnull
     {
@@ -252,7 +236,7 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         {
             Expression<Func<T, bool>> condition = _builder.Build();
 
-            query = applyDynamicWhere ? query.Where(condition) : query;
+            query = query.Where(condition);
             query = ApplyIncludes(query, includes);
             query = ApplyAsNoTracking(query, asNoTracking);
             query = ApplyOrdering(query, orderBy, ascending, thenBys);
@@ -275,7 +259,6 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         bool ascending = true,
         List<ThenByDataBaseExpression<T, TKey>>? thenBys = null,
         bool asNoTracking = false,
-        bool applyDynamicWhere = true,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null
     ) where TKey : notnull
     {
@@ -285,7 +268,7 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         {
             Expression<Func<T, bool>> condition = _builder.Build();
 
-            query = applyDynamicWhere ? query.Where(condition) : query;
+            query = query.Where(condition);
             query = ApplyIncludes(query, includes);
             query = ApplyAsNoTracking(query, asNoTracking);
 
@@ -311,7 +294,6 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         bool ascending = true,
         List<ThenByDataBaseExpression<T, TKey>>? thenBys = null,
         bool asNoTracking = false,
-        bool applyDynamicWhere = true,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null
     ) where TKey : notnull
     {
@@ -321,7 +303,7 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         {
             Expression<Func<T, bool>> condition = _builder.Build();
 
-            query = applyDynamicWhere ? query.Where(condition) : query;
+            query = query.Where(condition);
             query = ApplyIncludes(query, includes);
             query = ApplyAsNoTracking(query, asNoTracking);
 
@@ -345,7 +327,6 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         IQueryable<T> query,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
         bool asNoTracking = false,
-        bool applyDynamicWhere = true,
         CancellationToken cancellationToken = default
     ) where TKey : notnull
     {
@@ -358,9 +339,7 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
             query = ApplyIncludes(query, includes);
             query = ApplyAsNoTracking(query, asNoTracking);
 
-            return applyDynamicWhere
-                ? await query.LastOrDefaultAsync(condition, cancellationToken)
-                : await query.LastOrDefaultAsync(cancellationToken);
+            return await query.LastOrDefaultAsync(condition, cancellationToken);
         }
         catch (Exception ex)
         {
@@ -372,7 +351,6 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         IQueryable<T> query,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
         bool asNoTracking = false,
-        bool applyDynamicWhere = true,
         CancellationToken cancellationToken = default)
     {
         ValidationHelper.ValidateQueryNotNull(query);
@@ -384,9 +362,7 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
             query = ApplyIncludes(query, includes);
             query = ApplyAsNoTracking(query, asNoTracking);
 
-            return applyDynamicWhere
-                ? await query.LastOrDefaultAsync(condition, cancellationToken)
-                : await query.LastOrDefaultAsync(cancellationToken);
+            return await query.LastOrDefaultAsync(condition, cancellationToken);
         }
         catch (Exception ex)
         {
@@ -399,7 +375,6 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         Expression<Func<T, TResult>> selector,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
         bool asNoTracking = false,
-        bool applyDynamicWhere = true,
         CancellationToken cancellationToken = default
     ) where TResult : INumber<TResult>
     {
@@ -409,7 +384,7 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         {
             Expression<Func<T, bool>> condition = _builder.Build();
 
-            query = applyDynamicWhere ? query.Where(condition) : query;
+            query = query.Where(condition);
             query = ApplyIncludes(query, includes);
             query = ApplyAsNoTracking(query, asNoTracking);
 
@@ -426,7 +401,6 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         Expression<Func<T, TResult>> selector,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
         bool asNoTracking = false,
-        bool applyDynamicWhere = true,
         CancellationToken cancellationToken = default
     ) where TResult : INumber<TResult>
     {
@@ -436,7 +410,7 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         {
             Expression<Func<T, bool>> condition = _builder.Build();
 
-            query = applyDynamicWhere ? query.Where(condition) : query;
+            query = query.Where(condition);
             query = ApplyIncludes(query, includes);
             query = ApplyAsNoTracking(query, asNoTracking);
 
@@ -453,7 +427,6 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         Expression<Func<T, TResult>> selector,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
         bool asNoTracking = false,
-        bool applyDynamicWhere = true,
         CancellationToken cancellationToken = default
     ) where TResult : INumber<TResult>
     {
@@ -463,7 +436,7 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         {
             Expression<Func<T, bool>> condition = _builder.Build();
 
-            query = applyDynamicWhere ? query.Where(condition) : query;
+            query = query.Where(condition);
             query = ApplyIncludes(query, includes);
             query = ApplyAsNoTracking(query, asNoTracking);
 
@@ -480,7 +453,6 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         Expression<Func<T, int>> selector,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
         bool asNoTracking = false,
-        bool applyDynamicWhere = true,
         CancellationToken cancellationToken = default
     )
     {
@@ -490,7 +462,7 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         {
             Expression<Func<T, bool>> condition = _builder.Build();
 
-            query = applyDynamicWhere ? query.Where(condition) : query;
+            query = query.Where(condition);
             query = ApplyIncludes(query, includes);
             query = ApplyAsNoTracking(query, asNoTracking);
 
@@ -507,7 +479,6 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         Expression<Func<T, long>> selector,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
         bool asNoTracking = false,
-        bool applyDynamicWhere = true,
         CancellationToken cancellationToken = default
     )
     {
@@ -517,7 +488,7 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         {
             Expression<Func<T, bool>> condition = _builder.Build();
 
-            query = applyDynamicWhere ? query.Where(condition) : query;
+            query = query.Where(condition);
             query = ApplyIncludes(query, includes);
             query = ApplyAsNoTracking(query, asNoTracking);
 
@@ -534,7 +505,6 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         Expression<Func<T, double>> selector,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
         bool asNoTracking = false,
-        bool applyDynamicWhere = true,
         CancellationToken cancellationToken = default
     )
     {
@@ -544,7 +514,7 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         {
             Expression<Func<T, bool>> condition = _builder.Build();
 
-            query = applyDynamicWhere ? query.Where(condition) : query;
+            query = query.Where(condition);
             query = ApplyIncludes(query, includes);
             query = ApplyAsNoTracking(query, asNoTracking);
 
@@ -561,7 +531,6 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         Expression<Func<T, decimal>> selector,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
         bool asNoTracking = false,
-        bool applyDynamicWhere = true,
         CancellationToken cancellationToken = default
     )
     {
@@ -571,7 +540,7 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         {
             Expression<Func<T, bool>> condition = _builder.Build();
 
-            query = applyDynamicWhere ? query.Where(condition) : query;
+            query = query.Where(condition);
             query = ApplyIncludes(query, includes);
             query = ApplyAsNoTracking(query, asNoTracking);
 
@@ -588,7 +557,6 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         Expression<Func<T, float>> selector,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
         bool asNoTracking = false,
-        bool applyDynamicWhere = true,
         CancellationToken cancellationToken = default
     )
     {
@@ -598,7 +566,7 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         {
             Expression<Func<T, bool>> condition = _builder.Build();
 
-            query = applyDynamicWhere ? query.Where(condition) : query;
+            query = query.Where(condition);
             query = ApplyIncludes(query, includes);
             query = ApplyAsNoTracking(query, asNoTracking);
 
@@ -616,7 +584,6 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         Func<TResult, TResult, TResult> aggregator,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
         bool asNoTracking = false,
-        bool applyDynamicWhere = true,
         CancellationToken cancellationToken = default
     ) where TResult : INumber<TResult>
     {
@@ -626,7 +593,7 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         {
             Expression<Func<T, bool>> condition = _builder.Build();
 
-            query = applyDynamicWhere ? query.Where(condition) : query;
+            query = query.Where(condition);
             query = ApplyIncludes(query, includes);
             query = ApplyAsNoTracking(query, asNoTracking);
 
@@ -647,7 +614,6 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         Func<T, TKey> keySelector,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
         bool asNoTracking = false,
-        bool applyDynamicWhere = true,
         CancellationToken cancellationToken = default
     ) where TKey : notnull
     {
@@ -657,7 +623,7 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         {
             Expression<Func<T, bool>> condition = _builder.Build();
 
-            query = applyDynamicWhere ? query.Where(condition) : query;
+            query = query.Where(condition);
             query = ApplyIncludes(query, includes);
             query = ApplyAsNoTracking(query, asNoTracking);
 
@@ -680,7 +646,6 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         Func<T, TKey> keySelector,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
         bool asNoTracking = false,
-        bool applyDynamicWhere = true,
         CancellationToken cancellationToken = default
     ) where TKey : notnull
     {
@@ -690,7 +655,7 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         {
             Expression<Func<T, bool>> condition = _builder.Build();
 
-            query = applyDynamicWhere ? query.Where(condition) : query;
+            query = query.Where(condition);
             query = ApplyIncludes(query, includes);
             query = ApplyAsNoTracking(query, asNoTracking);
 
@@ -714,7 +679,6 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         Func<T, TResult> selector,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
         bool asNoTracking = false,
-        bool applyDynamicWhere = true,
         CancellationToken cancellationToken = default
     ) where TKey : notnull where TResult : INumber<TResult>
     {
@@ -724,7 +688,7 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         {
             Expression<Func<T, bool>> condition = _builder.Build();
 
-            query = applyDynamicWhere ? query.Where(condition) : query;
+            query = query.Where(condition);
             query = ApplyIncludes(query, includes);
             query = ApplyAsNoTracking(query, asNoTracking);
 
@@ -752,7 +716,6 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         Func<T, TResult> selector,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
         bool asNoTracking = false,
-        bool applyDynamicWhere = true,
         CancellationToken cancellationToken = default
     ) where TKey : notnull where TResult : INumber<TResult>
     {
@@ -762,7 +725,7 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         {
             Expression<Func<T, bool>> condition = _builder.Build();
 
-            query = applyDynamicWhere ? query.Where(condition) : query;
+            query = query.Where(condition);
             query = ApplyIncludes(query, includes);
             query = ApplyAsNoTracking(query, asNoTracking);
 
@@ -790,7 +753,6 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         Func<T, TResult> selector,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
         bool asNoTracking = false,
-        bool applyDynamicWhere = true,
         CancellationToken cancellationToken = default
     ) where TKey : notnull where TResult : INumber<TResult>
     {
@@ -800,7 +762,7 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         {
             Expression<Func<T, bool>> condition = _builder.Build();
 
-            query = applyDynamicWhere ? query.Where(condition) : query;
+            query = query.Where(condition);
             query = ApplyIncludes(query, includes);
             query = ApplyAsNoTracking(query, asNoTracking);
 
@@ -828,7 +790,6 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         Func<T, TResult> selector,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
         bool asNoTracking = false,
-        bool applyDynamicWhere = true,
         CancellationToken cancellationToken = default
     ) where TKey : notnull where TResult : INumber<TResult>
     {
@@ -838,7 +799,7 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         {
             Expression<Func<T, bool>> condition = _builder.Build();
 
-            query = applyDynamicWhere ? query.Where(condition) : query;
+            query = query.Where(condition);
             query = ApplyIncludes(query, includes);
             query = ApplyAsNoTracking(query, asNoTracking);
 
@@ -864,7 +825,6 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         IQueryable<T> query, Func<T, TKey> keySelector,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
         bool asNoTracking = false,
-        bool applyDynamicWhere = true,
         CancellationToken cancellationToken = default
     ) where TKey : notnull
     {
@@ -874,12 +834,11 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         {
             Expression<Func<T, bool>> condition = _builder.Build();
 
-            query = applyDynamicWhere ? query.Where(condition) : query;
+            query = query.Where(condition);
             query = ApplyIncludes(query, includes);
             query = ApplyAsNoTracking(query, asNoTracking);
 
-            List<T> data = await query.ToListAsync(cancellationToken);
-
+            IEnumerable<T> data = await query.ToListAsync(cancellationToken);
             IEnumerable<IGrouping<TKey, T>> groups = data.GroupBy(keySelector);
 
             Dictionary<TKey, List<T>> result = groups
@@ -899,7 +858,6 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         Func<T, TKey> keySelector,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
         bool asNoTracking = false,
-        bool applyDynamicWhere = true,
         CancellationToken cancellationToken = default
     ) where TKey : notnull
     {
@@ -909,12 +867,11 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         {
             Expression<Func<T, bool>> condition = _builder.Build();
 
-            query = applyDynamicWhere ? query.Where(condition) : query;
+            query = query.Where(condition);
             query = ApplyIncludes(query, includes);
             query = ApplyAsNoTracking(query, asNoTracking);
 
-            List<T> data = await query.ToListAsync(cancellationToken);
-
+            IEnumerable<T> data = await query.ToListAsync(cancellationToken);
             IEnumerable<IGrouping<TKey, T>> groups = data.GroupBy(keySelector);
 
             Dictionary<TKey, T> result = groups
@@ -937,7 +894,6 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         bool ascending = true,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
         bool asNoTracking = false,
-        bool applyDynamicWhere = true,
         CancellationToken cancellationToken = default
     ) where TKey : notnull
     {
@@ -948,7 +904,7 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         {
             Expression<Func<T, bool>> condition = _builder.Build();
 
-            query = applyDynamicWhere ? query.Where(condition) : query;
+            query = query.Where(condition);
             query = ApplyIncludes(query, includes);
             query = ApplyAsNoTracking(query, asNoTracking);
 
@@ -979,8 +935,7 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
 
     public async Task<IQueryable<T>> EvaluateQuery(
         IQueryable<T> query,
-        bool asNoTracking = false,
-        bool applyDynamicWhere = false
+        bool asNoTracking = false
     )
     {
         ValidationHelper.ValidateQueryNotNull(query);
@@ -989,7 +944,7 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         {
             Expression<Func<T, bool>> condition = _builder.Build();
 
-            query = applyDynamicWhere ? query.Where(condition) : query;
+            query = query.Where(condition);
             query = ApplyAsNoTracking(query, asNoTracking);
 
             return await Task.FromResult(query);

@@ -13,28 +13,24 @@ public interface IDatabaseEvaluator<T>
         IQueryable<T> query,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
         bool asNoTracking = false,
-        bool applyDynamicWhere = true,
         CancellationToken cancellationToken = default);
 
     Task<int> EvaluateCountAsync<TProperty>(
         IQueryable<T> query,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
         bool asNoTracking = false,
-        bool applyDynamicWhere = false,
         CancellationToken cancellationToken = default);
 
     Task<T?> GetFirstFailedAsync<TProperty>(
         IQueryable<T> query,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
         bool asNoTracking = false,
-        bool applyDynamicWhere = true,
         CancellationToken cancellationToken = default);
 
     Task<T?> GetFirstAsync<TProperty>(
         IQueryable<T> query,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
         bool asNoTracking = false,
-        bool applyDynamicWhere = true,
         CancellationToken cancellationToken = default);
 
     Task<IQueryable<T>> EvaluateAllFailedAsync<TKey, TProperty>(
@@ -45,7 +41,6 @@ public interface IDatabaseEvaluator<T>
         bool ascending = true,
         List<ThenByDataBaseExpression<T, TKey>>? thenBys = null,
         bool asNoTracking = false,
-        bool applyDynamicWhere = true,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null)
         where TKey : notnull;
 
@@ -55,7 +50,6 @@ public interface IDatabaseEvaluator<T>
         bool ascending = true,
         List<ThenByDataBaseExpression<T, TKey>>? thenBys = null,
         bool asNoTracking = false,
-        bool applyDynamicWhere = true,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null)
         where TKey : notnull;
 
@@ -67,7 +61,6 @@ public interface IDatabaseEvaluator<T>
         bool ascending = true,
         List<ThenByDataBaseExpression<T, TKey>>? thenBys = null,
         bool asNoTracking = false,
-        bool applyDynamicWhere = true,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null)
         where TKey : notnull;
 
@@ -78,7 +71,6 @@ public interface IDatabaseEvaluator<T>
         bool ascending = true,
         List<ThenByDataBaseExpression<T, TKey>>? thenBys = null,
         bool asNoTracking = false,
-        bool applyDynamicWhere = true,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null)
         where TKey : notnull;
 
@@ -91,7 +83,6 @@ public interface IDatabaseEvaluator<T>
         bool ascending = true,
         List<ThenByDataBaseExpression<T, TKey>>? thenBys = null,
         bool asNoTracking = false,
-        bool applyDynamicWhere = true,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null)
         where TKey : notnull;
 
@@ -104,7 +95,6 @@ public interface IDatabaseEvaluator<T>
         bool ascending = true,
         List<ThenByDataBaseExpression<T, TKey>>? thenBys = null,
         bool asNoTracking = false,
-        bool applyDynamicWhere = true,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null)
         where TKey : notnull;
 
@@ -112,7 +102,6 @@ public interface IDatabaseEvaluator<T>
         IQueryable<T> query,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
         bool asNoTracking = false,
-        bool applyDynamicWhere = true,
         CancellationToken cancellationToken = default)
         where TKey : notnull;
 
@@ -120,7 +109,6 @@ public interface IDatabaseEvaluator<T>
         IQueryable<T> query,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
         bool asNoTracking = false,
-        bool applyDynamicWhere = true,
         CancellationToken cancellationToken = default);
 
     Task<TResult> EvaluateMinAsync<TResult, TProperty>(
@@ -128,7 +116,6 @@ public interface IDatabaseEvaluator<T>
         Expression<Func<T, TResult>> selector,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
         bool asNoTracking = false,
-        bool applyDynamicWhere = true,
         CancellationToken cancellationToken = default
     ) where TResult : INumber<TResult>;
 
@@ -137,7 +124,6 @@ public interface IDatabaseEvaluator<T>
         Expression<Func<T, TResult>> selector,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
         bool asNoTracking = false,
-        bool applyDynamicWhere = true,
         CancellationToken cancellationToken = default
     ) where TResult : INumber<TResult>;
 
@@ -146,7 +132,6 @@ public interface IDatabaseEvaluator<T>
         Expression<Func<T, TResult>> selector,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
         bool asNoTracking = false,
-        bool applyDynamicWhere = true,
         CancellationToken cancellationToken = default
     ) where TResult : INumber<TResult>;
 
@@ -155,7 +140,6 @@ public interface IDatabaseEvaluator<T>
         Expression<Func<T, int>> selector,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
         bool asNoTracking = false,
-        bool applyDynamicWhere = true,
         CancellationToken cancellationToken = default
     );
 
@@ -164,7 +148,6 @@ public interface IDatabaseEvaluator<T>
         Expression<Func<T, long>> selector,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
         bool asNoTracking = false,
-        bool applyDynamicWhere = true,
         CancellationToken cancellationToken = default
     );
 
@@ -173,7 +156,6 @@ public interface IDatabaseEvaluator<T>
         Expression<Func<T, double>> selector,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
         bool asNoTracking = false,
-        bool applyDynamicWhere = true,
         CancellationToken cancellationToken = default
     );
 
@@ -182,7 +164,6 @@ public interface IDatabaseEvaluator<T>
         Expression<Func<T, decimal>> selector,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
         bool asNoTracking = false,
-        bool applyDynamicWhere = true,
         CancellationToken cancellationToken = default
     );
 
@@ -191,7 +172,6 @@ public interface IDatabaseEvaluator<T>
         Expression<Func<T, float>> selector,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
         bool asNoTracking = false,
-        bool applyDynamicWhere = true,
         CancellationToken cancellationToken = default
     );
 
@@ -201,7 +181,6 @@ public interface IDatabaseEvaluator<T>
         Func<TResult, TResult, TResult> aggregator,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
         bool asNoTracking = false,
-        bool applyDynamicWhere = true,
         CancellationToken cancellationToken = default
     ) where TResult : INumber<TResult>;
 
@@ -211,7 +190,6 @@ public interface IDatabaseEvaluator<T>
         Func<T, TKey> keySelector,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
         bool asNoTracking = false,
-        bool applyDynamicWhere = true,
         CancellationToken cancellationToken = default
     ) where TKey : notnull;
 
@@ -221,7 +199,6 @@ public interface IDatabaseEvaluator<T>
         Func<T, TKey> keySelector,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
         bool asNoTracking = false,
-        bool applyDynamicWhere = true,
         CancellationToken cancellationToken = default
     ) where TKey : notnull;
 
@@ -232,7 +209,6 @@ public interface IDatabaseEvaluator<T>
         Func<T, TResult> selector,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
         bool asNoTracking = false,
-        bool applyDynamicWhere = true,
         CancellationToken cancellationToken = default
     ) where TResult : INumber<TResult> where TKey : notnull;
 
@@ -243,7 +219,6 @@ public interface IDatabaseEvaluator<T>
         Func<T, TResult> selector,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
         bool asNoTracking = false,
-        bool applyDynamicWhere = true,
         CancellationToken cancellationToken = default
     ) where TResult : INumber<TResult> where TKey : notnull;
 
@@ -254,7 +229,6 @@ public interface IDatabaseEvaluator<T>
         Func<T, TResult> selector,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
         bool asNoTracking = false,
-        bool applyDynamicWhere = true,
         CancellationToken cancellationToken = default
     ) where TResult : INumber<TResult> where TKey : notnull;
 
@@ -265,7 +239,6 @@ public interface IDatabaseEvaluator<T>
         Func<T, TResult> selector,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
         bool asNoTracking = false,
-        bool applyDynamicWhere = true,
         CancellationToken cancellationToken = default
     ) where TResult : INumber<TResult> where TKey : notnull;
 
@@ -275,7 +248,6 @@ public interface IDatabaseEvaluator<T>
         Func<T, TKey> keySelector,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
         bool asNoTracking = false,
-        bool applyDynamicWhere = true,
         CancellationToken cancellationToken = default
     ) where TKey : notnull;
 
@@ -285,7 +257,6 @@ public interface IDatabaseEvaluator<T>
         Func<T, TKey> keySelector,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
         bool asNoTracking = false,
-        bool applyDynamicWhere = true,
         CancellationToken cancellationToken = default
     ) where TKey : notnull;
 
@@ -298,13 +269,11 @@ public interface IDatabaseEvaluator<T>
         bool ascending = true,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
         bool asNoTracking = false,
-        bool applyDynamicWhere = true,
         CancellationToken cancellationToken = default
     ) where TKey : notnull;
 
     Task<IQueryable<T>> EvaluateQuery(
         IQueryable<T> query,
-        bool applyDynamicWhere = false,
         bool asNoTracking = false
     );
 }
