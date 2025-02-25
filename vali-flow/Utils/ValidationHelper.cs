@@ -93,10 +93,32 @@ public static class ValidationHelper
     /// <exception cref="ArgumentOutOfRangeException">Thrown if either page or pageSize is provided and is less than or equal to zero.</exception>
     public static void ValidatePagination(int? page, int? pageSize)
     {
-        
-        if (page != null && page.Value <= 0) throw new ArgumentOutOfRangeException(nameof(page), "Page must be greater than zero.");
+        if (page is <= 0) throw new ArgumentOutOfRangeException(nameof(page), "Page must be greater than zero.");
+        if (pageSize is <= 0) throw new ArgumentOutOfRangeException(nameof(pageSize), "Page size must be greater than zero.");
+    }    
+    
+    /// <summary>
+    /// Validates pagination parameters.  Checks if page and pageSize are greater than zero, if provided.
+    /// </summary>
+    /// <param name="page">The page number to validate.</param>
+    /// <param name="pageSize">The page size to validate.</param>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown if either page or pageSize is provided and is less than or equal to zero.</exception>
+    public static void ValidatePagination(int page, int pageSize)
+    {
+        if (page <= 0) throw new ArgumentOutOfRangeException(nameof(page), "Page must be greater than zero.");
+        if (pageSize <= 0) throw new ArgumentOutOfRangeException(nameof(pageSize), "Page size must be greater than zero.");
+    }
 
-        if (pageSize != null && pageSize.Value <= 0) throw new ArgumentOutOfRangeException(nameof(pageSize), "Page size must be greater than zero.");
+    public static void ValidatePaginationBlock(int page, int pageSize, int blockSize)
+    {
+        ValidatePagination(page, pageSize);
+        if (blockSize <= 0) throw new ArgumentOutOfRangeException(nameof(pageSize), "Block size must be greater than zero.");
+    }
+    
+    public static void ValidatePaginationBlock(int? page, int? pageSize, int? blockSize)
+    {
+        ValidatePagination(page, pageSize);
+        if ( blockSize is <= 0) throw new ArgumentOutOfRangeException(nameof(pageSize), "Block size must be greater than zero.");
     }
     
     /// <summary>

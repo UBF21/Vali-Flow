@@ -38,7 +38,8 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         IQueryable<T> query,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
         bool asNoTracking = false,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default
+    )
     {
         ValidationHelper.ValidateQueryNotNull(query);
 
@@ -61,7 +62,8 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         IQueryable<T> query,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
         bool asNoTracking = false,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default
+    )
     {
         ValidationHelper.ValidateQueryNotNull(query);
 
@@ -86,7 +88,8 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         IQueryable<T> query,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
         bool asNoTracking = false,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default
+    )
     {
         ValidationHelper.ValidateQueryNotNull(query);
 
@@ -109,7 +112,8 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         IQueryable<T> query,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
         bool asNoTracking = false,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default
+    )
     {
         ValidationHelper.ValidateQueryNotNull(query);
 
@@ -134,66 +138,52 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         int? pageSize = null,
         Expression<Func<T, TKey>>? orderBy = null,
         bool ascending = true,
-        List<ThenByDataBaseExpression<T, TKey>>? thenBys = null,
-        bool asNoTracking = false,
-        IEnumerable<Expression<Func<T, TProperty>>>? includes = null)
-        where TKey : notnull
-    {
-        ValidationHelper.ValidateQueryNotNull(query);
-
-        try
-        {
-            Expression<Func<T, bool>> condition = _builder.BuildNegated();
-
-            query = query.Where(condition);
-            query = ApplyIncludes(query, includes);
-            query = ApplyAsNoTracking(query, asNoTracking);
-            query = ApplyOrdering(query, orderBy, ascending, thenBys);
-            query = ApplyPagination(query, page, pageSize);
-
-            return await Task.FromResult(query);
-        }
-        catch (Exception ex)
-        {
-            throw new InvalidOperationException($"Error evaluating {UtilHelper.GetCurrentMethodName()}.", ex);
-        }
-    }
-
-    public async Task<IQueryable<T>> EvaluateAllAsync<TKey, TProperty>(
-        IQueryable<T> query,
-        Expression<Func<T, TKey>>? orderBy = null,
-        bool ascending = true,
-        List<ThenByDataBaseExpression<T, TKey>>? thenBys = null,
+        IEnumerable<ThenByDataBaseExpression<T, TKey>>? thenBys = null,
         bool asNoTracking = false,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null
     ) where TKey : notnull
     {
         ValidationHelper.ValidateQueryNotNull(query);
 
-        try
-        {
-            Expression<Func<T, bool>> condition = _builder.Build();
+        Expression<Func<T, bool>> condition = _builder.BuildNegated();
 
-            query = query.Where(condition);
-            query = ApplyIncludes(query, includes);
-            query = ApplyAsNoTracking(query, asNoTracking);
-            query = ApplyOrdering(query, orderBy, ascending, thenBys);
+        query = query.Where(condition);
+        query = ApplyIncludes(query, includes);
+        query = ApplyAsNoTracking(query, asNoTracking);
+        query = ApplyOrdering(query, orderBy, ascending, thenBys);
+        query = ApplyPagination(query, page, pageSize);
 
-            return await Task.FromResult(query);
-        }
-        catch (Exception ex)
-        {
-            throw new InvalidOperationException($"Error evaluating {UtilHelper.GetCurrentMethodName()}.", ex);
-        }
+        return await Task.FromResult(query);
+    }
+
+    public async Task<IQueryable<T>> EvaluateAllAsync<TKey, TProperty>(
+        IQueryable<T> query,
+        Expression<Func<T, TKey>>? orderBy = null,
+        bool ascending = true,
+        IEnumerable<ThenByDataBaseExpression<T, TKey>>? thenBys = null,
+        bool asNoTracking = false,
+        IEnumerable<Expression<Func<T, TProperty>>>? includes = null
+    ) where TKey : notnull
+    {
+        ValidationHelper.ValidateQueryNotNull(query);
+
+        Expression<Func<T, bool>> condition = _builder.Build();
+
+        query = query.Where(condition);
+        query = ApplyIncludes(query, includes);
+        query = ApplyAsNoTracking(query, asNoTracking);
+        query = ApplyOrdering(query, orderBy, ascending, thenBys);
+
+        return await Task.FromResult(query);
     }
 
     public async Task<IQueryable<T>> EvaluatePagedAsync<TKey, TProperty>(
         IQueryable<T> query,
-        int page,
-        int pageSize,
+        int page = ConstantsHelper.One,
+        int pageSize = ConstantsHelper.Ten,
         Expression<Func<T, TKey>>? orderBy = null,
         bool ascending = true,
-        List<ThenByDataBaseExpression<T, TKey>>? thenBys = null,
+        IEnumerable<ThenByDataBaseExpression<T, TKey>>? thenBys = null,
         bool asNoTracking = false,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null
     ) where TKey : notnull
@@ -202,22 +192,15 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         ValidationHelper.ValidatePageZero(page);
         ValidationHelper.ValidatePageSizeZero(pageSize);
 
-        try
-        {
-            Expression<Func<T, bool>> condition = _builder.Build();
+        Expression<Func<T, bool>> condition = _builder.Build();
 
-            query = query.Where(condition);
-            query = ApplyIncludes(query, includes);
-            query = ApplyAsNoTracking(query, asNoTracking);
-            query = ApplyOrdering(query, orderBy, ascending, thenBys);
-            query = query.Skip((page - ConstantsHelper.One) * pageSize).Take(pageSize);
+        query = query.Where(condition);
+        query = ApplyIncludes(query, includes);
+        query = ApplyAsNoTracking(query, asNoTracking);
+        query = ApplyOrdering(query, orderBy, ascending, thenBys);
+        query = ApplyPagination(query, page, pageSize);
 
-            return await Task.FromResult(query);
-        }
-        catch (Exception ex)
-        {
-            throw new InvalidOperationException($"Error evaluating {UtilHelper.GetCurrentMethodName()}.", ex);
-        }
+        return await Task.FromResult(query);
     }
 
     public async Task<IQueryable<T>> EvaluateTopAsync<TKey, TProperty>(
@@ -225,7 +208,7 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         int count,
         Expression<Func<T, TKey>>? orderBy = null,
         bool ascending = true,
-        List<ThenByDataBaseExpression<T, TKey>>? thenBys = null,
+        IEnumerable<ThenByDataBaseExpression<T, TKey>>? thenBys = null,
         bool asNoTracking = false,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null
     ) where TKey : notnull
@@ -233,22 +216,15 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         ValidationHelper.ValidateQueryNotNull(query);
         ValidationHelper.ValidateCountZero(count);
 
-        try
-        {
-            Expression<Func<T, bool>> condition = _builder.Build();
+        Expression<Func<T, bool>> condition = _builder.Build();
 
-            query = query.Where(condition);
-            query = ApplyIncludes(query, includes);
-            query = ApplyAsNoTracking(query, asNoTracking);
-            query = ApplyOrdering(query, orderBy, ascending, thenBys);
-            query = query.Take(count);
+        query = query.Where(condition);
+        query = ApplyIncludes(query, includes);
+        query = ApplyAsNoTracking(query, asNoTracking);
+        query = ApplyOrdering(query, orderBy, ascending, thenBys);
+        query = query.Take(count);
 
-            return await Task.FromResult(query);
-        }
-        catch (Exception ex)
-        {
-            throw new InvalidOperationException($"Error evaluating {UtilHelper.GetCurrentMethodName()}.", ex);
-        }
+        return await Task.FromResult(query);
     }
 
     public async Task<IQueryable<T>> EvaluateDistinctAsync<TKey, TProperty>(
@@ -258,32 +234,25 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         int? pageSize = null,
         Expression<Func<T, TKey>>? orderBy = null,
         bool ascending = true,
-        List<ThenByDataBaseExpression<T, TKey>>? thenBys = null,
+        IEnumerable<ThenByDataBaseExpression<T, TKey>>? thenBys = null,
         bool asNoTracking = false,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null
     ) where TKey : notnull
     {
         ValidationHelper.ValidateQueryNotNull(query);
 
-        try
-        {
-            Expression<Func<T, bool>> condition = _builder.Build();
+        Expression<Func<T, bool>> condition = _builder.Build();
 
-            query = query.Where(condition);
-            query = ApplyIncludes(query, includes);
-            query = ApplyAsNoTracking(query, asNoTracking);
+        query = query.Where(condition);
+        query = ApplyIncludes(query, includes);
+        query = ApplyAsNoTracking(query, asNoTracking);
 
-            IQueryable<T> distinctQuery = query.GroupBy(selector).Select(g => g.First());
+        IQueryable<T> distinctQuery = query.GroupBy(selector).Select(g => g.First());
 
-            distinctQuery = ApplyOrdering(distinctQuery, orderBy, ascending, thenBys);
-            distinctQuery = ApplyPagination(distinctQuery, page, pageSize);
+        distinctQuery = ApplyOrdering(distinctQuery, orderBy, ascending, thenBys);
+        distinctQuery = ApplyPagination(distinctQuery, page, pageSize);
 
-            return await Task.FromResult(distinctQuery);
-        }
-        catch (Exception ex)
-        {
-            throw new InvalidOperationException($"Error evaluating {UtilHelper.GetCurrentMethodName()}.", ex);
-        }
+        return await Task.FromResult(distinctQuery);
     }
 
     public async Task<IQueryable<T>> EvaluateDuplicatesAsync<TKey, TProperty>(
@@ -293,36 +262,28 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         int? pageSize = null,
         Expression<Func<T, TKey>>? orderBy = null,
         bool ascending = true,
-        List<ThenByDataBaseExpression<T, TKey>>? thenBys = null,
+        IEnumerable<ThenByDataBaseExpression<T, TKey>>? thenBys = null,
         bool asNoTracking = false,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null
     ) where TKey : notnull
     {
         ValidationHelper.ValidateQueryNotNull(query);
 
-        try
-        {
-            Expression<Func<T, bool>> condition = _builder.Build();
+        Expression<Func<T, bool>> condition = _builder.Build();
 
-            query = query.Where(condition);
-            query = ApplyIncludes(query, includes);
-            query = ApplyAsNoTracking(query, asNoTracking);
+        query = query.Where(condition);
+        query = ApplyIncludes(query, includes);
+        query = ApplyAsNoTracking(query, asNoTracking);
 
-            IQueryable<T> duplicatesQuery = query.GroupBy(selector)
-                .Where(g => g.Count() > 1)
-                .SelectMany(g => g);
+        IQueryable<T> duplicatesQuery = query.GroupBy(selector)
+            .Where(g => g.Count() > ConstantsHelper.One)
+            .SelectMany(g => g);
 
-            duplicatesQuery = ApplyOrdering(duplicatesQuery, orderBy, ascending, thenBys);
-            duplicatesQuery = ApplyPagination(duplicatesQuery, page, pageSize);
+        duplicatesQuery = ApplyOrdering(duplicatesQuery, orderBy, ascending, thenBys);
+        duplicatesQuery = ApplyPagination(duplicatesQuery, page, pageSize);
 
-            return await Task.FromResult(duplicatesQuery);
-        }
-        catch (Exception ex)
-        {
-            throw new InvalidOperationException($"Error evaluating {UtilHelper.GetCurrentMethodName()}.", ex);
-        }
+        return await Task.FromResult(duplicatesQuery);
     }
-
 
     public async Task<T?> GetLastFailedAsync<TKey, TProperty>(
         IQueryable<T> query,
@@ -333,26 +294,20 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
     {
         ValidationHelper.ValidateQueryNotNull(query);
 
-        try
-        {
-            Expression<Func<T, bool>> condition = _builder.BuildNegated();
+        Expression<Func<T, bool>> condition = _builder.BuildNegated();
 
-            query = ApplyIncludes(query, includes);
-            query = ApplyAsNoTracking(query, asNoTracking);
+        query = ApplyIncludes(query, includes);
+        query = ApplyAsNoTracking(query, asNoTracking);
 
-            return await query.LastOrDefaultAsync(condition, cancellationToken);
-        }
-        catch (Exception ex)
-        {
-            throw new InvalidOperationException($"Error evaluating {UtilHelper.GetCurrentMethodName()}.", ex);
-        }
+        return await query.LastOrDefaultAsync(condition, cancellationToken);
     }
 
     public async Task<T?> GetLastAsync<TProperty>(
         IQueryable<T> query,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
         bool asNoTracking = false,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default
+    )
     {
         ValidationHelper.ValidateQueryNotNull(query);
 
@@ -598,11 +553,9 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
             query = ApplyIncludes(query, includes);
             query = ApplyAsNoTracking(query, asNoTracking);
 
-            List<TResult> values = await query.Select(selector).ToListAsync(cancellationToken);
+            IEnumerable<TResult> values = await query.Select(selector).ToListAsync(cancellationToken);
 
-            if (!values.Any()) return TResult.Zero;
-
-            return values.Aggregate(TResult.Zero, aggregator);
+            return !values.Any() ? TResult.Zero : values.Aggregate(TResult.Zero, aggregator);
         }
         catch (Exception ex)
         {
@@ -612,7 +565,7 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
 
     public async Task<Dictionary<TKey, List<T>>> EvaluateGroupedAsync<TKey, TProperty>(
         IQueryable<T> query,
-        Func<T, TKey> keySelector,
+        Expression<Func<T, TKey>> keySelector,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
         bool asNoTracking = false,
         CancellationToken cancellationToken = default
@@ -628,13 +581,11 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
             query = ApplyIncludes(query, includes);
             query = ApplyAsNoTracking(query, asNoTracking);
 
-            List<T> data = await query.ToListAsync(cancellationToken);
-
-            Dictionary<TKey, List<T>> result = data
-                .GroupBy(keySelector)
-                .ToDictionary(g => g.Key, g => g.ToList());
-
-            return result;
+            return await query.GroupBy(keySelector)
+                .ToDictionaryAsync(
+                    g => g.Key,
+                    g => g.ToList(),
+                    cancellationToken);
         }
         catch (Exception ex)
         {
@@ -660,8 +611,7 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
             query = ApplyIncludes(query, includes);
             query = ApplyAsNoTracking(query, asNoTracking);
 
-            List<T> data = await query.ToListAsync(cancellationToken);
-
+            IEnumerable<T> data = await query.ToListAsync(cancellationToken);
             IEnumerable<IGrouping<TKey, T>> groups = data.GroupBy(keySelector);
 
             Dictionary<TKey, int> result = groups.ToDictionary(g => g.Key, g => g.Count());
@@ -693,8 +643,7 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
             query = ApplyIncludes(query, includes);
             query = ApplyAsNoTracking(query, asNoTracking);
 
-            List<T> data = await query.ToListAsync(cancellationToken);
-
+            IEnumerable<T> data = await query.ToListAsync(cancellationToken);
             IEnumerable<IGrouping<TKey, T>> groups = data.GroupBy(keySelector);
 
             Dictionary<TKey, TResult> result = groups
@@ -730,8 +679,7 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
             query = ApplyIncludes(query, includes);
             query = ApplyAsNoTracking(query, asNoTracking);
 
-            List<T> data = await query.ToListAsync(cancellationToken);
-
+            IEnumerable<T> data = await query.ToListAsync(cancellationToken);
             IEnumerable<IGrouping<TKey, T>> groups = data.GroupBy(keySelector);
 
             Dictionary<TKey, TResult> result = groups
@@ -767,8 +715,7 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
             query = ApplyIncludes(query, includes);
             query = ApplyAsNoTracking(query, asNoTracking);
 
-            List<T> data = await query.ToListAsync(cancellationToken);
-
+            IEnumerable<T> data = await query.ToListAsync(cancellationToken);
             IEnumerable<IGrouping<TKey, T>> groups = data.GroupBy(keySelector);
 
             Dictionary<TKey, TResult> result = groups
@@ -804,8 +751,7 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
             query = ApplyIncludes(query, includes);
             query = ApplyAsNoTracking(query, asNoTracking);
 
-            List<T> data = await query.ToListAsync(cancellationToken);
-
+            IEnumerable<T> data = await query.ToListAsync(cancellationToken);
             IEnumerable<IGrouping<TKey, T>> groups = data.GroupBy(keySelector);
 
             Dictionary<TKey, decimal> result = groups
@@ -843,7 +789,7 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
             IEnumerable<IGrouping<TKey, T>> groups = data.GroupBy(keySelector);
 
             Dictionary<TKey, List<T>> result = groups
-                .Where(g => g.Count() > 1)
+                .Where(g => g.Count() > ConstantsHelper.One)
                 .ToDictionary(g => g.Key, g => g.ToList());
 
             return result;
@@ -876,7 +822,7 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
             IEnumerable<IGrouping<TKey, T>> groups = data.GroupBy(keySelector);
 
             Dictionary<TKey, T> result = groups
-                .Where(g => g.Count() == 1)
+                .Where(g => g.Count() == ConstantsHelper.One)
                 .ToDictionary(g => g.Key, g => g.First());
 
             return result;
@@ -887,16 +833,16 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         }
     }
 
-    public async Task<Dictionary<TKey, List<T>>> EvaluateTopByGroupAsync<TKey, TProperty>(
+    public async Task<Dictionary<TKey, List<T>>> EvaluateTopByGroupAsync<TKey, TKey2, TProperty>(
         IQueryable<T> query,
         Func<T, TKey> keySelector,
         int count,
-        Func<T, object>? orderBy = null,
+        Expression<Func<T, TKey2>>? orderBy = null,
         bool ascending = true,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
         bool asNoTracking = false,
         CancellationToken cancellationToken = default
-    ) where TKey : notnull
+    ) where TKey : notnull where TKey2 : notnull
     {
         ValidationHelper.ValidateQueryNotNull(query);
         ValidationHelper.ValidateCountZero(count);
@@ -908,23 +854,16 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
             query = query.Where(condition);
             query = ApplyIncludes(query, includes);
             query = ApplyAsNoTracking(query, asNoTracking);
+            query = ApplyOrdering(query, orderBy, ascending, null);
 
-            List<T> data = await query.ToListAsync(cancellationToken);
+            List<T> data = await query.Take(count).ToListAsync(cancellationToken);
 
-            var groups = data.GroupBy(keySelector);
-
-            Dictionary<TKey, List<T>> result = groups.ToDictionary(
-                g => g.Key,
-                g =>
-                {
-                    List<T> items = g.ToList();
-
-                    if (orderBy != null)
-                        items = (ascending ? items.OrderBy(orderBy) : items.OrderByDescending(orderBy)).ToList();
-
-                    return items.Take(count).ToList();
-                }
-            );
+            Dictionary<TKey, List<T>> result = data
+                .GroupBy(keySelector)
+                .ToDictionary(
+                    g => g.Key,
+                    g => g.ToList()
+                );
 
             return result;
         }
@@ -934,21 +873,62 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         }
     }
 
-    public async Task<IQueryable<T>> EvaluateQuery(
-        IQueryable<T> query,
-        bool asNoTracking = false
-    )
+    public async Task<IQueryable<T>> EvaluateQuery(IQueryable<T> query, bool asNoTracking = false)
     {
         ValidationHelper.ValidateQueryNotNull(query);
+
+        Expression<Func<T, bool>> condition = _builder.Build();
+
+        query = query.Where(condition);
+        query = ApplyAsNoTracking(query, asNoTracking);
+
+        return await Task.FromResult(query);
+    }
+
+    public async Task<PaginatedBlockResult<T>> GetPaginatedBlockAsync<TKey, TProperty>(
+        IQueryable<T> query,
+        int blockSize = ConstantsHelper.Thousand,
+        int page = ConstantsHelper.One,
+        int pageSize = ConstantsHelper.OneHundred,
+        Expression<Func<T, TKey>>? orderBy = null,
+        bool ascending = true,
+        IEnumerable<ThenByDataBaseExpression<T, TKey>>? thenBys = null,
+        bool asNoTracking = false,
+        IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
+        CancellationToken cancellationToken = default
+    )
+        where TKey : notnull
+    {
+        ValidationHelper.ValidatePaginationBlock(page, pageSize, blockSize);
 
         try
         {
             Expression<Func<T, bool>> condition = _builder.Build();
 
             query = query.Where(condition);
+            query = ApplyIncludes(query, includes);
             query = ApplyAsNoTracking(query, asNoTracking);
+            query = ApplyOrdering(query, orderBy, ascending, thenBys);
 
-            return await Task.FromResult(query);
+            int currentBlock = (page - ConstantsHelper.One) * pageSize / blockSize;
+            int blockOffset = currentBlock * blockSize;
+
+            IQueryable<T> blockQuery = query.Skip(blockOffset).Take(blockSize);
+
+            int totalItemsInBlock = await blockQuery.CountAsync(cancellationToken);
+
+            IEnumerable<T> blockData = await blockQuery.ToListAsync(cancellationToken);
+            IEnumerable<T> pageData = ApplyPaginationBlock(blockData, page, pageSize, blockSize);
+
+            return new PaginatedBlockResult<T>
+            {
+                Items = pageData,
+                CurrentPage = page,
+                PageSize = pageSize,
+                BlockSize = blockSize,
+                TotalItemsInBlock = totalItemsInBlock,
+                HasMoreBlocks = totalItemsInBlock == blockSize
+            };
         }
         catch (Exception ex)
         {
@@ -956,21 +936,35 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         }
     }
 
-    public Task<PaginatedBlockResult<T>> GetPaginatedBlockAsync<TKey,TProperty>(
+    public async Task<IQueryable<T>> GetPaginatedBlockQueryAsync<TKey, TProperty>(
         IQueryable<T> query,
-        int blockSize = 10000,
-        int page = 1,
-        int pageSize = 100,
+        int blockSize = ConstantsHelper.Thousand,
+        int page = ConstantsHelper.One,
+        int pageSize = ConstantsHelper.OneHundred,
         Expression<Func<T, TKey>>? orderBy = null,
         bool ascending = true,
-        List<ThenByDataBaseExpression<T, TKey>>? thenBys = null,
+        IEnumerable<ThenByDataBaseExpression<T, TKey>>? thenBys = null,
         bool asNoTracking = false,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null
-    )
-        where TKey : notnull
+        ) where TKey : notnull
     {
-        throw new NotImplementedException();
+        ValidationHelper.ValidatePaginationBlock(page, pageSize, blockSize);
+
+        Expression<Func<T, bool>> condition = _builder.Build();
+
+        query = query.Where(condition);
+        query = ApplyIncludes(query, includes);
+        query = ApplyAsNoTracking(query, asNoTracking);
+        query = ApplyOrdering(query, orderBy, ascending, thenBys);
+        
+        int currentBlock = ((page - ConstantsHelper.One) * pageSize) / blockSize;
+        int blockOffset = currentBlock * blockSize;
+        int pageOffset = (((page - ConstantsHelper.One) * pageSize)) % blockSize;
+        int finalOffset = blockOffset + pageOffset;
+        
+        return await Task.FromResult(query.Skip(finalOffset).Take(pageSize));
     }
+
 
     #region Private
 
@@ -1030,42 +1024,68 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         IQueryable<T> query,
         Expression<Func<T, TKey>>? orderBy,
         bool ascending,
-        List<ThenByDataBaseExpression<T, TKey>>? thenBys)
+        IEnumerable<ThenByDataBaseExpression<T, TKey>>? thenBys)
     {
-        if (orderBy == null) return query;
+        if (orderBy == null)
+            return query;
 
         IOrderedQueryable<T> orderedQuery = ascending
             ? query.OrderBy(orderBy)
             : query.OrderByDescending(orderBy);
 
-        if (thenBys != null && thenBys.Any())
+        if (thenBys != null)
         {
-            orderedQuery = thenBys.Aggregate(
-                orderedQuery,
-                (currentOrderedQuery, thenByExpression) =>
-                    thenByExpression.Ascending
-                        ? currentOrderedQuery.ThenBy(thenByExpression.ThenBy)
-                        : currentOrderedQuery.ThenByDescending(thenByExpression.ThenBy)
-            );
+            IEnumerable<ThenByDataBaseExpression<T, TKey>> thenByList = thenBys.ToList();
+
+            if (thenByList.Any())
+            {
+                orderedQuery = thenByList.Aggregate(
+                    orderedQuery,
+                    (currentOrderedQuery, thenByExpression) =>
+                        thenByExpression.Ascending
+                            ? currentOrderedQuery.ThenBy(thenByExpression.ThenBy)
+                            : currentOrderedQuery.ThenByDescending(thenByExpression.ThenBy)
+                );
+            }
         }
 
         return orderedQuery;
     }
 
-
     private IQueryable<T> ApplyPagination(IQueryable<T> query, int? page, int? pageSize)
     {
         if (!page.HasValue || !pageSize.HasValue) return query;
 
-        if (page.Value <= 0)
+        if (page.Value <= ConstantsHelper.ZeroInt)
             throw new ArgumentOutOfRangeException(nameof(page), "Page must be greater than zero.");
-
-        if (pageSize.Value <= 0)
+        if (pageSize.Value <= ConstantsHelper.ZeroInt)
             throw new ArgumentOutOfRangeException(nameof(pageSize), "Page size must be greater than zero.");
 
         query = query.Skip((page.Value - ConstantsHelper.One) * pageSize.Value).Take(pageSize.Value);
 
         return query;
+    }
+
+    private IQueryable<T> ApplyPagination(IQueryable<T> query, int page = ConstantsHelper.One,
+        int pageSize = ConstantsHelper.Fifty)
+    {
+        if (page <= ConstantsHelper.ZeroInt)
+            throw new ArgumentOutOfRangeException(nameof(page), "Page must be greater than zero.");
+        if (pageSize <= ConstantsHelper.ZeroInt)
+            throw new ArgumentOutOfRangeException(nameof(pageSize), "Page size must be greater than zero.");
+
+        query = query.Skip((page - ConstantsHelper.One) * pageSize).Take(pageSize);
+
+        return query;
+    }
+
+    private IEnumerable<T> ApplyPaginationBlock(
+        IEnumerable<T> query,
+        int page = ConstantsHelper.One,
+        int pageSize = ConstantsHelper.Fifty,
+        int blockSize = ConstantsHelper.Thousand)
+    {
+        return query.Skip((page - ConstantsHelper.One) * pageSize % blockSize).Take(pageSize).ToList();
     }
 
     #endregion

@@ -2,6 +2,7 @@ using System.Linq.Expressions;
 using System.Numerics;
 using vali_flow.Classes.Options;
 using vali_flow.Classes.Results;
+using vali_flow.Utils;
 
 namespace vali_flow.Interfaces.Evaluators;
 
@@ -40,7 +41,7 @@ public interface IDatabaseEvaluator<T>
         int? pageSize = null,
         Expression<Func<T, TKey>>? orderBy = null,
         bool ascending = true,
-        List<ThenByDataBaseExpression<T, TKey>>? thenBys = null,
+        IEnumerable<ThenByDataBaseExpression<T, TKey>>? thenBys = null,
         bool asNoTracking = false,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null)
         where TKey : notnull;
@@ -49,18 +50,18 @@ public interface IDatabaseEvaluator<T>
         IQueryable<T> query,
         Expression<Func<T, TKey>>? orderBy = null,
         bool ascending = true,
-        List<ThenByDataBaseExpression<T, TKey>>? thenBys = null,
+        IEnumerable<ThenByDataBaseExpression<T, TKey>>? thenBys = null,
         bool asNoTracking = false,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null)
         where TKey : notnull;
 
     Task<IQueryable<T>> EvaluatePagedAsync<TKey, TProperty>(
         IQueryable<T> query,
-        int page,
-        int pageSize,
+        int page = ConstantsHelper.One,
+        int pageSize = ConstantsHelper.Ten,
         Expression<Func<T, TKey>>? orderBy = null,
         bool ascending = true,
-        List<ThenByDataBaseExpression<T, TKey>>? thenBys = null,
+        IEnumerable<ThenByDataBaseExpression<T, TKey>>? thenBys = null,
         bool asNoTracking = false,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null)
         where TKey : notnull;
@@ -70,7 +71,7 @@ public interface IDatabaseEvaluator<T>
         int count,
         Expression<Func<T, TKey>>? orderBy = null,
         bool ascending = true,
-        List<ThenByDataBaseExpression<T, TKey>>? thenBys = null,
+        IEnumerable<ThenByDataBaseExpression<T, TKey>>? thenBys = null,
         bool asNoTracking = false,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null)
         where TKey : notnull;
@@ -82,7 +83,7 @@ public interface IDatabaseEvaluator<T>
         int? pageSize = null,
         Expression<Func<T, TKey>>? orderBy = null,
         bool ascending = true,
-        List<ThenByDataBaseExpression<T, TKey>>? thenBys = null,
+        IEnumerable<ThenByDataBaseExpression<T, TKey>>? thenBys = null,
         bool asNoTracking = false,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null)
         where TKey : notnull;
@@ -94,7 +95,7 @@ public interface IDatabaseEvaluator<T>
         int? pageSize = null,
         Expression<Func<T, TKey>>? orderBy = null,
         bool ascending = true,
-        List<ThenByDataBaseExpression<T, TKey>>? thenBys = null,
+        IEnumerable<ThenByDataBaseExpression<T, TKey>>? thenBys = null,
         bool asNoTracking = false,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null)
         where TKey : notnull;
@@ -188,7 +189,7 @@ public interface IDatabaseEvaluator<T>
     // Evalúa y agrupa los elementos que cumplen la condición
     Task<Dictionary<TKey, List<T>>> EvaluateGroupedAsync<TKey, TProperty>(
         IQueryable<T> query,
-        Func<T, TKey> keySelector,
+        Expression<Func<T, TKey>> keySelector,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
         bool asNoTracking = false,
         CancellationToken cancellationToken = default
@@ -262,31 +263,41 @@ public interface IDatabaseEvaluator<T>
     ) where TKey : notnull;
 
     // Evalúa y devuelve los N primeros elementos de cada grupo ordenados
-    Task<Dictionary<TKey, List<T>>> EvaluateTopByGroupAsync<TKey, TProperty>(
+    Task<Dictionary<TKey, List<T>>> EvaluateTopByGroupAsync<TKey, TKey2, TProperty>(
         IQueryable<T> query,
         Func<T, TKey> keySelector,
         int count,
-        Func<T, object>? orderBy = null,
+        Expression<Func<T, TKey2>>? orderBy = null,
         bool ascending = true,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
         bool asNoTracking = false,
         CancellationToken cancellationToken = default
-    ) where TKey : notnull;
+    ) where TKey : notnull where TKey2 : notnull;
 
-    Task<IQueryable<T>> EvaluateQuery(
-        IQueryable<T> query,
-        bool asNoTracking = false
-    );
+    Task<IQueryable<T>> EvaluateQuery(IQueryable<T> query, bool asNoTracking = false);
 
-    public Task<PaginatedBlockResult<T>> GetPaginatedBlockAsync<TKey,TProperty>(
+    Task<PaginatedBlockResult<T>> GetPaginatedBlockAsync<TKey, TProperty>(
         IQueryable<T> query,
-        int blockSize = 10000,
-        int page = 1,
-        int pageSize = 100,
+        int blockSize = ConstantsHelper.Thousand,
+        int page = ConstantsHelper.One,
+        int pageSize = ConstantsHelper.OneHundred,
         Expression<Func<T, TKey>>? orderBy = null,
         bool ascending = true,
-        List<ThenByDataBaseExpression<T, TKey>>? thenBys = null,
+        IEnumerable<ThenByDataBaseExpression<T, TKey>>? thenBys = null,
+        bool asNoTracking = false,
+        IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
+        CancellationToken cancellationToken = default
+    ) where TKey : notnull;
+
+     Task<IQueryable<T>> GetPaginatedBlockQueryAsync<TKey, TProperty>(
+        IQueryable<T> query,
+        int blockSize = ConstantsHelper.Thousand, 
+        int page = ConstantsHelper.One,
+        int pageSize = ConstantsHelper.OneHundred,
+        Expression<Func<T, TKey>>? orderBy = null,
+        bool ascending = true,
+        IEnumerable<ThenByDataBaseExpression<T, TKey>>? thenBys = null,
         bool asNoTracking = false,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null
-    ) where TKey : notnull;
+        ) where TKey : notnull;
 }

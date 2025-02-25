@@ -33,30 +33,14 @@ public class InMemoryEvaluator<TBuilder, T> : IInMemoryEvaluator<T>
 
     public bool EvaluateAny(IEnumerable<T> entities)
     {
-        try
-        {
-            Func<T, bool> condition = _builder.Build().Compile();
-            return entities.Any(condition);
-        }
-        catch (Exception ex)
-        {
-            throw new InvalidOperationException(
-                $"Error in evaluating the condition for {UtilHelper.GetCurrentMethodName()}.", ex);
-        }
+        Func<T, bool> condition = _builder.Build().Compile();
+        return entities.Any(condition);
     }
 
     public int EvaluateCount(IEnumerable<T> entities)
     {
-        try
-        {
-            Func<T, bool> condition = _builder.Build().Compile();
-            return entities.Count(condition);
-        }
-        catch (Exception ex)
-        {
-            throw new InvalidOperationException(
-                $"Error in evaluating the condition for {UtilHelper.GetCurrentMethodName()}.", ex);
-        }
+        Func<T, bool> condition = _builder.Build().Compile();
+        return entities.Count(condition);
     }
 
     public T? GetFirstFailed(IEnumerable<T> entities)
@@ -91,50 +75,32 @@ public class InMemoryEvaluator<TBuilder, T> : IInMemoryEvaluator<T>
         IEnumerable<T> entities,
         Func<T, TKey>? orderBy = null,
         bool ascending = true,
-        List<ThenByInMemoryExpression<T, TKey>>? thenBys = null
+        IEnumerable<ThenByInMemoryExpression<T, TKey>>? thenBys = null
     )
     {
+        Func<T, bool> condition = _builder.BuildNegated().Compile();
+
         IEnumerable<T> enumerable = entities.ToList();
+        IEnumerable<T> failedEntities = enumerable.Where(condition);
+        IOrderedEnumerable<T> orderedEntities = ApplyOrdering(failedEntities, orderBy, ascending, thenBys);
 
-        try
-        {
-            Func<T, bool> condition = _builder.BuildNegated().Compile();
-
-            IEnumerable<T> failedEntities = enumerable.Where(condition);
-            IOrderedEnumerable<T> orderedEntities = ApplyOrdering(failedEntities, orderBy, ascending, thenBys);
-
-            return orderedEntities;
-        }
-        catch (Exception ex)
-        {
-            throw new InvalidOperationException(
-                $"Error in evaluating the condition for {UtilHelper.GetCurrentMethodName()}.", ex);
-        }
+        return orderedEntities;
     }
 
     public IEnumerable<T> EvaluateAll<TKey>(
         IEnumerable<T> entities,
         Func<T, TKey>? orderBy = null,
         bool ascending = true,
-        List<ThenByInMemoryExpression<T, TKey>>? thenBys = null
+        IEnumerable<ThenByInMemoryExpression<T, TKey>>? thenBys = null
     )
     {
+        Func<T, bool> condition = _builder.Build().Compile();
+
         IEnumerable<T> enumerable = entities.ToList();
+        IEnumerable<T> passedEntities = enumerable.Where(condition);
+        IOrderedEnumerable<T> orderedEntities = ApplyOrdering(passedEntities, orderBy, ascending, thenBys);
 
-        try
-        {
-            Func<T, bool> condition = _builder.Build().Compile();
-
-            IEnumerable<T> passedEntities = enumerable.Where(condition);
-            IOrderedEnumerable<T> orderedEntities = ApplyOrdering(passedEntities, orderBy, ascending, thenBys);
-
-            return orderedEntities;
-        }
-        catch (Exception ex)
-        {
-            throw new InvalidOperationException(
-                $"Error in evaluating the condition for {UtilHelper.GetCurrentMethodName()}.", ex);
-        }
+        return orderedEntities;
     }
 
     public IEnumerable<T> EvaluatePaged<TKey>(
@@ -143,31 +109,22 @@ public class InMemoryEvaluator<TBuilder, T> : IInMemoryEvaluator<T>
         int pageSize,
         Func<T, TKey>? orderBy = null,
         bool ascending = true,
-        List<ThenByInMemoryExpression<T, TKey>>? thenBys = null
+        IEnumerable<ThenByInMemoryExpression<T, TKey>>? thenBys = null
     )
     {
-        IEnumerable<T> enumerable = entities.ToList();
-
         ValidationHelper.ValidatePageZero(page);
         ValidationHelper.ValidatePageSizeZero(pageSize);
 
-        try
-        {
-            Func<T, bool> condition = _builder.Build().Compile();
+        Func<T, bool> condition = _builder.Build().Compile();
 
-            IEnumerable<T> filteredEntities = enumerable.Where(condition);
-            IOrderedEnumerable<T> orderedEntities = ApplyOrdering(filteredEntities, orderBy, ascending, thenBys);
-            IEnumerable<T> pagedEntities = orderedEntities
-                .Skip((page - ConstantsHelper.One) * pageSize)
-                .Take(pageSize);
+        IEnumerable<T> enumerable = entities.ToList();
+        IEnumerable<T> filteredEntities = enumerable.Where(condition);
+        IOrderedEnumerable<T> orderedEntities = ApplyOrdering(filteredEntities, orderBy, ascending, thenBys);
+        IEnumerable<T> pagedEntities = orderedEntities
+            .Skip((page - ConstantsHelper.One) * pageSize)
+            .Take(pageSize);
 
-            return pagedEntities;
-        }
-        catch (Exception ex)
-        {
-            throw new InvalidOperationException(
-                $"Error in evaluating the condition for {UtilHelper.GetCurrentMethodName()}.", ex);
-        }
+        return pagedEntities;
     }
 
     public IEnumerable<T> EvaluateTop<TKey>(
@@ -175,27 +132,18 @@ public class InMemoryEvaluator<TBuilder, T> : IInMemoryEvaluator<T>
         int count,
         Func<T, TKey>? orderBy = null,
         bool ascending = true,
-        List<ThenByInMemoryExpression<T, TKey>>? thenBys = null
+        IEnumerable<ThenByInMemoryExpression<T, TKey>>? thenBys = null
     )
     {
-        IEnumerable<T> enumerable = entities.ToList();
-
         ValidationHelper.ValidateCountZero(count);
 
-        try
-        {
-            Func<T, bool> condition = _builder.Build().Compile();
+        Func<T, bool> condition = _builder.Build().Compile();
 
-            IEnumerable<T> filteredEntities = enumerable.Where(condition);
-            IOrderedEnumerable<T> orderedEntities = ApplyOrdering(filteredEntities, orderBy, ascending, thenBys);
+        IEnumerable<T> enumerable = entities.ToList();
+        IEnumerable<T> filteredEntities = enumerable.Where(condition);
+        IOrderedEnumerable<T> orderedEntities = ApplyOrdering(filteredEntities, orderBy, ascending, thenBys);
 
-            return orderedEntities.Take(count);
-        }
-        catch (Exception ex)
-        {
-            throw new InvalidOperationException(
-                $"Error in evaluating the condition for {UtilHelper.GetCurrentMethodName()}.", ex);
-        }
+        return orderedEntities.Take(count);
     }
 
     public IEnumerable<T> EvaluateDistinct<TKey>(
@@ -203,28 +151,18 @@ public class InMemoryEvaluator<TBuilder, T> : IInMemoryEvaluator<T>
         Func<T, TKey> selector,
         Func<T, TKey>? orderBy = null,
         bool ascending = true,
-        List<ThenByInMemoryExpression<T, TKey>>? thenBys = null
+        IEnumerable<ThenByInMemoryExpression<T, TKey>>? thenBys = null
     )
     {
-        IEnumerable<T> enumerable = entities.ToList();
-
-        ValidationHelper.ValidateEntitiesNotNull(enumerable);
         ValidationHelper.ValidateSelectorNotNull(selector);
 
-        try
-        {
-            Func<T, bool> condition = _builder.Build().Compile();
+        Func<T, bool> condition = _builder.Build().Compile();
 
-            IEnumerable<T> filteredEntities = enumerable.Where(condition);
-            IEnumerable<T> orderedEntities = ApplyOrdering(filteredEntities, orderBy, ascending, thenBys);
+        IEnumerable<T> enumerable = entities.ToList();
+        IEnumerable<T> filteredEntities = enumerable.Where(condition);
+        IEnumerable<T> orderedEntities = ApplyOrdering(filteredEntities, orderBy, ascending, thenBys);
 
-            return orderedEntities.DistinctBy(selector);
-        }
-        catch (Exception ex)
-        {
-            throw new InvalidOperationException(
-                $"Error in evaluating the condition for {UtilHelper.GetCurrentMethodName()}.", ex);
-        }
+        return orderedEntities.DistinctBy(selector);
     }
 
     public IEnumerable<T> EvaluateDuplicates<TKey>(
@@ -232,38 +170,28 @@ public class InMemoryEvaluator<TBuilder, T> : IInMemoryEvaluator<T>
         Func<T, TKey> selector,
         Func<T, TKey>? orderBy = null,
         bool ascending = true,
-        List<ThenByInMemoryExpression<T, TKey>>? thenBys = null
+        IEnumerable<ThenByInMemoryExpression<T, TKey>>? thenBys = null
     )
     {
-        IEnumerable<T> enumerable = entities.ToList();
-
-        ValidationHelper.ValidateEntitiesNotNull(enumerable);
         ValidationHelper.ValidateSelectorNotNull(selector);
 
-        try
-        {
-            Func<T, bool> condition = _builder.Build().Compile();
+        Func<T, bool> condition = _builder.Build().Compile();
 
-            IEnumerable<T> filteredEntities = enumerable.Where(condition);
-            IEnumerable<T> orderedEntities = ApplyOrdering(filteredEntities, orderBy, ascending, thenBys);
+        IEnumerable<T> enumerable = entities.ToList();
+        IEnumerable<T> filteredEntities = enumerable.Where(condition);
+        IEnumerable<T> orderedEntities = ApplyOrdering(filteredEntities, orderBy, ascending, thenBys);
 
-            return orderedEntities
-                .GroupBy(selector)
-                .Where(group => group.Skip(ConstantsHelper.One).Any()) // Más eficiente que Count() > 1
-                .SelectMany(group => group);
-        }
-        catch (Exception ex)
-        {
-            throw new InvalidOperationException(
-                $"Error in evaluating the condition for {UtilHelper.GetCurrentMethodName()}.", ex);
-        }
+        return orderedEntities
+            .GroupBy(selector)
+            .Where(group => group.Skip(ConstantsHelper.One).Any()) // Más eficiente que Count() > 1
+            .SelectMany(group => group);
     }
 
     public int GetFirstMatchIndex<TKey>(
         IEnumerable<T> entities,
         Func<T, TKey>? orderBy = null,
         bool ascending = true,
-        List<ThenByInMemoryExpression<T, TKey>>? thenBys = null
+        IEnumerable<ThenByInMemoryExpression<T, TKey>>? thenBys = null
     )
     {
         try
@@ -288,7 +216,7 @@ public class InMemoryEvaluator<TBuilder, T> : IInMemoryEvaluator<T>
         IEnumerable<T> entities,
         Func<T, TKey>? orderBy = null,
         bool ascending = true,
-        List<ThenByInMemoryExpression<T, TKey>>? thenBys = null
+        IEnumerable<ThenByInMemoryExpression<T, TKey>>? thenBys = null
     )
     {
         try
@@ -316,7 +244,7 @@ public class InMemoryEvaluator<TBuilder, T> : IInMemoryEvaluator<T>
         IEnumerable<T> entities,
         Func<T, TKey>? orderBy = null,
         bool ascending = true,
-        List<ThenByInMemoryExpression<T, TKey>>? thenBys = null
+        IEnumerable<ThenByInMemoryExpression<T, TKey>>? thenBys = null
     )
     {
         IEnumerable<T> enumerable = entities.ToList();
@@ -341,7 +269,7 @@ public class InMemoryEvaluator<TBuilder, T> : IInMemoryEvaluator<T>
         IEnumerable<T> entities,
         Func<T, TKey>? orderBy = null,
         bool ascending = true,
-        List<ThenByInMemoryExpression<T, TKey>>? thenBys = null
+        IEnumerable<ThenByInMemoryExpression<T, TKey>>? thenBys = null
     )
     {
         IEnumerable<T> enumerable = entities.ToList();
@@ -465,8 +393,7 @@ public class InMemoryEvaluator<TBuilder, T> : IInMemoryEvaluator<T>
         IEnumerable<T> entities,
         Func<T, TResult> selector,
         Func<TResult, TResult, TResult> aggregator
-    )
-        where TResult : INumber<TResult>
+    ) where TResult : INumber<TResult>
     {
         IEnumerable<T> enumerable = entities.ToList();
 
@@ -713,7 +640,7 @@ public class InMemoryEvaluator<TBuilder, T> : IInMemoryEvaluator<T>
         IEnumerable<T> entities,
         Func<T, TKey>? orderBy,
         bool ascending,
-        List<ThenByInMemoryExpression<T, TKey>>? thenBys = null)
+        IEnumerable<ThenByInMemoryExpression<T, TKey>>? thenBys = null)
     {
         if (orderBy == null) return entities.OrderBy(x => x);
 
@@ -721,15 +648,20 @@ public class InMemoryEvaluator<TBuilder, T> : IInMemoryEvaluator<T>
             ? entities.OrderBy(orderBy)
             : entities.OrderByDescending(orderBy);
 
-        if (thenBys != null && thenBys.Any())
+        if (thenBys != null)
         {
-            orderedEntities = thenBys.Aggregate(
-                orderedEntities,
-                (currentOrderedQuery, thenByExpression) =>
-                    thenByExpression.Ascending
-                        ? currentOrderedQuery.ThenBy(thenByExpression.ThenBy)
-                        : currentOrderedQuery.ThenByDescending(thenByExpression.ThenBy)
-            );
+            List<ThenByInMemoryExpression<T, TKey>> thenByInMemoryExpressions = thenBys.ToList();
+
+            if (thenByInMemoryExpressions.Any())
+            {
+                orderedEntities = thenByInMemoryExpressions.Aggregate(
+                    orderedEntities,
+                    (currentOrderedQuery, thenByExpression) =>
+                        thenByExpression.Ascending
+                            ? currentOrderedQuery.ThenBy(thenByExpression.ThenBy)
+                            : currentOrderedQuery.ThenByDescending(thenByExpression.ThenBy)
+                );
+            }
         }
 
         return orderedEntities;
