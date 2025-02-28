@@ -15,14 +15,14 @@ public interface IComparisonExpression<out TBuilder, T>
     /// </summary>
     /// <param name="selector">Expression to select the property.</param>
     /// <returns>The builder instance for method chaining.</returns>
-    TBuilder NotNull(Expression<Func<T, object?>> selector);
+    TBuilder NotNull<TProperty>(Expression<Func<T, TProperty?>> selector);
     
     /// <summary>
     /// Ensures that the selected property is null.
     /// </summary>
     /// <param name="selector">Expression to select the property.</param>
     /// <returns>The builder instance for method chaining.</returns>
-    TBuilder Null(Expression<Func<T, object?>> selector);
+    TBuilder Null<TProperty>(Expression<Func<T, TProperty?>> selector);
     
     /// <summary>
     /// Ensures that the selected property is equal to the specified value.

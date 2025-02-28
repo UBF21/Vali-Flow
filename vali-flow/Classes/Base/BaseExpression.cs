@@ -72,7 +72,7 @@ public class BaseExpression<TBuilder, T> : IExpression<TBuilder, T>
         return Add(combinedCondition);
     }
 
-    public TBuilder AddSubGroup(Action<TBuilder> group)
+    public TBuilder AddSubGroup(Action<IExpression<TBuilder,T>> group)
     {
         TBuilder groupBuilderInstance = new TBuilder();
         group(groupBuilderInstance);
@@ -87,162 +87,162 @@ public class BaseExpression<TBuilder, T> : IExpression<TBuilder, T>
         return Add(groupCondition);
     }
 
-    public bool Evaluate(T entity)
-    {
-        try
-        {
-            Func<T, bool> compiledCondition = Build().Compile(); // Compila la expresión internamente.
-            return compiledCondition(entity);
-        }
-        catch (Exception ex)
-        {
-            throw new InvalidOperationException("Error in evaluating the conditions.", ex);
-        }
-    }
+    // public bool Evaluate(T entity)
+    // {
+    //     try
+    //     {
+    //         Func<T, bool> compiledCondition = Build().Compile(); // Compila la expresión internamente.
+    //         return compiledCondition(entity);
+    //     }
+    //     catch (Exception ex)
+    //     {
+    //         throw new InvalidOperationException("Error in evaluating the conditions.", ex);
+    //     }
+    // }
 
-    public bool Evaluate(IEnumerable<T> entities)
-    {
-        if (entities == null || !entities.Any())
-        {
-            throw new ArgumentException("Collection is empty or null", nameof(entities));
-        }
+    // public bool Evaluate(IEnumerable<T> entities)
+    // {
+    //     if (entities == null || !entities.Any())
+    //     {
+    //         throw new ArgumentException("Collection is empty or null", nameof(entities));
+    //     }
+    //
+    //     try
+    //     {
+    //         Func<T, bool> compiledCondition = Build().Compile();
+    //         return entities.All(compiledCondition);
+    //     }
+    //     catch (Exception ex)
+    //     {
+    //         throw new InvalidOperationException("Error in evaluating the conditions.", ex);
+    //     }
+    // }
 
-        try
-        {
-            Func<T, bool> compiledCondition = Build().Compile();
-            return entities.All(compiledCondition);
-        }
-        catch (Exception ex)
-        {
-            throw new InvalidOperationException("Error in evaluating the conditions.", ex);
-        }
-    }
+    // public bool EvaluateAny(IEnumerable<T> entities)
+    // {
+    //     if (entities == null || !entities.Any())
+    //     {
+    //         throw new ArgumentException("Collection is empty or null", nameof(entities));
+    //     }
+    //
+    //     try
+    //     {
+    //         Func<T, bool> compiledCondition = Build().Compile();
+    //         return entities.Any(compiledCondition);
+    //     }
+    //     catch (Exception ex)
+    //     {
+    //         throw new InvalidOperationException("Error in evaluating the conditions.", ex);
+    //     }
+    // }
 
-    public bool EvaluateAny(IEnumerable<T> entities)
-    {
-        if (entities == null || !entities.Any())
-        {
-            throw new ArgumentException("Collection is empty or null", nameof(entities));
-        }
+    // public int EvaluateCount(IEnumerable<T> entities)
+    // {
+    //     if (entities == null || !entities.Any())
+    //     {
+    //         throw new ArgumentException("Collection is empty or null", nameof(entities));
+    //     }
+    //
+    //     try
+    //     {
+    //         Func<T, bool> compiledCondition = Build().Compile();
+    //         return entities.Count(compiledCondition);
+    //     }
+    //     catch (Exception ex)
+    //     {
+    //         throw new InvalidOperationException("Error in evaluating the conditions.", ex);
+    //     }
+    // }
 
-        try
-        {
-            Func<T, bool> compiledCondition = Build().Compile();
-            return entities.Any(compiledCondition);
-        }
-        catch (Exception ex)
-        {
-            throw new InvalidOperationException("Error in evaluating the conditions.", ex);
-        }
-    }
+    // public T? GetFirstFailed(IEnumerable<T> entities)
+    // {
+    //     if (entities == null || !entities.Any())
+    //     {
+    //         throw new ArgumentException("Collection is empty or null", nameof(entities));
+    //     }
+    //
+    //     try
+    //     {
+    //         Func<T, bool> compiledCondition = Build().Compile();
+    //         return entities.FirstOrDefault(e => !compiledCondition(e));
+    //     }
+    //     catch (Exception ex)
+    //     {
+    //         throw new InvalidOperationException("Error in evaluating the conditions.", ex);
+    //     }
+    // }
 
-    public int EvaluateCount(IEnumerable<T> entities)
-    {
-        if (entities == null || !entities.Any())
-        {
-            throw new ArgumentException("Collection is empty or null", nameof(entities));
-        }
+    // public T? GetFirst(IEnumerable<T> entities)
+    // {
+    //     if (entities == null || !entities.Any())
+    //     {
+    //         throw new ArgumentException("Collection is empty or null", nameof(entities));
+    //     }
+    //
+    //     try
+    //     {
+    //         Func<T, bool> compiledCondition = Build().Compile();
+    //         return entities.FirstOrDefault(compiledCondition); // Devuelve el primer que cumple o null
+    //     }
+    //     catch (Exception ex)
+    //     {
+    //         throw new InvalidOperationException("Error in evaluating the conditions.", ex);
+    //     }
+    // }
 
-        try
-        {
-            Func<T, bool> compiledCondition = Build().Compile();
-            return entities.Count(compiledCondition);
-        }
-        catch (Exception ex)
-        {
-            throw new InvalidOperationException("Error in evaluating the conditions.", ex);
-        }
-    }
+    // public IEnumerable<T> EvaluateAllFailed(IEnumerable<T> entities)
+    // {
+    //     if (entities == null || !entities.Any())
+    //     {
+    //         throw new ArgumentException("Collection is empty or null", nameof(entities));
+    //     }
+    //
+    //     try
+    //     {
+    //         Func<T, bool> compiledCondition = Build().Compile();
+    //         return entities.Where(e => !compiledCondition(e)); // Filtra los que NO cumplen
+    //     }
+    //     catch (Exception ex)
+    //     {
+    //         throw new InvalidOperationException("Error in evaluating the conditions.", ex);
+    //     }
+    // }
 
-    public T? GetFirstFailed(IEnumerable<T> entities)
-    {
-        if (entities == null || !entities.Any())
-        {
-            throw new ArgumentException("Collection is empty or null", nameof(entities));
-        }
+    // public IEnumerable<T> EvaluateAll(IEnumerable<T> entities)
+    // {
+    //     if (entities == null || !entities.Any())
+    //     {
+    //         throw new ArgumentException("Collection is empty or null", nameof(entities));
+    //     }
+    //
+    //     Func<T, bool> compiledCondition = Build().Compile();
+    //     return entities.Where(compiledCondition);
+    // }
 
-        try
-        {
-            Func<T, bool> compiledCondition = Build().Compile();
-            return entities.FirstOrDefault(e => !compiledCondition(e));
-        }
-        catch (Exception ex)
-        {
-            throw new InvalidOperationException("Error in evaluating the conditions.", ex);
-        }
-    }
-
-    public T? GetFirst(IEnumerable<T> entities)
-    {
-        if (entities == null || !entities.Any())
-        {
-            throw new ArgumentException("Collection is empty or null", nameof(entities));
-        }
-
-        try
-        {
-            Func<T, bool> compiledCondition = Build().Compile();
-            return entities.FirstOrDefault(compiledCondition); // Devuelve el primer que cumple o null
-        }
-        catch (Exception ex)
-        {
-            throw new InvalidOperationException("Error in evaluating the conditions.", ex);
-        }
-    }
-
-    public IEnumerable<T> EvaluateAllFailed(IEnumerable<T> entities)
-    {
-        if (entities == null || !entities.Any())
-        {
-            throw new ArgumentException("Collection is empty or null", nameof(entities));
-        }
-
-        try
-        {
-            Func<T, bool> compiledCondition = Build().Compile();
-            return entities.Where(e => !compiledCondition(e)); // Filtra los que NO cumplen
-        }
-        catch (Exception ex)
-        {
-            throw new InvalidOperationException("Error in evaluating the conditions.", ex);
-        }
-    }
-
-    public IEnumerable<T> EvaluateAll(IEnumerable<T> entities)
-    {
-        if (entities == null || !entities.Any())
-        {
-            throw new ArgumentException("Collection is empty or null", nameof(entities));
-        }
-
-        Func<T, bool> compiledCondition = Build().Compile();
-        return entities.Where(compiledCondition);
-    }
-
-    public IEnumerable<T> EvaluatePaged(IEnumerable<T> entities, int page, int pageSize)
-    {
-        if (entities == null || !entities.Any())
-        {
-            throw new ArgumentException("Collection is empty or null", nameof(entities));
-        }
-
-        if (page < 1 || pageSize < 1)
-        {
-            throw new ArgumentException("Page and pageSize must be greater than zero.");
-        }
-
-        try
-        {
-            Func<T, bool> compiledCondition = Build().Compile(); // Compiles the validation expression
-            return entities.Where(compiledCondition) // Filters valid elements
-                .Skip((page - 1) * pageSize) // Skips previous pages
-                .Take(pageSize); // Takes elements for the current page
-        }
-        catch (Exception ex)
-        {
-            throw new InvalidOperationException("Error in evaluating the conditions.", ex);
-        }
-    }
+    // public IEnumerable<T> EvaluatePaged(IEnumerable<T> entities, int page, int pageSize)
+    // {
+    //     if (entities == null || !entities.Any())
+    //     {
+    //         throw new ArgumentException("Collection is empty or null", nameof(entities));
+    //     }
+    //
+    //     if (page < 1 || pageSize < 1)
+    //     {
+    //         throw new ArgumentException("Page and pageSize must be greater than zero.");
+    //     }
+    //
+    //     try
+    //     {
+    //         Func<T, bool> compiledCondition = Build().Compile(); // Compiles the validation expression
+    //         return entities.Where(compiledCondition) // Filters valid elements
+    //             .Skip((page - 1) * pageSize) // Skips previous pages
+    //             .Take(pageSize); // Takes elements for the current page
+    //     }
+    //     catch (Exception ex)
+    //     {
+    //         throw new InvalidOperationException("Error in evaluating the conditions.", ex);
+    //     }
+    // }
     
     public TBuilder And()
     {

@@ -19,7 +19,7 @@ public interface ICollectionExpression<out TBuilder, T>
     /// builder.NotEmpty(x => x.Orders);
     /// </code>
     /// </example>
-    TBuilder NotEmpty(Expression<Func<T, IEnumerable<object?>>> selector);
+    TBuilder NotEmpty<TValue>(Expression<Func<T, IEnumerable<TValue?>>> selector);
     
     /// <summary>
     /// Checks if the selected property value is within the specified set of values.
@@ -60,7 +60,7 @@ public interface ICollectionExpression<out TBuilder, T>
     /// builder.Count(x => x.Orders, 3);
     /// </code>
     /// </example>
-    TBuilder Count(Expression<Func<T, IEnumerable<object?>>> selector, int count);
+    TBuilder Count<TValue>(Expression<Func<T, IEnumerable<TValue?>>> selector, int count);
     
     /// <summary>
     /// Ensures that the selected collection contains a number of elements within the specified range.
@@ -74,7 +74,7 @@ public interface ICollectionExpression<out TBuilder, T>
     /// builder.CountBetween(x => x.Orders, 1, 5);
     /// </code>
     /// </example>
-    TBuilder CountBetween(Expression<Func<T, IEnumerable<object?>>> selector, int min, int max);
+    TBuilder CountBetween<TValue>(Expression<Func<T, IEnumerable<TValue>>> selector, int min, int max);
     
     /// <summary>
     /// Ensures that all elements in the selected collection satisfy the given condition.
@@ -129,7 +129,7 @@ public interface ICollectionExpression<out TBuilder, T>
     /// builder.DistinctCount(x => x.Categories, 3);
     /// </code>
     /// </example>
-    TBuilder DistinctCount(Expression<Func<T, IEnumerable<object?>>> selector, int count);
+    TBuilder DistinctCount<TValue>(Expression<Func<T, IEnumerable<TValue?>>> selector, int count);
     
     /// <summary>
     /// Ensures that none of the elements in the selected collection satisfy the given condition.

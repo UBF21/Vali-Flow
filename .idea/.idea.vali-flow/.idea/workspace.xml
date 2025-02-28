@@ -9,11 +9,14 @@
   <component name="ChangeListManager">
     <list default="true" id="aa4fc315-c37b-4ab3-b9cc-02a55a2255c8" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/.idea.vali-flow/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.vali-flow/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/vali-flow/Classes/Evaluators/DatabaseEvaluator.cs" beforeDir="false" afterPath="$PROJECT_DIR$/vali-flow/Classes/Evaluators/DatabaseEvaluator.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/vali-flow/Classes/Results/PaginatedBlockResult.cs" beforeDir="false" afterPath="$PROJECT_DIR$/vali-flow/Classes/Results/PaginatedBlockResult.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/vali-flow/Interfaces/Evaluators/IDatabaseEvaluator.cs" beforeDir="false" afterPath="$PROJECT_DIR$/vali-flow/Interfaces/Evaluators/IDatabaseEvaluator.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/vali-flow/Utils/ConstantsHelper.cs" beforeDir="false" afterPath="$PROJECT_DIR$/vali-flow/Utils/ConstantsHelper.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/vali-flow/Utils/ValidationHelper.cs" beforeDir="false" afterPath="$PROJECT_DIR$/vali-flow/Utils/ValidationHelper.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/vali-flow-test/Program.cs" beforeDir="false" afterPath="$PROJECT_DIR$/vali-flow-test/Program.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/vali-flow/Builder/ValiFlow.cs" beforeDir="false" afterPath="$PROJECT_DIR$/vali-flow/Builder/ValiFlow.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/vali-flow/Classes/Base/BaseExpression.cs" beforeDir="false" afterPath="$PROJECT_DIR$/vali-flow/Classes/Base/BaseExpression.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/vali-flow/Classes/General/ComparisonExpression.cs" beforeDir="false" afterPath="$PROJECT_DIR$/vali-flow/Classes/General/ComparisonExpression.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/vali-flow/Classes/Types/CollectionExpression.cs" beforeDir="false" afterPath="$PROJECT_DIR$/vali-flow/Classes/Types/CollectionExpression.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/vali-flow/Interfaces/General/IComparisonExpression.cs" beforeDir="false" afterPath="$PROJECT_DIR$/vali-flow/Interfaces/General/IComparisonExpression.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/vali-flow/Interfaces/Types/ICollectionExpression.cs" beforeDir="false" afterPath="$PROJECT_DIR$/vali-flow/Interfaces/Types/ICollectionExpression.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/vali-flow/Interfaces/Types/IExpression.cs" beforeDir="false" afterPath="$PROJECT_DIR$/vali-flow/Interfaces/Types/IExpression.cs" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -44,8 +47,15 @@
     <setting file="file://$APPLICATION_CONFIG_DIR$/resharper-host/SourcesCache/67818da183a0c61cb12efd51eff113abd0238f8e25f75580148096acdd4a6be3/Aggregate.cs" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/vali-flow/Builder/ValiFlow.cs" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/vali-flow/Classes/Base/BaseExpression.cs" root0="FORCE_HIGHLIGHTING" />
+    <setting file="mock:///Users/isw21/RiderProjects/vali-flow/vali-flow/Classes/Evaluators/DatabaseEvaluator.cs" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///Users/isw21/RiderProjects/vali-flow/vali-flow/Classes/Evaluators/InMemoryEvaluator.cs" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///Users/isw21/RiderProjects/vali-flow/vali-flow/Classes/Results/PaginatedBlockResult.cs" root0="SKIP_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/vali-flow/Classes/Types/StringExpression.cs" root0="FORCE_HIGHLIGHTING" />
+    <setting file="mock:///Users/isw21/RiderProjects/vali-flow/vali-flow/Interfaces/Evaluators/IDatabaseEvaluator.cs" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///Users/isw21/RiderProjects/vali-flow/vali-flow/Interfaces/Evaluators/IInMemoryEvaluator.cs" root0="SKIP_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/vali-flow/Interfaces/Types/IStringExpression.cs" root0="FORCE_HIGHLIGHTING" />
+    <setting file="mock:///Users/isw21/RiderProjects/vali-flow/vali-flow/Utils/ConstantsHelper.cs" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///Users/isw21/RiderProjects/vali-flow/vali-flow/Utils/ValidationHelper.cs" root0="SKIP_HIGHLIGHTING" />
     <setting file="file:///usr/local/share/dotnet/sdk/7.0.410/Sdks/Microsoft.NET.Sdk/Sdk/Sdk.props" root0="FORCE_HIGHLIGHTING" />
     <setting file="file:///usr/local/share/dotnet/sdk/7.0.410/Sdks/Microsoft.NET.Sdk/Sdk/Sdk.targets" root0="FORCE_HIGHLIGHTING" />
   </component>
@@ -117,6 +127,8 @@
       <workItem from="1740433381338" duration="4631000" />
       <workItem from="1740489095631" duration="7857000" />
       <workItem from="1740510749461" duration="4221000" />
+      <workItem from="1740522833194" duration="3765000" />
+      <workItem from="1740756413709" duration="7934000" />
     </task>
     <task id="LOCAL-00001" summary="-Creación de nueva estructura para el builder de expresiones para linq o fuentes de datos en general (ValiFlow).">
       <option name="closed" value="true" />
@@ -198,7 +210,15 @@
       <option name="project" value="LOCAL" />
       <updated>1740440812258</updated>
     </task>
-    <option name="localTasksCounter" value="11" />
+    <task id="LOCAL-00011" summary="- Creación método para paginación en bloque.&#10;&#10;-Quitando Try-Catch en métodos que no materializan data.">
+      <option name="closed" value="true" />
+      <created>1740526603525</created>
+      <option name="number" value="00011" />
+      <option name="presentableId" value="LOCAL-00011" />
+      <option name="project" value="LOCAL" />
+      <updated>1740526603525</updated>
+    </task>
+    <option name="localTasksCounter" value="12" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -218,7 +238,8 @@
     <MESSAGE value="- workspace.xml subido." />
     <MESSAGE value="-Quitando el applyDynamicWhere para manejar el where internamente en los evaluadores." />
     <MESSAGE value="-Creando el nuevo método para paginar por bloques de datos." />
-    <option name="LAST_COMMIT_MESSAGE" value="-Creando el nuevo método para paginar por bloques de datos." />
+    <MESSAGE value="- Creación método para paginación en bloque.&#10;&#10;-Quitando Try-Catch en métodos que no materializan data." />
+    <option name="LAST_COMMIT_MESSAGE" value="- Creación método para paginación en bloque.&#10;&#10;-Quitando Try-Catch en métodos que no materializan data." />
   </component>
   <component name="XSLT-Support.FileAssociations.UIState">
     <expand />

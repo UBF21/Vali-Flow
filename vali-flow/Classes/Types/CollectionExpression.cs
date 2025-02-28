@@ -14,9 +14,9 @@ public class CollectionExpression<TBuilder, T> : ICollectionExpression<TBuilder,
         _builder = builder;
     }
 
-    public TBuilder NotEmpty(Expression<Func<T, IEnumerable<object?>>> selector)
+    public TBuilder NotEmpty<TValue>(Expression<Func<T, IEnumerable<TValue?>>> selector)
     {
-        Expression<Func<IEnumerable<object?>, bool>> predicate = val => val.Any() == true;
+        Expression<Func<IEnumerable<TValue?>, bool>> predicate = val => val.Any() == true;
         return _builder.Add(selector, predicate);
     }
 
@@ -34,15 +34,33 @@ public class CollectionExpression<TBuilder, T> : ICollectionExpression<TBuilder,
         return _builder.Add(selector, predicate);
     }
 
-    public TBuilder Count(Expression<Func<T, IEnumerable<object?>>> selector, int count)
+    public TBuilder Count<TValue>(Expression<Func<T, IEnumerable<TValue?>>> selector, int count)
     {
-        Expression<Func<IEnumerable<object?>, bool>> predicate = val => val.Count() == count;
+        Expression<Func<IEnumerable<TValue?>, bool>> predicate = val => val.Count() == count;
         return _builder.Add(selector, predicate);
     }
 
-    public TBuilder CountBetween(Expression<Func<T, IEnumerable<object?>>> selector, int min, int max)
+    public TBuilder CountBetween<TValue>(Expression<Func<T, IEnumerable<TValue>>> selector, int min, int max)
     {
-        Expression<Func<IEnumerable<object?>, bool>> predicate = val => val.Count() >= min && val.Count() <= max;
+        ParameterExpression parameter = Expression.Parameter(typeof(IEnumerable<TValue>), "val");
+        
+        ParameterExpression countVar = Expression.Variable(typeof(int), "count");
+        
+        BinaryExpression countAssign = Expression.Assign(countVar, Expression.Call(
+            typeof(Enumerable), "Count", new[] { typeof(TValue) }, parameter));
+        
+        BinaryExpression condition = Expression.AndAlso(
+            Expression.GreaterThanOrEqual(countVar, Expression.Constant(min)),
+            Expression.LessThanOrEqual(countVar, Expression.Constant(max))
+        );
+
+        BlockExpression block = Expression.Block(
+            new[] { countVar },
+            countAssign,
+            condition
+        );
+
+        Expression<Func<IEnumerable<TValue>, bool>> predicate = Expression.Lambda<Func<IEnumerable<TValue>, bool>>(block, parameter);
         return _builder.Add(selector, predicate);
     }
 
@@ -66,9 +84,9 @@ public class CollectionExpression<TBuilder, T> : ICollectionExpression<TBuilder,
         return _builder.Add(selector, predicate);
     }
 
-    public TBuilder DistinctCount(Expression<Func<T, IEnumerable<object?>>> selector, int count)
+    public TBuilder DistinctCount<TValue>(Expression<Func<T, IEnumerable<TValue?>>> selector, int count)
     {
-        Expression<Func<IEnumerable<object?>, bool>> predicate = val => val.Distinct().Count() == count;
+        Expression<Func<IEnumerable<TValue?>, bool>> predicate = val => val.Distinct().Count() == count;
         return _builder.Add(selector, predicate);
     }
 

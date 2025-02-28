@@ -14,15 +14,15 @@ public class ComparisonExpression<TBuilder,T> : IComparisonExpression<TBuilder, 
         _builder = builder;
     }
     
-    public TBuilder NotNull(Expression<Func<T, object?>> selector)
+    public TBuilder NotNull<TValue>(Expression<Func<T, TValue?>> selector)
     {
-        Expression<Func<object?, bool>> predicate = value => value != null;
+        Expression<Func<TValue?, bool>> predicate = value => value != null;
         return _builder.Add(selector, predicate);
     }
 
-    public TBuilder Null(Expression<Func<T, object?>> selector)
+    public TBuilder Null<TValue>(Expression<Func<T, TValue?>> selector)
     {
-        Expression<Func<object?, bool>> predicate = value => value == null;
+        Expression<Func<TValue?, bool>> predicate = value => value == null;
         return _builder.Add(selector, predicate);
     }
 

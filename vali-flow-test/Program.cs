@@ -35,18 +35,18 @@ var builder = new ValiFlow<User>()
     .IsBase64(x => x.Base64Data); // Ensures the field contains a valid Base64-encoded string.
 
 //valid row collection 
-var usersValid = builder.EvaluateAll(users);
-string jsonOutput =  JsonConvert.SerializeObject(usersValid, Formatting.Indented);
-Console.WriteLine(jsonOutput);
+// var usersValid = builder.EvaluateAll(users);
+// string jsonOutput =  JsonConvert.SerializeObject(usersValid, Formatting.Indented);
+// Console.WriteLine(jsonOutput);
 
 //Get Build Expression 
 var expressionResult = builder.Build();
 
 //rows passing the expression
-foreach (var user in users)
-{
-    var result = builder.Evaluate(user);
-    string value = result ? $" {user.Name} es válido" : $" {user.Name} no es válido";
-    Console.WriteLine(value);
-}
-
+// foreach (var user in users)
+// {
+//     var result = builder.Evaluate(user);
+//     string value = result ? $" {user.Name} es válido" : $" {user.Name} no es válido";
+//     Console.WriteLine(value);
+// }
+//

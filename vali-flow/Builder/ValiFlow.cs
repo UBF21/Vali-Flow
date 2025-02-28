@@ -31,9 +31,9 @@ public class ValiFlow<T> : BaseExpression<ValiFlow<T>, T>,
 
     public ValiFlow<T> IsFalse(Func<T, bool> selector) => _booleanExpression.IsFalse(selector);
 
-    public ValiFlow<T> NotNull(Expression<Func<T, object?>> selector) => _comparisonExpression.NotNull(selector);
+    public ValiFlow<T> NotNull<TProperty>(Expression<Func<T, TProperty?>> selector) => _comparisonExpression.NotNull(selector);
 
-    public ValiFlow<T> Null(Expression<Func<T, object?>> selector) => _comparisonExpression.Null(selector);
+    public ValiFlow<T> Null<TProperty>(Expression<Func<T, TProperty?>> selector) => _comparisonExpression.Null(selector);
 
     public ValiFlow<T> EqualTo<TValue>(Expression<Func<T, TValue>> selector, TValue value)
         where TValue : IEquatable<TValue> => _comparisonExpression.EqualTo(selector, value);
@@ -41,7 +41,7 @@ public class ValiFlow<T> : BaseExpression<ValiFlow<T>, T>,
     public ValiFlow<T> NotEqualTo<TValue>(Expression<Func<T, TValue>> selector, TValue value)
         where TValue : IEquatable<TValue> => _comparisonExpression.NotEqualTo(selector, value);
 
-    public ValiFlow<T> NotEmpty(Expression<Func<T, IEnumerable<object?>>> selector) =>
+    public ValiFlow<T> NotEmpty<TValue>(Expression<Func<T, IEnumerable<TValue?>>> selector) =>
         _collectionExpression.NotEmpty(selector);
 
     public ValiFlow<T> In<TValue>(Expression<Func<T, TValue>> selector, IEnumerable<TValue> values)
@@ -50,10 +50,10 @@ public class ValiFlow<T> : BaseExpression<ValiFlow<T>, T>,
     public ValiFlow<T> NotIn<TValue>(Expression<Func<T, TValue>> selector, IEnumerable<TValue> values)
         => _collectionExpression.NotIn(selector, values);
 
-    public ValiFlow<T> Count(Expression<Func<T, IEnumerable<object?>>> selector, int count)
+    public ValiFlow<T> Count<TValue>(Expression<Func<T, IEnumerable<TValue?>>> selector, int count)
         => _collectionExpression.Count(selector, count);
 
-    public ValiFlow<T> CountBetween(Expression<Func<T, IEnumerable<object?>>> selector, int min, int max)
+    public ValiFlow<T> CountBetween<TValue>(Expression<Func<T, IEnumerable<TValue?>>> selector, int min, int max)
         => _collectionExpression.CountBetween(selector, min, max);
 
     public ValiFlow<T> All<TValue>(Expression<Func<T, IEnumerable<TValue>>> selector,
@@ -67,7 +67,7 @@ public class ValiFlow<T> : BaseExpression<ValiFlow<T>, T>,
     public ValiFlow<T> Contains<TValue>(Expression<Func<T, IEnumerable<TValue>>> selector, TValue value)
         => _collectionExpression.Contains(selector, value);
 
-    public ValiFlow<T> DistinctCount(Expression<Func<T, IEnumerable<object?>>> selector, int count)
+    public ValiFlow<T> DistinctCount<TValue>(Expression<Func<T, IEnumerable<TValue?>>> selector, int count)
         => _collectionExpression.DistinctCount(selector, count);
 
     public ValiFlow<T> None<TValue>(Expression<Func<T, IEnumerable<TValue>>> selector,
