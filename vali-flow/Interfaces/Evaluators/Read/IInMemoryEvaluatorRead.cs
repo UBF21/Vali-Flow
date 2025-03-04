@@ -1,10 +1,10 @@
 using System.Numerics;
 using vali_flow.Classes.Options;
 
-namespace vali_flow.Interfaces.Evaluators;
+namespace vali_flow.Interfaces.Evaluators.Read;
 
 //29
-public interface IInMemoryEvaluator<T>
+public interface IInMemoryEvaluatorRead<T>
 {
     bool Evaluate(T entity);
     bool EvaluateAny(IEnumerable<T> entities);

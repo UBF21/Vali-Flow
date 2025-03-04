@@ -21,10 +21,9 @@
         <PackageIcon>logo.png</PackageIcon>
     </PropertyGroup>
 
-    
-<!--    Quitar al publicar -->
     <ItemGroup>
-        <PackageReference Include="Microsoft.EntityFrameworkCore" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore" Version="6.0.0" /> <!-- Versión mínima soportada -->
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="6.0.0" /> <!-- Versión mínima soportada -->
     </ItemGroup>
     
     <ItemGroup>

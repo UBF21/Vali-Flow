@@ -1,31 +1,31 @@
 using System.Linq.Expressions;
 using System.Numerics;
-using vali_flow.Classes.Base;
-using vali_flow.Interfaces.Evaluators;
 using Microsoft.EntityFrameworkCore;
+using vali_flow.Builder;
 using vali_flow.Classes.Options;
 using vali_flow.Classes.Results;
+using vali_flow.Interfaces.Evaluators.Read;
+using vali_flow.Interfaces.Evaluators.Write;
 using vali_flow.Utils;
 
 namespace vali_flow.Classes.Evaluators;
 
-public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
-    where TBuilder : BaseExpression<TBuilder, T>, IDatabaseEvaluator<T>, new() where T : class
+public class ValiFlowEvaluator<T> : IDatabaseEvaluatorRead<T>, IDatabaseEvaluatorWrite<T> where T : class
 {
-    private readonly BaseExpression<TBuilder, T> _builder;
+    private readonly DbContext _dbContext;
 
-    public DatabaseEvaluator(BaseExpression<TBuilder, T> builder)
+    public ValiFlowEvaluator(DbContext dbContext)
     {
-        _builder = builder;
+        _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext), "The DbContext provided is null.");
     }
 
-    public async Task<bool> EvaluateAsync(T entity)
+    public async Task<bool> EvaluateAsync(ValiFlow<T> valiFlow, T entity)
     {
         ValidationHelper.ValidateEntityNotNull(entity);
 
         try
         {
-            Func<T, bool> condition = _builder.Build().Compile();
+            Func<T, bool> condition = valiFlow.Build().Compile();
             return await Task.FromResult(condition(entity));
         }
         catch (Exception ex)
@@ -35,20 +35,16 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
     }
 
     public async Task<bool> EvaluateAnyAsync<TProperty>(
-        IQueryable<T> query,
+        ValiFlow<T> valiFlow,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
         bool asNoTracking = false,
         CancellationToken cancellationToken = default
     )
     {
-        ValidationHelper.ValidateQueryNotNull(query);
-
         try
         {
-            Expression<Func<T, bool>> condition = _builder.Build();
-
-            query = ApplyIncludes(query, includes);
-            query = ApplyAsNoTracking(query, asNoTracking);
+            Expression<Func<T, bool>> condition = valiFlow.Build();
+            IQueryable<T> query = ConfigureQuery(includes, asNoTracking);
 
             return await query.AnyAsync(condition, cancellationToken);
         }
@@ -59,20 +55,16 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
     }
 
     public async Task<int> EvaluateCountAsync<TProperty>(
-        IQueryable<T> query,
+        ValiFlow<T> valiFlow,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
         bool asNoTracking = false,
         CancellationToken cancellationToken = default
     )
     {
-        ValidationHelper.ValidateQueryNotNull(query);
-
         try
         {
-            Expression<Func<T, bool>> condition = _builder.Build();
-
-            query = ApplyIncludes(query, includes);
-            query = ApplyAsNoTracking(query, asNoTracking);
+            Expression<Func<T, bool>> condition = valiFlow.Build();
+            IQueryable<T> query = ConfigureQuery(includes, asNoTracking);
 
             int result = await query.CountAsync(condition, cancellationToken);
 
@@ -85,20 +77,17 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
     }
 
     public async Task<T?> GetFirstFailedAsync<TProperty>(
-        IQueryable<T> query,
+        ValiFlow<T> valiFlow,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
         bool asNoTracking = false,
         CancellationToken cancellationToken = default
     )
     {
-        ValidationHelper.ValidateQueryNotNull(query);
-
         try
         {
-            Expression<Func<T, bool>> condition = _builder.BuildNegated();
+            Expression<Func<T, bool>> condition = valiFlow.BuildNegated();
+            IQueryable<T> query = ConfigureQuery(includes, asNoTracking);
 
-            query = ApplyIncludes(query, includes);
-            query = ApplyAsNoTracking(query, asNoTracking);
 
             return await query.FirstOrDefaultAsync(condition, cancellationToken);
         }
@@ -109,20 +98,16 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
     }
 
     public async Task<T?> GetFirstAsync<TProperty>(
-        IQueryable<T> query,
+        ValiFlow<T> valiFlow,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
         bool asNoTracking = false,
         CancellationToken cancellationToken = default
     )
     {
-        ValidationHelper.ValidateQueryNotNull(query);
-
         try
         {
-            Expression<Func<T, bool>> condition = _builder.Build();
-
-            query = ApplyIncludes(query, includes);
-            query = ApplyAsNoTracking(query, asNoTracking);
+            Expression<Func<T, bool>> condition = valiFlow.Build();
+            IQueryable<T> query = ConfigureQuery(includes, asNoTracking);
 
             return await query.FirstOrDefaultAsync(condition, cancellationToken);
         }
@@ -133,7 +118,7 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
     }
 
     public async Task<IQueryable<T>> EvaluateAllFailedAsync<TKey, TProperty>(
-        IQueryable<T> query,
+        ValiFlow<T> valiFlow,
         int? page = null,
         int? pageSize = null,
         Expression<Func<T, TKey>>? orderBy = null,
@@ -143,13 +128,10 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null
     ) where TKey : notnull
     {
-        ValidationHelper.ValidateQueryNotNull(query);
-
-        Expression<Func<T, bool>> condition = _builder.BuildNegated();
+        Expression<Func<T, bool>> condition = valiFlow.BuildNegated();
+        IQueryable<T> query = ConfigureQuery(includes, asNoTracking);
 
         query = query.Where(condition);
-        query = ApplyIncludes(query, includes);
-        query = ApplyAsNoTracking(query, asNoTracking);
         query = ApplyOrdering(query, orderBy, ascending, thenBys);
         query = ApplyPagination(query, page, pageSize);
 
@@ -157,7 +139,7 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
     }
 
     public async Task<IQueryable<T>> EvaluateAllAsync<TKey, TProperty>(
-        IQueryable<T> query,
+        ValiFlow<T> valiFlow,
         Expression<Func<T, TKey>>? orderBy = null,
         bool ascending = true,
         IEnumerable<ThenByDataBaseExpression<T, TKey>>? thenBys = null,
@@ -165,20 +147,17 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null
     ) where TKey : notnull
     {
-        ValidationHelper.ValidateQueryNotNull(query);
-
-        Expression<Func<T, bool>> condition = _builder.Build();
+        Expression<Func<T, bool>> condition = valiFlow.Build();
+        IQueryable<T> query = ConfigureQuery(includes, asNoTracking);
 
         query = query.Where(condition);
-        query = ApplyIncludes(query, includes);
-        query = ApplyAsNoTracking(query, asNoTracking);
         query = ApplyOrdering(query, orderBy, ascending, thenBys);
 
         return await Task.FromResult(query);
     }
 
     public async Task<IQueryable<T>> EvaluatePagedAsync<TKey, TProperty>(
-        IQueryable<T> query,
+        ValiFlow<T> valiFlow,
         int page = ConstantsHelper.One,
         int pageSize = ConstantsHelper.Ten,
         Expression<Func<T, TKey>>? orderBy = null,
@@ -188,15 +167,13 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null
     ) where TKey : notnull
     {
-        ValidationHelper.ValidateQueryNotNull(query);
         ValidationHelper.ValidatePageZero(page);
         ValidationHelper.ValidatePageSizeZero(pageSize);
 
-        Expression<Func<T, bool>> condition = _builder.Build();
+        Expression<Func<T, bool>> condition = valiFlow.Build();
+        IQueryable<T> query = ConfigureQuery(includes, asNoTracking);
 
         query = query.Where(condition);
-        query = ApplyIncludes(query, includes);
-        query = ApplyAsNoTracking(query, asNoTracking);
         query = ApplyOrdering(query, orderBy, ascending, thenBys);
         query = ApplyPagination(query, page, pageSize);
 
@@ -204,7 +181,7 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
     }
 
     public async Task<IQueryable<T>> EvaluateTopAsync<TKey, TProperty>(
-        IQueryable<T> query,
+        ValiFlow<T> valiFlow,
         int count,
         Expression<Func<T, TKey>>? orderBy = null,
         bool ascending = true,
@@ -213,14 +190,12 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null
     ) where TKey : notnull
     {
-        ValidationHelper.ValidateQueryNotNull(query);
         ValidationHelper.ValidateCountZero(count);
 
-        Expression<Func<T, bool>> condition = _builder.Build();
+        Expression<Func<T, bool>> condition = valiFlow.Build();
+        IQueryable<T> query = ConfigureQuery(includes, asNoTracking);
 
         query = query.Where(condition);
-        query = ApplyIncludes(query, includes);
-        query = ApplyAsNoTracking(query, asNoTracking);
         query = ApplyOrdering(query, orderBy, ascending, thenBys);
         query = query.Take(count);
 
@@ -228,7 +203,7 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
     }
 
     public async Task<IQueryable<T>> EvaluateDistinctAsync<TKey, TProperty>(
-        IQueryable<T> query,
+        ValiFlow<T> valiFlow,
         Expression<Func<T, TKey>> selector,
         int? page = null,
         int? pageSize = null,
@@ -239,13 +214,10 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null
     ) where TKey : notnull
     {
-        ValidationHelper.ValidateQueryNotNull(query);
-
-        Expression<Func<T, bool>> condition = _builder.Build();
+        Expression<Func<T, bool>> condition = valiFlow.Build();
+        IQueryable<T> query = ConfigureQuery(includes, asNoTracking);
 
         query = query.Where(condition);
-        query = ApplyIncludes(query, includes);
-        query = ApplyAsNoTracking(query, asNoTracking);
 
         IQueryable<T> distinctQuery = query.GroupBy(selector).Select(g => g.First());
 
@@ -256,7 +228,7 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
     }
 
     public async Task<IQueryable<T>> EvaluateDuplicatesAsync<TKey, TProperty>(
-        IQueryable<T> query,
+        ValiFlow<T> valiFlow,
         Expression<Func<T, TKey>> selector,
         int? page = null,
         int? pageSize = null,
@@ -267,13 +239,10 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null
     ) where TKey : notnull
     {
-        ValidationHelper.ValidateQueryNotNull(query);
-
-        Expression<Func<T, bool>> condition = _builder.Build();
+        Expression<Func<T, bool>> condition = valiFlow.Build();
+        IQueryable<T> query = ConfigureQuery(includes, asNoTracking);
 
         query = query.Where(condition);
-        query = ApplyIncludes(query, includes);
-        query = ApplyAsNoTracking(query, asNoTracking);
 
         IQueryable<T> duplicatesQuery = query.GroupBy(selector)
             .Where(g => g.Count() > ConstantsHelper.One)
@@ -286,37 +255,29 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
     }
 
     public async Task<T?> GetLastFailedAsync<TKey, TProperty>(
-        IQueryable<T> query,
+        ValiFlow<T> valiFlow,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
         bool asNoTracking = false,
         CancellationToken cancellationToken = default
     ) where TKey : notnull
     {
-        ValidationHelper.ValidateQueryNotNull(query);
-
-        Expression<Func<T, bool>> condition = _builder.BuildNegated();
-
-        query = ApplyIncludes(query, includes);
-        query = ApplyAsNoTracking(query, asNoTracking);
+        Expression<Func<T, bool>> condition = valiFlow.BuildNegated();
+        IQueryable<T> query = ConfigureQuery(includes, asNoTracking);
 
         return await query.LastOrDefaultAsync(condition, cancellationToken);
     }
 
     public async Task<T?> GetLastAsync<TProperty>(
-        IQueryable<T> query,
+        ValiFlow<T> valiFlow,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
         bool asNoTracking = false,
         CancellationToken cancellationToken = default
     )
     {
-        ValidationHelper.ValidateQueryNotNull(query);
-
         try
         {
-            Expression<Func<T, bool>> condition = _builder.Build();
-
-            query = ApplyIncludes(query, includes);
-            query = ApplyAsNoTracking(query, asNoTracking);
+            Expression<Func<T, bool>> condition = valiFlow.Build();
+            IQueryable<T> query = ConfigureQuery(includes, asNoTracking);
 
             return await query.LastOrDefaultAsync(condition, cancellationToken);
         }
@@ -327,22 +288,19 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
     }
 
     public async Task<TResult> EvaluateMinAsync<TResult, TProperty>(
-        IQueryable<T> query,
+        ValiFlow<T> valiFlow,
         Expression<Func<T, TResult>> selector,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
         bool asNoTracking = false,
         CancellationToken cancellationToken = default
     ) where TResult : INumber<TResult>
     {
-        ValidationHelper.ValidateQueryNotNull(query);
-
         try
         {
-            Expression<Func<T, bool>> condition = _builder.Build();
+            Expression<Func<T, bool>> condition = valiFlow.Build();
+            IQueryable<T> query = ConfigureQuery(includes, asNoTracking);
 
             query = query.Where(condition);
-            query = ApplyIncludes(query, includes);
-            query = ApplyAsNoTracking(query, asNoTracking);
 
             return await query.Select(selector).MinAsync(cancellationToken);
         }
@@ -353,22 +311,19 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
     }
 
     public async Task<TResult> EvaluateMaxAsync<TResult, TProperty>(
-        IQueryable<T> query,
+        ValiFlow<T> valiFlow,
         Expression<Func<T, TResult>> selector,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
         bool asNoTracking = false,
         CancellationToken cancellationToken = default
     ) where TResult : INumber<TResult>
     {
-        ValidationHelper.ValidateQueryNotNull(query);
-
         try
         {
-            Expression<Func<T, bool>> condition = _builder.Build();
+            Expression<Func<T, bool>> condition = valiFlow.Build();
+            IQueryable<T> query = ConfigureQuery(includes, asNoTracking);
 
             query = query.Where(condition);
-            query = ApplyIncludes(query, includes);
-            query = ApplyAsNoTracking(query, asNoTracking);
 
             return await query.Select(selector).MaxAsync(cancellationToken);
         }
@@ -379,22 +334,19 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
     }
 
     public async Task<decimal> EvaluateAverageAsync<TResult, TProperty>(
-        IQueryable<T> query,
+        ValiFlow<T> valiFlow,
         Expression<Func<T, TResult>> selector,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
         bool asNoTracking = false,
         CancellationToken cancellationToken = default
     ) where TResult : INumber<TResult>
     {
-        ValidationHelper.ValidateQueryNotNull(query);
-
         try
         {
-            Expression<Func<T, bool>> condition = _builder.Build();
+            Expression<Func<T, bool>> condition = valiFlow.Build();
+            IQueryable<T> query = ConfigureQuery(includes, asNoTracking);
 
             query = query.Where(condition);
-            query = ApplyIncludes(query, includes);
-            query = ApplyAsNoTracking(query, asNoTracking);
 
             return await query.Select(selector).AverageAsync(x => Convert.ToDecimal(x), cancellationToken);
         }
@@ -405,22 +357,19 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
     }
 
     public async Task<int> EvaluateSumAsync<TProperty>(
-        IQueryable<T> query,
+        ValiFlow<T> valiFlow,
         Expression<Func<T, int>> selector,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
         bool asNoTracking = false,
         CancellationToken cancellationToken = default
     )
     {
-        ValidationHelper.ValidateQueryNotNull(query);
-
         try
         {
-            Expression<Func<T, bool>> condition = _builder.Build();
+            Expression<Func<T, bool>> condition = valiFlow.Build();
+            IQueryable<T> query = ConfigureQuery(includes, asNoTracking);
 
             query = query.Where(condition);
-            query = ApplyIncludes(query, includes);
-            query = ApplyAsNoTracking(query, asNoTracking);
 
             return await query.Select(selector).SumAsync(cancellationToken);
         }
@@ -431,22 +380,19 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
     }
 
     public async Task<long> EvaluateSumAsync<TProperty>(
-        IQueryable<T> query,
+        ValiFlow<T> valiFlow,
         Expression<Func<T, long>> selector,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
         bool asNoTracking = false,
         CancellationToken cancellationToken = default
     )
     {
-        ValidationHelper.ValidateQueryNotNull(query);
-
         try
         {
-            Expression<Func<T, bool>> condition = _builder.Build();
+            Expression<Func<T, bool>> condition = valiFlow.Build();
+            IQueryable<T> query = ConfigureQuery(includes, asNoTracking);
 
             query = query.Where(condition);
-            query = ApplyIncludes(query, includes);
-            query = ApplyAsNoTracking(query, asNoTracking);
 
             return await query.Select(selector).SumAsync(cancellationToken);
         }
@@ -457,22 +403,19 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
     }
 
     public async Task<double> EvaluateSumAsync<TProperty>(
-        IQueryable<T> query,
+        ValiFlow<T> valiFlow,
         Expression<Func<T, double>> selector,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
         bool asNoTracking = false,
         CancellationToken cancellationToken = default
     )
     {
-        ValidationHelper.ValidateQueryNotNull(query);
-
         try
         {
-            Expression<Func<T, bool>> condition = _builder.Build();
+            Expression<Func<T, bool>> condition = valiFlow.Build();
+            IQueryable<T> query = ConfigureQuery(includes, asNoTracking);
 
             query = query.Where(condition);
-            query = ApplyIncludes(query, includes);
-            query = ApplyAsNoTracking(query, asNoTracking);
 
             return await query.Select(selector).SumAsync(cancellationToken);
         }
@@ -483,22 +426,19 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
     }
 
     public async Task<decimal> EvaluateSumAsync<TProperty>(
-        IQueryable<T> query,
+        ValiFlow<T> valiFlow,
         Expression<Func<T, decimal>> selector,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
         bool asNoTracking = false,
         CancellationToken cancellationToken = default
     )
     {
-        ValidationHelper.ValidateQueryNotNull(query);
-
         try
         {
-            Expression<Func<T, bool>> condition = _builder.Build();
+            Expression<Func<T, bool>> condition = valiFlow.Build();
+            IQueryable<T> query = ConfigureQuery(includes, asNoTracking);
 
             query = query.Where(condition);
-            query = ApplyIncludes(query, includes);
-            query = ApplyAsNoTracking(query, asNoTracking);
 
             return await query.Select(selector).SumAsync(cancellationToken);
         }
@@ -509,22 +449,19 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
     }
 
     public async Task<float> EvaluateSumAsync<TProperty>(
-        IQueryable<T> query,
+        ValiFlow<T> valiFlow,
         Expression<Func<T, float>> selector,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
         bool asNoTracking = false,
         CancellationToken cancellationToken = default
     )
     {
-        ValidationHelper.ValidateQueryNotNull(query);
-
         try
         {
-            Expression<Func<T, bool>> condition = _builder.Build();
+            Expression<Func<T, bool>> condition = valiFlow.Build();
+            IQueryable<T> query = ConfigureQuery(includes, asNoTracking);
 
             query = query.Where(condition);
-            query = ApplyIncludes(query, includes);
-            query = ApplyAsNoTracking(query, asNoTracking);
 
             return await query.Select(selector).SumAsync(cancellationToken);
         }
@@ -535,7 +472,7 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
     }
 
     public async Task<TResult> EvaluateAggregateAsync<TResult, TProperty>(
-        IQueryable<T> query,
+        ValiFlow<T> valiFlow,
         Expression<Func<T, TResult>> selector,
         Func<TResult, TResult, TResult> aggregator,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
@@ -543,15 +480,12 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         CancellationToken cancellationToken = default
     ) where TResult : INumber<TResult>
     {
-        ValidationHelper.ValidateQueryNotNull(query);
-
         try
         {
-            Expression<Func<T, bool>> condition = _builder.Build();
+            Expression<Func<T, bool>> condition = valiFlow.Build();
+            IQueryable<T> query = ConfigureQuery(includes, asNoTracking);
 
             query = query.Where(condition);
-            query = ApplyIncludes(query, includes);
-            query = ApplyAsNoTracking(query, asNoTracking);
 
             IEnumerable<TResult> values = await query.Select(selector).ToListAsync(cancellationToken);
 
@@ -564,22 +498,19 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
     }
 
     public async Task<Dictionary<TKey, List<T>>> EvaluateGroupedAsync<TKey, TProperty>(
-        IQueryable<T> query,
+        ValiFlow<T> valiFlow,
         Expression<Func<T, TKey>> keySelector,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
         bool asNoTracking = false,
         CancellationToken cancellationToken = default
     ) where TKey : notnull
     {
-        ValidationHelper.ValidateQueryNotNull(query);
-
         try
         {
-            Expression<Func<T, bool>> condition = _builder.Build();
+            Expression<Func<T, bool>> condition = valiFlow.Build();
+            IQueryable<T> query = ConfigureQuery(includes, asNoTracking);
 
             query = query.Where(condition);
-            query = ApplyIncludes(query, includes);
-            query = ApplyAsNoTracking(query, asNoTracking);
 
             return await query.GroupBy(keySelector)
                 .ToDictionaryAsync(
@@ -594,22 +525,19 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
     }
 
     public async Task<Dictionary<TKey, int>> EvaluateCountByGroupAsync<TKey, TProperty>(
-        IQueryable<T> query,
+        ValiFlow<T> valiFlow,
         Func<T, TKey> keySelector,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
         bool asNoTracking = false,
         CancellationToken cancellationToken = default
     ) where TKey : notnull
     {
-        ValidationHelper.ValidateQueryNotNull(query);
-
         try
         {
-            Expression<Func<T, bool>> condition = _builder.Build();
+            Expression<Func<T, bool>> condition = valiFlow.Build();
+            IQueryable<T> query = ConfigureQuery(includes, asNoTracking);
 
             query = query.Where(condition);
-            query = ApplyIncludes(query, includes);
-            query = ApplyAsNoTracking(query, asNoTracking);
 
             IEnumerable<T> data = await query.ToListAsync(cancellationToken);
             IEnumerable<IGrouping<TKey, T>> groups = data.GroupBy(keySelector);
@@ -625,7 +553,7 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
     }
 
     public async Task<Dictionary<TKey, TResult>> EvaluateSumByGroupAsync<TKey, TResult, TProperty>(
-        IQueryable<T> query,
+        ValiFlow<T> valiFlow,
         Func<T, TKey> keySelector,
         Func<T, TResult> selector,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
@@ -633,15 +561,12 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         CancellationToken cancellationToken = default
     ) where TKey : notnull where TResult : INumber<TResult>
     {
-        ValidationHelper.ValidateQueryNotNull(query);
-
         try
         {
-            Expression<Func<T, bool>> condition = _builder.Build();
+            Expression<Func<T, bool>> condition = valiFlow.Build();
+            IQueryable<T> query = ConfigureQuery(includes, asNoTracking);
 
             query = query.Where(condition);
-            query = ApplyIncludes(query, includes);
-            query = ApplyAsNoTracking(query, asNoTracking);
 
             IEnumerable<T> data = await query.ToListAsync(cancellationToken);
             IEnumerable<IGrouping<TKey, T>> groups = data.GroupBy(keySelector);
@@ -661,7 +586,7 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
     }
 
     public async Task<Dictionary<TKey, TResult>> EvaluateMinByGroupAsync<TKey, TResult, TProperty>(
-        IQueryable<T> query,
+        ValiFlow<T> valiFlow,
         Func<T, TKey> keySelector,
         Func<T, TResult> selector,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
@@ -669,15 +594,12 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         CancellationToken cancellationToken = default
     ) where TKey : notnull where TResult : INumber<TResult>
     {
-        ValidationHelper.ValidateQueryNotNull(query);
-
         try
         {
-            Expression<Func<T, bool>> condition = _builder.Build();
+            Expression<Func<T, bool>> condition = valiFlow.Build();
+            IQueryable<T> query = ConfigureQuery(includes, asNoTracking);
 
             query = query.Where(condition);
-            query = ApplyIncludes(query, includes);
-            query = ApplyAsNoTracking(query, asNoTracking);
 
             IEnumerable<T> data = await query.ToListAsync(cancellationToken);
             IEnumerable<IGrouping<TKey, T>> groups = data.GroupBy(keySelector);
@@ -697,7 +619,7 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
     }
 
     public async Task<Dictionary<TKey, TResult>> EvaluateMaxByGroupAsync<TKey, TResult, TProperty>(
-        IQueryable<T> query,
+        ValiFlow<T> valiFlow,
         Func<T, TKey> keySelector,
         Func<T, TResult> selector,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
@@ -705,15 +627,12 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         CancellationToken cancellationToken = default
     ) where TKey : notnull where TResult : INumber<TResult>
     {
-        ValidationHelper.ValidateQueryNotNull(query);
-
         try
         {
-            Expression<Func<T, bool>> condition = _builder.Build();
+            Expression<Func<T, bool>> condition = valiFlow.Build();
+            IQueryable<T> query = ConfigureQuery(includes, asNoTracking);
 
             query = query.Where(condition);
-            query = ApplyIncludes(query, includes);
-            query = ApplyAsNoTracking(query, asNoTracking);
 
             IEnumerable<T> data = await query.ToListAsync(cancellationToken);
             IEnumerable<IGrouping<TKey, T>> groups = data.GroupBy(keySelector);
@@ -733,7 +652,7 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
     }
 
     public async Task<Dictionary<TKey, decimal>> EvaluateAverageByGroupAsync<TKey, TResult, TProperty>(
-        IQueryable<T> query,
+        ValiFlow<T> valiFlow,
         Func<T, TKey> keySelector,
         Func<T, TResult> selector,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
@@ -741,15 +660,12 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         CancellationToken cancellationToken = default
     ) where TKey : notnull where TResult : INumber<TResult>
     {
-        ValidationHelper.ValidateQueryNotNull(query);
-
         try
         {
-            Expression<Func<T, bool>> condition = _builder.Build();
+            Expression<Func<T, bool>> condition = valiFlow.Build();
+            IQueryable<T> query = ConfigureQuery(includes, asNoTracking);
 
             query = query.Where(condition);
-            query = ApplyIncludes(query, includes);
-            query = ApplyAsNoTracking(query, asNoTracking);
 
             IEnumerable<T> data = await query.ToListAsync(cancellationToken);
             IEnumerable<IGrouping<TKey, T>> groups = data.GroupBy(keySelector);
@@ -769,21 +685,19 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
     }
 
     public async Task<Dictionary<TKey, List<T>>> EvaluateDuplicatesByGroupAsync<TKey, TProperty>(
-        IQueryable<T> query, Func<T, TKey> keySelector,
+        ValiFlow<T> valiFlow,
+        Func<T, TKey> keySelector,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
         bool asNoTracking = false,
         CancellationToken cancellationToken = default
     ) where TKey : notnull
     {
-        ValidationHelper.ValidateQueryNotNull(query);
-
         try
         {
-            Expression<Func<T, bool>> condition = _builder.Build();
+            Expression<Func<T, bool>> condition = valiFlow.Build();
+            IQueryable<T> query = ConfigureQuery(includes, asNoTracking);
 
             query = query.Where(condition);
-            query = ApplyIncludes(query, includes);
-            query = ApplyAsNoTracking(query, asNoTracking);
 
             IEnumerable<T> data = await query.ToListAsync(cancellationToken);
             IEnumerable<IGrouping<TKey, T>> groups = data.GroupBy(keySelector);
@@ -801,22 +715,19 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
     }
 
     public async Task<Dictionary<TKey, T>> EvaluateUniquesByGroupAsync<TKey, TProperty>(
-        IQueryable<T> query,
+        ValiFlow<T> valiFlow,
         Func<T, TKey> keySelector,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
         bool asNoTracking = false,
         CancellationToken cancellationToken = default
     ) where TKey : notnull
     {
-        ValidationHelper.ValidateQueryNotNull(query);
-
         try
         {
-            Expression<Func<T, bool>> condition = _builder.Build();
+            Expression<Func<T, bool>> condition = valiFlow.Build();
+            IQueryable<T> query = ConfigureQuery(includes, asNoTracking);
 
             query = query.Where(condition);
-            query = ApplyIncludes(query, includes);
-            query = ApplyAsNoTracking(query, asNoTracking);
 
             IEnumerable<T> data = await query.ToListAsync(cancellationToken);
             IEnumerable<IGrouping<TKey, T>> groups = data.GroupBy(keySelector);
@@ -834,7 +745,7 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
     }
 
     public async Task<Dictionary<TKey, List<T>>> EvaluateTopByGroupAsync<TKey, TKey2, TProperty>(
-        IQueryable<T> query,
+        ValiFlow<T> valiFlow,
         Func<T, TKey> keySelector,
         int count,
         Expression<Func<T, TKey2>>? orderBy = null,
@@ -844,16 +755,14 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         CancellationToken cancellationToken = default
     ) where TKey : notnull where TKey2 : notnull
     {
-        ValidationHelper.ValidateQueryNotNull(query);
         ValidationHelper.ValidateCountZero(count);
 
         try
         {
-            Expression<Func<T, bool>> condition = _builder.Build();
+            Expression<Func<T, bool>> condition = valiFlow.Build();
+            IQueryable<T> query = ConfigureQuery(includes, asNoTracking);
 
             query = query.Where(condition);
-            query = ApplyIncludes(query, includes);
-            query = ApplyAsNoTracking(query, asNoTracking);
             query = ApplyOrdering(query, orderBy, ascending, null);
 
             List<T> data = await query.Take(count).ToListAsync(cancellationToken);
@@ -873,20 +782,26 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         }
     }
 
-    public async Task<IQueryable<T>> EvaluateQuery(IQueryable<T> query, bool asNoTracking = false)
+    public async Task<IQueryable<T>> EvaluateQuery<TProperty, TKey>(
+        ValiFlow<T> valiFlow,
+        IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
+        Expression<Func<T, TKey>>? orderBy = null,
+        bool ascending = true,
+        IEnumerable<ThenByDataBaseExpression<T, TKey>>? thenBys = null,
+        bool asNoTracking = false
+    ) where TKey : notnull
     {
-        ValidationHelper.ValidateQueryNotNull(query);
-
-        Expression<Func<T, bool>> condition = _builder.Build();
+        Expression<Func<T, bool>> condition = valiFlow.Build();
+        IQueryable<T> query = ConfigureQuery(includes, asNoTracking);
 
         query = query.Where(condition);
-        query = ApplyAsNoTracking(query, asNoTracking);
+        query = ApplyOrdering(query, orderBy, ascending, thenBys);
 
         return await Task.FromResult(query);
     }
 
     public async Task<PaginatedBlockResult<T>> GetPaginatedBlockAsync<TKey, TProperty>(
-        IQueryable<T> query,
+        ValiFlow<T> valiFlow,
         int blockSize = ConstantsHelper.Thousand,
         int page = ConstantsHelper.One,
         int pageSize = ConstantsHelper.OneHundred,
@@ -899,15 +814,12 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
     )
         where TKey : notnull
     {
-        ValidationHelper.ValidatePaginationBlock(page, pageSize, blockSize);
-
         try
         {
-            Expression<Func<T, bool>> condition = _builder.Build();
+            Expression<Func<T, bool>> condition = valiFlow.Build();
+            IQueryable<T> query = ConfigureQuery(includes, asNoTracking);
 
             query = query.Where(condition);
-            query = ApplyIncludes(query, includes);
-            query = ApplyAsNoTracking(query, asNoTracking);
             query = ApplyOrdering(query, orderBy, ascending, thenBys);
 
             int currentBlock = (page - ConstantsHelper.One) * pageSize / blockSize;
@@ -937,7 +849,7 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
     }
 
     public async Task<IQueryable<T>> GetPaginatedBlockQueryAsync<TKey, TProperty>(
-        IQueryable<T> query,
+        ValiFlow<T> valiFlow,
         int blockSize = ConstantsHelper.Thousand,
         int page = ConstantsHelper.One,
         int pageSize = ConstantsHelper.OneHundred,
@@ -946,25 +858,249 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         IEnumerable<ThenByDataBaseExpression<T, TKey>>? thenBys = null,
         bool asNoTracking = false,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null
-        ) where TKey : notnull
+    ) where TKey : notnull
     {
-        ValidationHelper.ValidatePaginationBlock(page, pageSize, blockSize);
-
-        Expression<Func<T, bool>> condition = _builder.Build();
+        Expression<Func<T, bool>> condition = valiFlow.Build();
+        IQueryable<T> query = ConfigureQuery(includes, asNoTracking);
 
         query = query.Where(condition);
-        query = ApplyIncludes(query, includes);
-        query = ApplyAsNoTracking(query, asNoTracking);
         query = ApplyOrdering(query, orderBy, ascending, thenBys);
-        
+
         int currentBlock = ((page - ConstantsHelper.One) * pageSize) / blockSize;
         int blockOffset = currentBlock * blockSize;
         int pageOffset = (((page - ConstantsHelper.One) * pageSize)) % blockSize;
         int finalOffset = blockOffset + pageOffset;
-        
+
         return await Task.FromResult(query.Skip(finalOffset).Take(pageSize));
     }
 
+    public async Task<T> AddAsync(T entity, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            await _dbContext.Set<T>().AddAsync(entity, cancellationToken);
+            return entity;
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException($"Error al insertar la entidad en {UtilHelper.GetCurrentMethodName()}.", ex);
+        }
+    }
+
+    public async Task<IEnumerable<T>> AddRangeAsync(IEnumerable<T> entities, CancellationToken cancellationToken = default)
+    {
+        if (entities == null)
+            throw new ArgumentNullException(nameof(entities), "La colección de entidades no puede ser nula.");
+
+        List<T> entityList = entities.ToList();
+    
+        if (!entityList.Any())
+            throw new ArgumentException("La colección de entidades no puede estar vacía.", nameof(entities));
+
+        try
+        {
+            await _dbContext.Set<T>().AddRangeAsync(entityList, cancellationToken);
+            return entityList;
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException($"Error al agregar múltiples entidades en {UtilHelper.GetCurrentMethodName()}.", ex);
+        }
+    }
+
+    public async Task<T> UpdateAsync(T entity)
+    {
+        ValidationHelper.ValidateEntityNotNull(entity);
+        try
+        {
+            _dbContext.Set<T>().Update(entity);
+            await Task.CompletedTask;
+            return entity;
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException($"Error al actualizar la entidad en {UtilHelper.GetCurrentMethodName()}.", ex);
+        }
+    }
+
+    public async Task<IEnumerable<T>> UpdateRangeAsync(IEnumerable<T> entities)
+    {
+        if (entities == null)
+            throw new ArgumentNullException(nameof(entities), "La colección de entidades no puede ser nula o vacía.");
+
+        List<T> entityList = entities.ToList();
+
+        if (!entityList.Any())
+            throw new ArgumentException("La colección de entidades no puede estar vacía.", nameof(entities));
+
+        
+        try
+        {
+            _dbContext.Set<T>().UpdateRange(entityList);
+            await Task.CompletedTask;
+            return entityList;
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException($"Error al actualizar múltiples entidades en {UtilHelper.GetCurrentMethodName()}.", ex);
+        }
+    }
+
+    public async Task DeleteAsync(T entity)
+    {
+        ValidationHelper.ValidateEntityNotNull(entity);
+        try
+        {
+            _dbContext.Set<T>().Remove(entity);
+            await Task.CompletedTask;
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException($"Error al eliminar la entidad en {UtilHelper.GetCurrentMethodName()}.", ex);
+        }
+    }
+
+    public async Task DeleteRangeAsync(IEnumerable<T> entities)
+    {
+        if (entities == null)
+            throw new ArgumentNullException(nameof(entities), "La colección de entidades no puede ser nula.");
+
+        List<T> entityList = entities.ToList();
+
+        if (!entityList.Any())
+            throw new ArgumentException("La colección de entidades no puede estar vacía.", nameof(entities));
+
+        try
+        {
+            _dbContext.Set<T>().RemoveRange(entityList);
+            await Task.CompletedTask;
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException($"Error al eliminar múltiples entidades en {UtilHelper.GetCurrentMethodName()}.", ex);
+        }
+    }
+
+
+    public async Task SaveChangesAsync(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            await _dbContext.SaveChangesAsync(cancellationToken); 
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException($"Error al guardar los cambios en {UtilHelper.GetCurrentMethodName()}.", ex);
+        }
+    }
+
+    public async Task<T> UpsertAsync(T entity, Expression<Func<T, bool>> matchCondition, CancellationToken cancellationToken = default)
+    {
+        ValidationHelper.ValidateEntityNotNull(entity);
+        try
+        {
+            var existingEntity = await _dbContext.Set<T>().FirstOrDefaultAsync(matchCondition, cancellationToken);
+            if (existingEntity == null)
+            {
+                await _dbContext.Set<T>().AddAsync(entity, cancellationToken);
+            }
+            else
+            {
+                _dbContext.Entry(existingEntity).CurrentValues.SetValues(entity);
+                return existingEntity;
+            }
+            return entity;
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException($"Error al realizar upsert en {UtilHelper.GetCurrentMethodName()}.", ex);
+        }
+    }
+
+    public async Task<IEnumerable<T>> UpsertRangeAsync<TProperty>(IEnumerable<T> entities, Func<T, TProperty> keySelector, CancellationToken cancellationToken = default) where TProperty : notnull
+    {
+        if (entities == null)
+            throw new ArgumentNullException(nameof(entities), "La colección de entidades no puede ser nula.");
+
+        List<T> entityList = entities.ToList();
+        if (!entityList.Any())
+            throw new ArgumentException("La colección de entidades no puede estar vacía.", nameof(entities));
+
+        try
+        {
+            var keys = entityList.Select(keySelector).ToList();
+
+            var existingEntities = await _dbContext.Set<T>()
+                .Where(e => keys.Contains(keySelector(e)))
+                .ToListAsync(cancellationToken);
+
+            var existingEntityDict = existingEntities.ToDictionary(keySelector, e => e);
+
+            foreach (var entity in entityList)
+            {
+                var key = keySelector(entity);
+                if (existingEntityDict.TryGetValue(key, out var existingEntity))
+                {
+                    _dbContext.Entry(existingEntity).CurrentValues.SetValues(entity);
+                }
+                else
+                {
+                    await _dbContext.Set<T>().AddAsync(entity, cancellationToken);
+                }
+            }
+            return entityList;
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException($"Error al realizar upsert múltiple en {UtilHelper.GetCurrentMethodName()}.", ex);
+        }
+    }
+
+
+    public async Task DeleteByConditionAsync(Expression<Func<T, bool>> condition, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var entitiesToDelete = await _dbContext.Set<T>().Where(condition).ToListAsync(cancellationToken);
+            if (entitiesToDelete.Any())
+            {
+                _dbContext.Set<T>().RemoveRange(entitiesToDelete);
+            }
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException($"Error al eliminar por condición en {UtilHelper.GetCurrentMethodName()}.", ex);
+        }
+    }
+
+    public async Task ExecuteTransactionAsync(Func<Task> operations, CancellationToken cancellationToken = default)
+    {
+        if (_dbContext.Database.CurrentTransaction != null)
+        {
+            await operations();
+            return;
+        }
+
+        await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
+        
+        try
+        {
+            await operations();
+            await transaction.CommitAsync(cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            try
+            {
+                await transaction.RollbackAsync(cancellationToken);
+            }
+            catch (Exception rollbackEx)
+            {
+                throw new InvalidOperationException($"Error al ejecutar transacción en {UtilHelper.GetCurrentMethodName()}. Falló rollback: {rollbackEx.Message}", ex);
+            }
+            throw new InvalidOperationException($"Error al ejecutar transacción en {UtilHelper.GetCurrentMethodName()}.", ex);
+        }
+    }
 
     #region Private
 
@@ -1086,6 +1222,21 @@ public class DatabaseEvaluator<TBuilder, T> : IDatabaseEvaluator<T>
         int blockSize = ConstantsHelper.Thousand)
     {
         return query.Skip((page - ConstantsHelper.One) * pageSize % blockSize).Take(pageSize).ToList();
+    }
+
+    private IQueryable<T> ConfigureQuery<TProperty>(
+        IEnumerable<Expression<Func<T, TProperty>>>? includes,
+        bool asNoTracking
+    )
+    {
+        IQueryable<T> query = _dbContext.Set<T>().AsQueryable();
+
+        ValidationHelper.ValidateQueryNotNull(query);
+
+        query = ApplyAsNoTracking(query, asNoTracking);
+        query = ApplyIncludes(query, includes);
+
+        return query;
     }
 
     #endregion
