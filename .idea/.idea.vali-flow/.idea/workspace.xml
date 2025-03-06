@@ -8,7 +8,59 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="aa4fc315-c37b-4ab3-b9cc-02a55a2255c8" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/ValiFlow.Core/Builder/ValiFlow.cs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ValiFlow.Core/Classes/Base/BaseExpression.cs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ValiFlow.Core/Classes/General/ComparisonExpression.cs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ValiFlow.Core/Classes/Types/BooleanExpression.cs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ValiFlow.Core/Classes/Types/CollectionExpression.cs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ValiFlow.Core/Classes/Types/DateTimeExpression.cs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ValiFlow.Core/Classes/Types/NumericExpression.cs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ValiFlow.Core/Classes/Types/StringExpression.cs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ValiFlow.Core/Interfaces/General/IComparisonExpression.cs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ValiFlow.Core/Interfaces/General/IExpression.cs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ValiFlow.Core/Interfaces/Types/IBooleanExpression.cs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ValiFlow.Core/Interfaces/Types/ICollectionExpression.cs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ValiFlow.Core/Interfaces/Types/IDateTimeExpression.cs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ValiFlow.Core/Interfaces/Types/INumericExpression.cs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ValiFlow.Core/Interfaces/Types/IStringExpression.cs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ValiFlow.Core/RegularExpressions/RegularExpression.cs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ValiFlow.Core/Utils/ConstantHelper.cs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ValiFlow.Core/Utils/UtilHelper.cs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ValiFlow.Core/Utils/ValidationHelper.cs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ValiFlow.InMemory/Classes/Options.cs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ValiFlow.InMemory/logo.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ValiFlow/logo.png" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/.idea.vali-flow/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.vali-flow/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/vali-flow-test/vali-flow-test.csproj" beforeDir="false" afterPath="$PROJECT_DIR$/vali-flow-test/vali-flow-test.csproj" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/vali-flow.sln" beforeDir="false" afterPath="$PROJECT_DIR$/vali-flow.sln" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/vali-flow/Builder/ValiFlow.cs" beforeDir="false" afterPath="$PROJECT_DIR$/ValiFlow/Builder/ValiFlow.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/vali-flow/Classes/Base/BaseExpression.cs" beforeDir="false" afterPath="$PROJECT_DIR$/ValiFlow/Classes/Base/BaseExpression.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/vali-flow/Classes/Evaluators/ValiFlowEvaluator.cs" beforeDir="false" afterPath="$PROJECT_DIR$/ValiFlow/Classes/Evaluators/ValiFlowEvaluator.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/vali-flow/Classes/General/ComparisonExpression.cs" beforeDir="false" afterPath="$PROJECT_DIR$/ValiFlow/Classes/General/ComparisonExpression.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/vali-flow/Classes/Options/ThenByDataBaseExpression.cs" beforeDir="false" afterPath="$PROJECT_DIR$/ValiFlow/Classes/Options/ThenByDataBaseExpression.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/vali-flow/Classes/Options/ThenByInMemoryExpression.cs" beforeDir="false" afterPath="$PROJECT_DIR$/ValiFlow/Classes/Options/ThenByInMemoryExpression.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/vali-flow/Classes/Results/PaginatedBlockResult.cs" beforeDir="false" afterPath="$PROJECT_DIR$/ValiFlow/Classes/Results/PaginatedBlockResult.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/vali-flow/Classes/Types/BooleanExpression.cs" beforeDir="false" afterPath="$PROJECT_DIR$/ValiFlow/Classes/Types/BooleanExpression.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/vali-flow/Classes/Types/CollectionExpression.cs" beforeDir="false" afterPath="$PROJECT_DIR$/ValiFlow/Classes/Types/CollectionExpression.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/vali-flow/Classes/Types/DateTimeExpression.cs" beforeDir="false" afterPath="$PROJECT_DIR$/ValiFlow/Classes/Types/DateTimeExpression.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/vali-flow/Classes/Types/NumericExpression.cs" beforeDir="false" afterPath="$PROJECT_DIR$/ValiFlow/Classes/Types/NumericExpression.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/vali-flow/Classes/Types/StringExpression.cs" beforeDir="false" afterPath="$PROJECT_DIR$/ValiFlow/Classes/Types/StringExpression.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/vali-flow/Interfaces/Evaluators/Read/IDatabaseEvaluatorRead.cs" beforeDir="false" afterPath="$PROJECT_DIR$/ValiFlow/Interfaces/Evaluators/Read/IDatabaseEvaluatorRead.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/vali-flow/Interfaces/Evaluators/Read/IInMemoryEvaluatorRead.cs" beforeDir="false" afterPath="$PROJECT_DIR$/ValiFlow/Interfaces/Evaluators/Read/IInMemoryEvaluatorRead.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/vali-flow/Interfaces/Evaluators/Write/IDatabaseEvaluatorWrite.cs" beforeDir="false" afterPath="$PROJECT_DIR$/ValiFlow/Interfaces/Evaluators/Write/IDatabaseEvaluatorWrite.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/vali-flow/Interfaces/General/IComparisonExpression.cs" beforeDir="false" afterPath="$PROJECT_DIR$/ValiFlow/Interfaces/General/IComparisonExpression.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/vali-flow/Interfaces/Types/IBooleanExpression.cs" beforeDir="false" afterPath="$PROJECT_DIR$/ValiFlow/Interfaces/Types/IBooleanExpression.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/vali-flow/Interfaces/Types/ICollectionExpression.cs" beforeDir="false" afterPath="$PROJECT_DIR$/ValiFlow/Interfaces/Types/ICollectionExpression.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/vali-flow/Interfaces/Types/IDateTimeExpression.cs" beforeDir="false" afterPath="$PROJECT_DIR$/ValiFlow/Interfaces/Types/IDateTimeExpression.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/vali-flow/Interfaces/Types/IExpression.cs" beforeDir="false" afterPath="$PROJECT_DIR$/ValiFlow/Interfaces/Types/IExpression.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/vali-flow/Interfaces/Types/INumericExpression.cs" beforeDir="false" afterPath="$PROJECT_DIR$/ValiFlow/Interfaces/Types/INumericExpression.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/vali-flow/Interfaces/Types/IStringExpression.cs" beforeDir="false" afterPath="$PROJECT_DIR$/ValiFlow/Interfaces/Types/IStringExpression.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/vali-flow/RegularExpressions/RegularExpression.cs" beforeDir="false" afterPath="$PROJECT_DIR$/ValiFlow/RegularExpressions/RegularExpression.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/vali-flow/Utils/ConstantsHelper.cs" beforeDir="false" afterPath="$PROJECT_DIR$/ValiFlow/Utils/ConstantsHelper.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/vali-flow/Utils/UtilHelper.cs" beforeDir="false" afterPath="$PROJECT_DIR$/ValiFlow/Utils/UtilHelper.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/vali-flow/Utils/ValidationHelper.cs" beforeDir="false" afterPath="$PROJECT_DIR$/ValiFlow/Utils/ValidationHelper.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/vali-flow/logo.png" beforeDir="false" afterPath="$PROJECT_DIR$/ValiFlow.Core/logo.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/vali-flow/vali-flow.csproj" beforeDir="false" afterPath="$PROJECT_DIR$/ValiFlow/ValiFlow.csproj" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -37,17 +89,11 @@
     <setting file="file://$APPLICATION_CONFIG_DIR$/resharper-host/DecompilerCache/decompiler/3442bdbe7a07406dbd4e05fe7357d408c40e00/4d/c91dd509/IEnumerable`1.cs" root0="SKIP_HIGHLIGHTING" />
     <setting file="file://$APPLICATION_CONFIG_DIR$/resharper-host/DecompilerCache/decompiler/a11fb02b10e04f8883113b5389cc1b4fb85f8/11/84988e72/EntityFrameworkQueryableExtensions.cs" root0="SKIP_HIGHLIGHTING" />
     <setting file="file://$APPLICATION_CONFIG_DIR$/resharper-host/SourcesCache/67818da183a0c61cb12efd51eff113abd0238f8e25f75580148096acdd4a6be3/Aggregate.cs" root0="FORCE_HIGHLIGHTING" />
-    <setting file="mock:///Users/isw21/RiderProjects/vali-flow/vali-flow-test/Program.cs" root0="SKIP_HIGHLIGHTING" />
-    <setting file="mock:///Users/isw21/RiderProjects/vali-flow/vali-flow/Builder/ValiFlow.cs" root0="SKIP_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/vali-flow/Builder/ValiFlow.cs" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/vali-flow/Classes/Base/BaseExpression.cs" root0="FORCE_HIGHLIGHTING" />
-    <setting file="mock:///Users/isw21/RiderProjects/vali-flow/vali-flow/Classes/Base/BaseExpression.cs" root0="SKIP_HIGHLIGHTING" />
-    <setting file="mock:///Users/isw21/RiderProjects/vali-flow/vali-flow/Classes/General/ComparisonExpression.cs" root0="SKIP_HIGHLIGHTING" />
-    <setting file="mock:///Users/isw21/RiderProjects/vali-flow/vali-flow/Classes/Types/CollectionExpression.cs" root0="SKIP_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/vali-flow/Classes/Evaluators/ValiFlowEvaluator.cs" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/vali-flow/Classes/Types/StringExpression.cs" root0="FORCE_HIGHLIGHTING" />
-    <setting file="mock:///Users/isw21/RiderProjects/vali-flow/vali-flow/Interfaces/General/IComparisonExpression.cs" root0="SKIP_HIGHLIGHTING" />
-    <setting file="mock:///Users/isw21/RiderProjects/vali-flow/vali-flow/Interfaces/Types/ICollectionExpression.cs" root0="SKIP_HIGHLIGHTING" />
-    <setting file="mock:///Users/isw21/RiderProjects/vali-flow/vali-flow/Interfaces/Types/IExpression.cs" root0="SKIP_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/vali-flow/Interfaces/Evaluators/Read/IDatabaseEvaluatorRead.cs" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/vali-flow/Interfaces/Types/IStringExpression.cs" root0="FORCE_HIGHLIGHTING" />
     <setting file="file:///usr/local/share/dotnet/sdk/7.0.410/Sdks/Microsoft.NET.Sdk/Sdk/Sdk.props" root0="FORCE_HIGHLIGHTING" />
     <setting file="file:///usr/local/share/dotnet/sdk/7.0.410/Sdks/Microsoft.NET.Sdk/Sdk/Sdk.targets" root0="FORCE_HIGHLIGHTING" />
@@ -126,6 +172,9 @@
       <workItem from="1741109992327" duration="78000" />
       <workItem from="1741110904047" duration="242000" />
       <workItem from="1741111215859" duration="352000" />
+      <workItem from="1741115364961" duration="14334000" />
+      <workItem from="1741180153542" duration="762000" />
+      <workItem from="1741181707075" duration="4821000" />
     </task>
     <task id="LOCAL-00001" summary="-Creación de nueva estructura para el builder de expresiones para linq o fuentes de datos en general (ValiFlow).">
       <option name="closed" value="true" />
@@ -223,7 +272,15 @@
       <option name="project" value="LOCAL" />
       <updated>1740785943405</updated>
     </task>
-    <option name="localTasksCounter" value="13" />
+    <task id="LOCAL-00013" summary="Desacoplando los métodos evaluadores para implementarlos por repositorio y separando la responsabilidad de Read y write para de esta manera interactuar con la el dbcontext.&#10;&#10;Queda pendiente crear algo similar para los evaluadores en memoria.">
+      <option name="closed" value="true" />
+      <created>1741131164156</created>
+      <option name="number" value="00013" />
+      <option name="presentableId" value="LOCAL-00013" />
+      <option name="project" value="LOCAL" />
+      <updated>1741131164156</updated>
+    </task>
+    <option name="localTasksCounter" value="14" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -245,7 +302,8 @@
     <MESSAGE value="-Creando el nuevo método para paginar por bloques de datos." />
     <MESSAGE value="- Creación método para paginación en bloque.&#10;&#10;-Quitando Try-Catch en métodos que no materializan data." />
     <MESSAGE value="- Eliminando métodos del BaseExpression.cs&#10;&#10;-Cambiando de Object a TValue para evitar boxing de inferencia de datos CollectionExpression.cs.&#10;&#10;-Cambiando de Object a TValue para evitar boxing de inferencia de datos ComparisonExpression.cs." />
-    <option name="LAST_COMMIT_MESSAGE" value="- Eliminando métodos del BaseExpression.cs&#10;&#10;-Cambiando de Object a TValue para evitar boxing de inferencia de datos CollectionExpression.cs.&#10;&#10;-Cambiando de Object a TValue para evitar boxing de inferencia de datos ComparisonExpression.cs." />
+    <MESSAGE value="Desacoplando los métodos evaluadores para implementarlos por repositorio y separando la responsabilidad de Read y write para de esta manera interactuar con la el dbcontext.&#10;&#10;Queda pendiente crear algo similar para los evaluadores en memoria." />
+    <option name="LAST_COMMIT_MESSAGE" value="Desacoplando los métodos evaluadores para implementarlos por repositorio y separando la responsabilidad de Read y write para de esta manera interactuar con la el dbcontext.&#10;&#10;Queda pendiente crear algo similar para los evaluadores en memoria." />
   </component>
   <component name="XSLT-Support.FileAssociations.UIState">
     <expand />
