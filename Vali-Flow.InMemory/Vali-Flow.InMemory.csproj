@@ -1,0 +1,38 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net7.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <RootNamespace>Vali-Flow.InMemory</RootNamespace>
+        <PackageProjectUrl>#</PackageProjectUrl>
+        <RepositoryType>git</RepositoryType>
+        <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+        <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
+        <Authors>Felipe Rafael Montenegro Morriberon</Authors>
+        <Copyright>Copyright © 2025 - FM. Todos los derechos reservados.</Copyright>
+        <RepositoryUrl>https://github.com/UBF21/vali-flow</RepositoryUrl>
+        <PackageReleaseNotes>
+        </PackageReleaseNotes>
+        <Version>1.0.1</Version>
+        <PackageIcon>logo.png</PackageIcon>
+        <PackageId>Vali-Flow.InMemory</PackageId>
+        <Product>Vali-Flow.InMemory</Product>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <None Update="logo.png">
+        <Pack>True</Pack>
+        <PackagePath></PackagePath>
+      </None>
+    </ItemGroup>
+
+    <ItemGroup>
+      <Folder Include="Classes\Repositories\" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\Vali-Flow.Core\Vali-Flow.Core.csproj" />
+    </ItemGroup>
+
+</Project>

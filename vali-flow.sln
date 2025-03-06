@@ -1,12 +1,12 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ValiFlow", "ValiFlow\ValiFlow.csproj", "{7AE77995-79B8-4801-9585-2111537494F2}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vali-Flow", "Vali-Flow\Vali-Flow.csproj", "{7AE77995-79B8-4801-9585-2111537494F2}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "vali-flow-test", "vali-flow-test\vali-flow-test.csproj", "{D7FB71BE-1C8E-433A-964D-A0E7E070F00F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ValiFlow.Core", "ValiFlow.Core\ValiFlow.Core.csproj", "{8F563D0F-37F4-4505-A8A8-578596B8E74D}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vali-Flow.Core", "Vali-Flow.Core\Vali-Flow.Core.csproj", "{8F563D0F-37F4-4505-A8A8-578596B8E74D}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ValiFlow.InMemory", "ValiFlow.InMemory\ValiFlow.InMemory.csproj", "{02504EA2-D813-42AD-9C62-C7D95E2CA88D}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vali-Flow.InMemory", "Vali-Flow.InMemory\Vali-Flow.InMemory.csproj", "{02504EA2-D813-42AD-9C62-C7D95E2CA88D}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
