@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Linq.Expressions;
 using System.Numerics;
 using Vali_Flow.Core.Builder;
@@ -34,99 +35,148 @@ public class ValiFlowEvaluator<T, TProperty> : IInMemoryEvaluatorRead<T>, IInMem
         });
     }
 
+    #region Methods Read
+
     public void SetValiFlow(ValiFlow<T> valiFlow)
     {
         _valiFlow = valiFlow ?? throw new ArgumentNullException(nameof(valiFlow));
     }
 
-    private Func<T, bool> GetCondition(bool negated = false)
+    private Func<T, bool> GetDefaultCondition(ValiFlow<T>? valiFlow = null, bool negated = false)
     {
-        return negated ? BuildNegated().Compile() : Build().Compile();
+        var selectedValiFlow = valiFlow ?? _valiFlow;
+        if (selectedValiFlow == null) return negated ? _ => false : _ => true;
+
+        return negated ? BuildNegated(selectedValiFlow).Compile() : Build(selectedValiFlow).Compile();
     }
 
-    private Expression<Func<T, bool>> Build()
+    private Expression<Func<T, bool>> Build(ValiFlow<T>? valiFlow = null)
     {
-        return _valiFlow?.Build() ?? (x => true);
+        var selectedValiFlow = valiFlow ?? _valiFlow;
+        return selectedValiFlow?.Build() ?? (x => true);
     }
 
-    private Expression<Func<T, bool>> BuildNegated()
+    private Expression<Func<T, bool>> BuildNegated(ValiFlow<T>? valiFlow = null)
     {
-        return _valiFlow?.BuildNegated() ?? (x => false);
+        var selectedValiFlow = valiFlow ?? _valiFlow;
+        return selectedValiFlow?.BuildNegated() ?? (x => false);
     }
 
-    public bool Evaluate(T entity)
+    public bool Evaluate(T entity, ValiFlow<T>? valiFlow = null, bool negateCondition = false)
     {
-        return GetCondition()(entity);
+        return GetDefaultCondition(valiFlow, negateCondition)(entity);
     }
 
-    public bool EvaluateAny(IEnumerable<T> entities)
+    public bool EvaluateAny(IEnumerable<T>? entities, ValiFlow<T>? valiFlow = null, bool negateCondition = false)
     {
-        return entities.Any(GetCondition());
+        IEnumerable<T> dataSource = entities ?? _inMemoryStore;
+        return dataSource.Any(GetDefaultCondition(valiFlow, negateCondition));
     }
 
-    public int EvaluateCount(IEnumerable<T> entities)
+    public int EvaluateCount(IEnumerable<T>? entities, ValiFlow<T>? valiFlow = null, bool negateCondition = false)
     {
-        return entities.Count(GetCondition());
+        IEnumerable<T> dataSource = entities ?? _inMemoryStore;
+        return dataSource.Count(GetDefaultCondition(valiFlow, negateCondition));
     }
 
-    public T? GetFirstFailed(IEnumerable<T> entities)
+    public T? GetFirstFailed(IEnumerable<T>? entities, ValiFlow<T>? valiFlow = null, bool negateCondition = false)
     {
-        return entities.FirstOrDefault(t => GetCondition(true)(t));
+        IEnumerable<T> dataSource = entities ?? _inMemoryStore;
+        return dataSource.FirstOrDefault(t => GetDefaultCondition(valiFlow, !negateCondition)(t));
     }
 
-    public T? GetFirst(IEnumerable<T> entities)
+    public T? GetFirst(IEnumerable<T>? entities, ValiFlow<T>? valiFlow = null, bool negateCondition = false)
     {
-        return entities.FirstOrDefault(GetCondition());
+        IEnumerable<T> dataSource = entities ?? _inMemoryStore;
+        return dataSource.FirstOrDefault(GetDefaultCondition(valiFlow, negateCondition));
     }
 
-    public IEnumerable<T> EvaluateAllFailed<TKey>(IEnumerable<T>? entities, Func<T, TKey>? orderBy = null,
+    public IEnumerable<T> EvaluateAllFailed<TKey>(
+        IEnumerable<T>? entities, Func<T, TKey>? orderBy = null,
         bool ascending = true,
-        IEnumerable<InMemoryThenBy<T, TKey>>? thenBys = null)
+        IEnumerable<InMemoryThenBy<T, TKey>>? thenBys = null,
+        ValiFlow<T>? valiFlow = null,
+        bool negateCondition = false
+    )
     {
-        var query = (entities ?? _inMemoryStore).Where(GetCondition(true));
+        IEnumerable<T> dataSource = entities ?? _inMemoryStore;
+        IEnumerable<T> query = dataSource.Where(GetDefaultCondition(valiFlow, !negateCondition));
         return ApplyOrdering(query, orderBy, ascending, thenBys);
     }
 
-    public IEnumerable<T> EvaluateAll<TKey>(IEnumerable<T>? entities, Func<T, TKey>? orderBy = null,
+    public IEnumerable<T> EvaluateAll<TKey>(
+        IEnumerable<T>? entities, Func<T, TKey>? orderBy = null,
         bool ascending = true,
-        IEnumerable<InMemoryThenBy<T, TKey>>? thenBys = null)
+        IEnumerable<InMemoryThenBy<T, TKey>>? thenBys = null,
+        ValiFlow<T>? valiFlow = null,
+        bool negateCondition = false
+    )
     {
-        var query = (entities ?? _inMemoryStore).Where(GetCondition());
+        IEnumerable<T> dataSource = entities ?? _inMemoryStore;
+        IEnumerable<T> query = dataSource.Where(GetDefaultCondition(valiFlow, negateCondition));
         return ApplyOrdering(query, orderBy, ascending, thenBys);
     }
 
-    public IEnumerable<T> EvaluatePaged<TKey>(IEnumerable<T>? entities, int page, int pageSize,
+    public IEnumerable<T> EvaluatePaged<TKey>(
+        IEnumerable<T>? entities,
+        int page,
+        int pageSize,
         Func<T, TKey>? orderBy = null,
-        bool ascending = true, IEnumerable<InMemoryThenBy<T, TKey>>? thenBys = null)
+        bool ascending = true,
+        IEnumerable<InMemoryThenBy<T, TKey>>? thenBys = null,
+        ValiFlow<T>? valiFlow = null, bool negateCondition = false
+    )
     {
-        var query = EvaluateAll(entities, orderBy, ascending, thenBys);
+        IEnumerable<T> dataSource = entities ?? _inMemoryStore;
+        IEnumerable<T> query = EvaluateAll(dataSource, orderBy, ascending, thenBys, valiFlow, negateCondition);
         return query.Skip((page - ConstantHelper.One) * pageSize).Take(pageSize);
     }
 
-    public IEnumerable<T> EvaluateTop<TKey>(IEnumerable<T>? entities, int count, Func<T, TKey>? orderBy = null,
+    public IEnumerable<T> EvaluateTop<TKey>(
+        IEnumerable<T>? entities,
+        int count,
+        Func<T, TKey>? orderBy = null,
         bool ascending = true,
-        IEnumerable<InMemoryThenBy<T, TKey>>? thenBys = null)
+        IEnumerable<InMemoryThenBy<T, TKey>>? thenBys = null,
+        ValiFlow<T>? valiFlow = null,
+        bool negateCondition = false
+    )
     {
-        var query = EvaluateAll(entities, orderBy, ascending, thenBys);
+        IEnumerable<T> dataSource = entities ?? _inMemoryStore;
+        IEnumerable<T> query = EvaluateAll(dataSource, orderBy, ascending, thenBys, valiFlow, negateCondition);
         return query.Take(count);
     }
 
-    public IEnumerable<T> EvaluateDistinct<TKey>(IEnumerable<T> entities, Func<T, TKey> selector,
-        Func<T, TKey>? orderBy = null, bool ascending = true,
-        IEnumerable<InMemoryThenBy<T, TKey>>? thenBys = null)
+    public IEnumerable<T> EvaluateDistinct<TKey>(
+        IEnumerable<T>? entities,
+        Func<T, TKey> selector,
+        Func<T, TKey>? orderBy = null,
+        bool ascending = true,
+        IEnumerable<InMemoryThenBy<T, TKey>>? thenBys = null,
+        ValiFlow<T>? valiFlow = null,
+        bool negateCondition = false
+    )
     {
-        var query = entities.Where(GetCondition())
+        IEnumerable<T> dataSource = entities ?? _inMemoryStore;
+        IEnumerable<T> query = dataSource.Where(GetDefaultCondition(valiFlow, negateCondition))
             .GroupBy(selector)
             .Select(g => g.First());
 
         return ApplyOrdering(query, orderBy, ascending, thenBys);
     }
 
-    public IEnumerable<T> EvaluateDuplicates<TKey>(IEnumerable<T> entities, Func<T, TKey> selector,
-        Func<T, TKey>? orderBy = null, bool ascending = true,
-        IEnumerable<InMemoryThenBy<T, TKey>>? thenBys = null)
+    public IEnumerable<T> EvaluateDuplicates<TKey>(
+        IEnumerable<T>? entities,
+        Func<T, TKey> selector,
+        Func<T, TKey>? orderBy = null,
+        bool ascending = true,
+        IEnumerable<InMemoryThenBy<T, TKey>>? thenBys = null,
+        ValiFlow<T>? valiFlow = null,
+        bool negateCondition = false
+    )
     {
-        var query = entities.Where(GetCondition())
+        IEnumerable<T> dataSource = entities ?? _inMemoryStore;
+        IEnumerable<T> query = dataSource.Where(GetDefaultCondition(valiFlow, negateCondition))
             .GroupBy(selector)
             .Where(g => g.Count() > ConstantHelper.One)
             .SelectMany(g => g);
@@ -134,159 +184,268 @@ public class ValiFlowEvaluator<T, TProperty> : IInMemoryEvaluatorRead<T>, IInMem
         return ApplyOrdering(query, orderBy, ascending, thenBys);
     }
 
-    public int GetFirstMatchIndex<TKey>(IEnumerable<T> entities, Func<T, TKey>? orderBy = null,
+    public int GetFirstMatchIndex<TKey>(
+        IEnumerable<T>? entities,
+        Func<T, TKey>? orderBy = null,
         bool ascending = true,
-        IEnumerable<InMemoryThenBy<T, TKey>>? thenBys = null)
+        IEnumerable<InMemoryThenBy<T, TKey>>? thenBys = null,
+        ValiFlow<T>? valiFlow = null,
+        bool negateCondition = false
+    )
     {
-        var ordered = ApplyOrdering(entities.Where(GetCondition()), orderBy, ascending, thenBys).ToList();
-        return ordered.FindIndex(item => GetCondition()(item));
+        IEnumerable<T> dataSource = entities ?? _inMemoryStore;
+        List<T> ordered = ApplyOrdering(dataSource.Where(GetDefaultCondition(valiFlow, negateCondition)), orderBy,
+            ascending, thenBys).ToList();
+        return ordered.FindIndex(item => GetDefaultCondition()(item));
     }
 
-    public int GetLastMatchIndex<TKey>(IEnumerable<T> entities, Func<T, TKey>? orderBy = null,
+    public int GetLastMatchIndex<TKey>(
+        IEnumerable<T>? entities,
+        Func<T, TKey>? orderBy = null,
         bool ascending = true,
-        IEnumerable<InMemoryThenBy<T, TKey>>? thenBys = null)
+        IEnumerable<InMemoryThenBy<T, TKey>>? thenBys = null,
+        ValiFlow<T>? valiFlow = null,
+        bool negateCondition = false
+    )
     {
-        var ordered = ApplyOrdering(entities.Where(GetCondition()), orderBy, ascending, thenBys).ToList();
-        return ordered.FindLastIndex(item => GetCondition()(item));
+        IEnumerable<T> dataSource = entities ?? _inMemoryStore;
+        List<T> ordered = ApplyOrdering(dataSource.Where(GetDefaultCondition(valiFlow, negateCondition)), orderBy,
+            ascending, thenBys).ToList();
+        return ordered.FindLastIndex(item => GetDefaultCondition()(item));
     }
 
-    public T? GetLastFailed<TKey>(IEnumerable<T> entities, Func<T, TKey>? orderBy = null, bool ascending = true,
-        IEnumerable<InMemoryThenBy<T, TKey>>? thenBys = null)
+    public T? GetLastFailed<TKey>(
+        IEnumerable<T>? entities, Func<T, TKey>? orderBy = null,
+        bool ascending = true,
+        IEnumerable<InMemoryThenBy<T, TKey>>? thenBys = null,
+        ValiFlow<T>? valiFlow = null,
+        bool negateCondition = false
+    )
     {
-        return EvaluateAllFailed(entities, orderBy, ascending, thenBys).LastOrDefault();
+        return EvaluateAllFailed(entities, orderBy, ascending, thenBys, valiFlow, negateCondition).LastOrDefault();
     }
 
-    public T? GetLast<TKey>(IEnumerable<T> entities, Func<T, TKey>? orderBy = null, bool ascending = true,
-        IEnumerable<InMemoryThenBy<T, TKey>>? thenBys = null)
+    public T? GetLast<TKey>(
+        IEnumerable<T>? entities,
+        Func<T, TKey>? orderBy = null,
+        bool ascending = true,
+        IEnumerable<InMemoryThenBy<T, TKey>>? thenBys = null,
+        ValiFlow<T>? valiFlow = null,
+        bool negateCondition = false
+    )
     {
-        return EvaluateAll(entities, orderBy, ascending, thenBys).LastOrDefault();
+        return EvaluateAll(entities, orderBy, ascending, thenBys, valiFlow, negateCondition).LastOrDefault();
     }
 
-    public TResult EvaluateMin<TResult>(IEnumerable<T> entities, Func<T, TResult> selector)
-        where TResult : INumber<TResult>
+    public TResult EvaluateMin<TResult>(
+        IEnumerable<T>? entities,
+        Func<T, TResult> selector,
+        ValiFlow<T>? valiFlow = null,
+        bool negateCondition = false
+    ) where TResult : INumber<TResult>
     {
-        return entities.Where(GetCondition()).Select(selector).Min() ?? TResult.Zero;
+        IEnumerable<T> dataSource = entities ?? _inMemoryStore;
+        return dataSource.Where(GetDefaultCondition(valiFlow, negateCondition)).Select(selector).Min() ?? TResult.Zero;
     }
 
-    public TResult EvaluateMax<TResult>(IEnumerable<T> entities, Func<T, TResult> selector)
-        where TResult : INumber<TResult>
+    public TResult EvaluateMax<TResult>(
+        IEnumerable<T>? entities,
+        Func<T, TResult> selector,
+        ValiFlow<T>? valiFlow = null,
+        bool negateCondition = false
+    ) where TResult : INumber<TResult>
     {
-        return entities.Where(GetCondition()).Select(selector).Max() ?? TResult.Zero;
+        IEnumerable<T> dataSource = entities ?? _inMemoryStore;
+        return dataSource.Where(GetDefaultCondition(valiFlow, negateCondition)).Select(selector).Max() ?? TResult.Zero;
     }
 
-    public decimal EvaluateAverage<TResult>(IEnumerable<T> entities, Func<T, TResult> selector)
-        where TResult : INumber<TResult>
+    public decimal EvaluateAverage<TResult>(
+        IEnumerable<T>? entities,
+        Func<T, TResult> selector,
+        ValiFlow<T>? valiFlow = null,
+        bool negateCondition = false
+    ) where TResult : INumber<TResult>
     {
-        return entities.Where(GetCondition()).Select(selector).Average(x => Convert.ToDecimal(x));
+        IEnumerable<T> dataSource = entities ?? _inMemoryStore;
+        return dataSource.Where(GetDefaultCondition(valiFlow, negateCondition)).Select(selector)
+            .Average(x => Convert.ToDecimal(x));
     }
 
-    public TResult EvaluateSum<TResult>(IEnumerable<T> entities, Func<T, TResult> selector)
-        where TResult : INumber<TResult>
+    public TResult EvaluateSum<TResult>(
+        IEnumerable<T>? entities,
+        Func<T, TResult> selector,
+        ValiFlow<T>? valiFlow = null,
+        bool negateCondition = false
+    ) where TResult : INumber<TResult>
     {
-        return entities.Where(GetCondition()).Select(selector).Aggregate((acc, x) => acc + x);
+        IEnumerable<T> dataSource = entities ?? _inMemoryStore;
+        return dataSource.Where(GetDefaultCondition(valiFlow, negateCondition)).Select(selector)
+            .Aggregate((acc, x) => acc + x);
     }
 
-    public TResult EvaluateAggregate<TResult>(IEnumerable<T> entities, Func<T, TResult> selector,
-        Func<TResult, TResult, TResult> aggregator) where TResult : INumber<TResult>
+    public TResult EvaluateAggregate<TResult>(
+        IEnumerable<T>? entities,
+        Func<T, TResult> selector,
+        Func<TResult, TResult, TResult> aggregator,
+        ValiFlow<T>? valiFlow = null,
+        bool negateCondition = false
+    ) where TResult : INumber<TResult>
     {
-        IEnumerable<TResult> values = entities.Where(GetCondition()).Select(selector).ToList();
+        IEnumerable<T> dataSource = entities ?? _inMemoryStore;
+        IEnumerable<TResult> values = dataSource.Where(GetDefaultCondition(valiFlow, negateCondition)).Select(selector)
+            .ToList();
         return values.Any() ? values.Aggregate(aggregator) : TResult.Zero;
     }
 
-    public Dictionary<TKey, List<T>> EvaluateGrouped<TKey>(IEnumerable<T> entities, Func<T, TKey> keySelector)
-        where TKey : notnull
+    public Dictionary<TKey, List<T>> EvaluateGrouped<TKey>(
+        IEnumerable<T>? entities,
+        Func<T, TKey> keySelector,
+        ValiFlow<T>? valiFlow = null,
+        bool negateCondition = false
+    ) where TKey : notnull
     {
-        return entities.Where(GetCondition())
+        IEnumerable<T> dataSource = entities ?? _inMemoryStore;
+        return dataSource.Where(GetDefaultCondition(valiFlow, negateCondition))
             .GroupBy(keySelector)
             .ToDictionary(g => g.Key, g => g.ToList());
     }
 
-    public Dictionary<TKey, int> EvaluateCountByGroup<TKey>(IEnumerable<T> entities, Func<T, TKey> keySelector)
-        where TKey : notnull
+    public Dictionary<TKey, int> EvaluateCountByGroup<TKey>(
+        IEnumerable<T>? entities,
+        Func<T, TKey> keySelector,
+        ValiFlow<T>? valiFlow = null,
+        bool negateCondition = false
+    ) where TKey : notnull
     {
-        return entities.Where(GetCondition())
+        IEnumerable<T> dataSource = entities ?? _inMemoryStore;
+        return dataSource.Where(GetDefaultCondition(valiFlow, negateCondition))
             .GroupBy(keySelector)
             .ToDictionary(g => g.Key, g => g.Count());
     }
 
-    public Dictionary<TKey, TResult> EvaluateSumByGroup<TKey, TResult>(IEnumerable<T> entities,
-        Func<T, TKey> keySelector, Func<T, TResult> selector) where TKey : notnull where TResult : INumber<TResult>
+    public Dictionary<TKey, TResult> EvaluateSumByGroup<TKey, TResult>(
+        IEnumerable<T>? entities,
+        Func<T, TKey> keySelector,
+        Func<T, TResult> selector,
+        ValiFlow<T>? valiFlow = null,
+        bool negateCondition = false
+    ) where TKey : notnull where TResult : INumber<TResult>
     {
-        return entities.Where(GetCondition())
+        IEnumerable<T> dataSource = entities ?? _inMemoryStore;
+        return dataSource.Where(GetDefaultCondition(valiFlow, negateCondition))
             .GroupBy(keySelector)
             .ToDictionary(g => g.Key, g => g.Select(selector).Aggregate((acc, x) => acc + x));
     }
 
-    public Dictionary<TKey, TResult> EvaluateMinByGroup<TKey, TResult>(IEnumerable<T> entities,
-        Func<T, TKey> keySelector, Func<T, TResult> selector) where TKey : notnull where TResult : INumber<TResult>
+    public Dictionary<TKey, TResult> EvaluateMinByGroup<TKey, TResult>(
+        IEnumerable<T>? entities,
+        Func<T, TKey> keySelector,
+        Func<T, TResult> selector,
+        ValiFlow<T>? valiFlow = null,
+        bool negateCondition = false
+    ) where TKey : notnull where TResult : INumber<TResult>
     {
-        return entities.Where(GetCondition())
+        IEnumerable<T> dataSource = entities ?? _inMemoryStore;
+        return dataSource.Where(GetDefaultCondition(valiFlow, negateCondition))
             .GroupBy(keySelector)
             .ToDictionary(g => g.Key, g => g.Select(selector).Min() ?? TResult.Zero);
     }
 
-    public Dictionary<TKey, TResult> EvaluateMaxByGroup<TKey, TResult>(IEnumerable<T> entities,
-        Func<T, TKey> keySelector, Func<T, TResult> selector) where TKey : notnull where TResult : INumber<TResult>
+    public Dictionary<TKey, TResult> EvaluateMaxByGroup<TKey, TResult>(
+        IEnumerable<T>? entities,
+        Func<T, TKey> keySelector,
+        Func<T, TResult> selector,
+        ValiFlow<T>? valiFlow = null,
+        bool negateCondition = false
+    ) where TKey : notnull where TResult : INumber<TResult>
     {
-        return entities.Where(GetCondition())
+        IEnumerable<T> dataSource = entities ?? _inMemoryStore;
+        return dataSource.Where(GetDefaultCondition(valiFlow, negateCondition))
             .GroupBy(keySelector)
             .ToDictionary(g => g.Key, g => g.Select(selector).Max() ?? TResult.Zero);
     }
 
-    public Dictionary<TKey, decimal> EvaluateAverageByGroup<TKey, TResult>(IEnumerable<T> entities,
-        Func<T, TKey> keySelector, Func<T, TResult> selector) where TKey : notnull where TResult : INumber<TResult>
+    public Dictionary<TKey, decimal> EvaluateAverageByGroup<TKey, TResult>(
+        IEnumerable<T>? entities,
+        Func<T, TKey> keySelector,
+        Func<T, TResult> selector,
+        ValiFlow<T>? valiFlow = null,
+        bool negateCondition = false
+    ) where TKey : notnull where TResult : INumber<TResult>
     {
-        return entities.Where(GetCondition())
+        IEnumerable<T> dataSource = entities ?? _inMemoryStore;
+        return dataSource.Where(GetDefaultCondition(valiFlow, negateCondition))
             .GroupBy(keySelector)
             .ToDictionary(g => g.Key, g => g.Select(selector).Average(x => Convert.ToDecimal(x)));
     }
 
-    public Dictionary<TKey, List<T>> EvaluateDuplicatesByGroup<TKey>(IEnumerable<T> entities,
-        Func<T, TKey> keySelector)
-        where TKey : notnull
+    public Dictionary<TKey, List<T>> EvaluateDuplicatesByGroup<TKey>(
+        IEnumerable<T>? entities,
+        Func<T, TKey> keySelector,
+        ValiFlow<T>? valiFlow = null,
+        bool negateCondition = false
+    ) where TKey : notnull
     {
-        return entities.Where(GetCondition())
+        IEnumerable<T> dataSource = entities ?? _inMemoryStore;
+        return dataSource.Where(GetDefaultCondition(valiFlow, negateCondition))
             .GroupBy(keySelector)
             .Where(g => g.Count() > ConstantHelper.One)
             .ToDictionary(g => g.Key, g => g.ToList());
     }
 
-    public Dictionary<TKey, T> EvaluateUniquesByGroup<TKey>(IEnumerable<T> entities, Func<T, TKey> keySelector)
-        where TKey : notnull
+    public Dictionary<TKey, T> EvaluateUniquesByGroup<TKey>(
+        IEnumerable<T>? entities,
+        Func<T, TKey> keySelector,
+        ValiFlow<T>? valiFlow = null,
+        bool negateCondition = false
+    ) where TKey : notnull
     {
-        return entities.Where(GetCondition())
+        IEnumerable<T> dataSource = entities ?? _inMemoryStore;
+        return dataSource.Where(GetDefaultCondition(valiFlow, negateCondition))
             .GroupBy(keySelector)
             .Where(g => g.Count() == ConstantHelper.One)
             .ToDictionary(g => g.Key, g => g.First());
     }
 
-    public Dictionary<TKey, List<T>> EvaluateTopByGroup<TKey>(IEnumerable<T> entities, Func<T, TKey> keySelector,
-        int count, Func<T, object>? orderBy = null,
-        bool ascending = true) where TKey : notnull
+    public Dictionary<TKey, List<T>> EvaluateTopByGroup<TKey>(
+        IEnumerable<T>? entities,
+        Func<T, TKey> keySelector,
+        int count,
+        Func<T, object>? orderBy = null,
+        bool ascending = true,
+        ValiFlow<T>? valiFlow = null,
+        bool negateCondition = false
+    ) where TKey : notnull
     {
-        var query = entities.Where(GetCondition());
+        IEnumerable<T> dataSource = entities ?? _inMemoryStore;
+        IEnumerable<T> query = dataSource.Where(GetDefaultCondition(valiFlow, negateCondition));
         if (orderBy != null) query = ascending ? query.OrderBy(orderBy) : query.OrderByDescending(orderBy);
 
         return query.GroupBy(keySelector)
             .ToDictionary(g => g.Key, g => g.Take(count).ToList());
     }
 
+    #endregion
+
+    #region Methods Private
+
     private IEnumerable<T> ApplyOrdering<TKey>(
-        IEnumerable<T> query,
+        IEnumerable<T>? query,
         Func<T, TKey>? orderBy,
         bool ascending,
-        IEnumerable<InMemoryThenBy<T, TKey>>? thenBys)
+        IEnumerable<InMemoryThenBy<T, TKey>>? thenBys
+    )
     {
-        var queryList = query.ToList();
+        IEnumerable<T> dataSource = query ?? _inMemoryStore;
 
         if (orderBy == null)
         {
-            return queryList;
+            return dataSource;
         }
 
         IOrderedEnumerable<T> orderedQuery = ascending
-            ? queryList.OrderBy(orderBy)
-            : queryList.OrderByDescending(orderBy);
+            ? dataSource.OrderBy(orderBy)
+            : dataSource.OrderByDescending(orderBy);
 
         if (thenBys != null)
         {
@@ -304,75 +463,112 @@ public class ValiFlowEvaluator<T, TProperty> : IInMemoryEvaluatorRead<T>, IInMem
         return orderedQuery;
     }
 
-    public void Add(T entity)
+    #endregion
+
+    #region Methods Write
+
+    public bool Add(T entity, IEnumerable<T>? entities = null)
     {
-        if (GetCondition()(entity)) _addedEntities.Add(entity);
+        _addedEntities.Add(entity);
+
+        if (entities is List<T> list)
+        {
+            list.Add(entity);
+            return true;
+        }
+
+        return true;
     }
 
-    public T? Update(T entity)
+    public T? Update(T entity, IEnumerable<T>? entities = null)
     {
-        if (GetCondition()(entity))
+        IEnumerable<T> dataSource = entities ?? _inMemoryStore;
+        var existing =
+            dataSource.FirstOrDefault(e => EqualityComparer<TProperty>.Default.Equals(_getId(e), _getId(entity)));
+        if (existing != null)
         {
-            var existing = _inMemoryStore.FirstOrDefault(e =>
-                EqualityComparer<TProperty>.Default.Equals(_getId(e), _getId(entity)));
-            if (existing != null)
+            _updatedEntities.Add(entity);
+            if (entities is List<T> list)
             {
-                _updatedEntities.Add(entity);
-                return entity;
+                var index = list.FindIndex(e =>
+                    EqualityComparer<TProperty>.Default.Equals(_getId(e), _getId(entity)));
+                if (index >= 0) list[index] = entity;
             }
+
+            return entity;
         }
 
         return null;
     }
 
-    public bool Delete(T entity)
+    public bool Delete(T entity, IEnumerable<T>? entities = null)
     {
-        if (GetCondition()(entity))
+        IEnumerable<T> dataSource = entities ?? _inMemoryStore;
+        var existing =
+            dataSource.FirstOrDefault(e => EqualityComparer<TProperty>.Default.Equals(_getId(e), _getId(entity)));
+        if (existing != null)
         {
-            var existing = _inMemoryStore.FirstOrDefault(e =>
-                EqualityComparer<TProperty>.Default.Equals(_getId(e), _getId(entity)));
-            if (existing != null)
-            {
-                _deletedEntities.Add(existing);
-                return true;
-            }
+            _deletedEntities.Add(existing);
+            if (entities is List<T> list) list.Remove(existing);
+            return true;
         }
 
         return false;
     }
 
-    public void AddRange(IEnumerable<T> entities)
+    public void AddRange(IEnumerable<T> entitiesToAdd, IEnumerable<T>? entities = null)
     {
-        foreach (var entity in entities.Where(GetCondition())) _addedEntities.Add(entity);
+        foreach (T entity in entitiesToAdd)
+        {
+            _addedEntities.Add(entity);
+            if (entities is List<T> list) list.Add(entity);
+        }
     }
 
-    public IEnumerable<T> UpdateRange(IEnumerable<T> entities)
+    public IEnumerable<T> UpdateRange(IEnumerable<T> entitiesToUpdate, IEnumerable<T>? entities = null)
     {
         var updated = new List<T>();
-        foreach (var entity in entities.Where(GetCondition()))
+        foreach (T entity in entitiesToUpdate)
         {
-            var existing = _inMemoryStore.FirstOrDefault(e =>
-                EqualityComparer<TProperty>.Default.Equals(_getId(e), _getId(entity)));
+            // Usa la colección proporcionada o _inMemoryStore como fuente para buscar la entidad existente
+            IEnumerable<T> dataSource = entities ?? _inMemoryStore;
+            var existing =
+                dataSource.FirstOrDefault(e => EqualityComparer<TProperty>.Default.Equals(_getId(e), _getId(entity)));
             if (existing != null)
             {
                 _updatedEntities.Add(entity);
                 updated.Add(entity);
+                if (entities is List<T> list)
+                {
+                    var index = list.FindIndex(e =>
+                        EqualityComparer<TProperty>.Default.Equals(_getId(e), _getId(entity)));
+                    if (index >= 0)
+                    {
+                        list[index] = entity;
+                    }
+                }
             }
         }
 
         return updated;
     }
 
-    public int DeleteRange(IEnumerable<T> entities)
+    public int DeleteRange(IEnumerable<T> entitiesToDelete, IEnumerable<T>? entities = null)
     {
         int count = 0;
-        foreach (var entity in entities.Where(GetCondition()))
+        foreach (T entity in entitiesToDelete)
         {
-            var existing = _inMemoryStore.FirstOrDefault(e =>
-                EqualityComparer<TProperty>.Default.Equals(_getId(e), _getId(entity)));
+            IEnumerable<T> dataSource = entities ?? _inMemoryStore;
+            var existing =
+                dataSource.FirstOrDefault(e => EqualityComparer<TProperty>.Default.Equals(_getId(e), _getId(entity)));
             if (existing != null)
             {
                 _deletedEntities.Add(existing);
+                if (entities is List<T> list)
+                {
+                    list.Remove(existing);
+                }
+
                 count++;
             }
         }
@@ -380,8 +576,16 @@ public class ValiFlowEvaluator<T, TProperty> : IInMemoryEvaluatorRead<T>, IInMem
         return count;
     }
 
-    public void SaveChanges()
+    public void SaveChanges(IEnumerable<T>? entities = null)
     {
+        if (entities != null)
+        {
+            _addedEntities.Clear();
+            _updatedEntities.Clear();
+            _deletedEntities.Clear();
+            return;
+        }
+
         foreach (var entity in _addedEntities)
         {
             if (!_inMemoryStore.Contains(entity, new EntityEqualityComparer<T, TProperty>(_getId)))
@@ -409,6 +613,8 @@ public class ValiFlowEvaluator<T, TProperty> : IInMemoryEvaluatorRead<T>, IInMem
         _updatedEntities.Clear();
         _deletedEntities.Clear();
     }
+
+    #endregion
 }
 
 internal class EntityEqualityComparer<T, TProperty> : IEqualityComparer<T> where T : class
