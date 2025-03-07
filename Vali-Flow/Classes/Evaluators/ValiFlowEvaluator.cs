@@ -19,102 +19,65 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext), "The DbContext provided is null.");
     }
 
+    #region Methods Read
+
     public async Task<bool> EvaluateAsync(ValiFlow<T> valiFlow, T entity)
     {
         ValidationHelper.ValidateEntityNotNull(entity);
-
-        try
-        {
-            Func<T, bool> condition = valiFlow.Build().Compile();
-            return await Task.FromResult(condition(entity));
-        }
-        catch (Exception ex)
-        {
-            throw new InvalidOperationException($"Error evaluating {UtilHelper.GetCurrentMethodName()}.", ex);
-        }
+        var condition = valiFlow.Build().Compile();
+        return await Task.FromResult(condition(entity));
     }
 
     public async Task<bool> EvaluateAnyAsync<TProperty>(
         ValiFlow<T> valiFlow,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
-        bool asNoTracking = false,
+        bool asNoTracking = true,
+        bool asSplitQuery = false,
         CancellationToken cancellationToken = default
     )
     {
-        try
-        {
-            Expression<Func<T, bool>> condition = valiFlow.Build();
-            IQueryable<T> query = ConfigureQuery(includes, asNoTracking);
-
-            return await query.AnyAsync(condition, cancellationToken);
-        }
-        catch (Exception ex)
-        {
-            throw new InvalidOperationException($"Error evaluating {UtilHelper.GetCurrentMethodName()}.", ex);
-        }
+        IQueryable<T> query = BuildQuery(valiFlow, false, includes, asNoTracking, asSplitQuery);
+        return await ExecuteWithExceptionHandlingAsync(() => query.AnyAsync(cancellationToken),
+            nameof(EvaluateAnyAsync));
     }
 
     public async Task<int> EvaluateCountAsync<TProperty>(
         ValiFlow<T> valiFlow,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
-        bool asNoTracking = false,
+        bool asNoTracking = true,
+        bool asSplitQuery = false,
         CancellationToken cancellationToken = default
     )
     {
-        try
-        {
-            Expression<Func<T, bool>> condition = valiFlow.Build();
-            IQueryable<T> query = ConfigureQuery(includes, asNoTracking);
-
-            int result = await query.CountAsync(condition, cancellationToken);
-
-            return result;
-        }
-        catch (Exception ex)
-        {
-            throw new InvalidOperationException($"Error evaluating {UtilHelper.GetCurrentMethodName()}.", ex);
-        }
+        IQueryable<T> query = BuildQuery(valiFlow, false, includes, asNoTracking, asSplitQuery);
+        return await ExecuteWithExceptionHandlingAsync(() => query.CountAsync(cancellationToken),
+            nameof(EvaluateCountAsync));
     }
 
     public async Task<T?> GetFirstFailedAsync<TProperty>(
         ValiFlow<T> valiFlow,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
-        bool asNoTracking = false,
+        bool asNoTracking = true,
+        bool asSplitQuery = false,
         CancellationToken cancellationToken = default
     )
     {
-        try
-        {
-            Expression<Func<T, bool>> condition = valiFlow.BuildNegated();
-            IQueryable<T> query = ConfigureQuery(includes, asNoTracking);
-
-
-            return await query.FirstOrDefaultAsync(condition, cancellationToken);
-        }
-        catch (Exception ex)
-        {
-            throw new InvalidOperationException($"Error evaluating {UtilHelper.GetCurrentMethodName()}.", ex);
-        }
+        var query = BuildQuery(valiFlow, true, includes, asNoTracking, asSplitQuery);
+        return await ExecuteWithExceptionHandlingAsync(() => query.FirstOrDefaultAsync(cancellationToken),
+            nameof(GetFirstFailedAsync));
     }
 
     public async Task<T?> GetFirstAsync<TProperty>(
         ValiFlow<T> valiFlow,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
-        bool asNoTracking = false,
+        bool asNoTracking = true,
+        bool asSplitQuery = false,
         CancellationToken cancellationToken = default
     )
     {
-        try
-        {
-            Expression<Func<T, bool>> condition = valiFlow.Build();
-            IQueryable<T> query = ConfigureQuery(includes, asNoTracking);
-
-            return await query.FirstOrDefaultAsync(condition, cancellationToken);
-        }
-        catch (Exception ex)
-        {
-            throw new InvalidOperationException($"Error evaluating {UtilHelper.GetCurrentMethodName()}.", ex);
-        }
+        var query = BuildQuery(valiFlow, false, includes, asNoTracking, asSplitQuery);
+        return await ExecuteWithExceptionHandlingAsync(() => query.FirstOrDefaultAsync(cancellationToken),
+            nameof(GetFirstAsync));
     }
 
     public async Task<IQueryable<T>> EvaluateAllFailedAsync<TKey, TProperty>(
@@ -124,17 +87,14 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
         Expression<Func<T, TKey>>? orderBy = null,
         bool ascending = true,
         IEnumerable<EfOrderThenBy<T, TKey>>? thenBys = null,
-        bool asNoTracking = false,
-        IEnumerable<Expression<Func<T, TProperty>>>? includes = null
+        IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
+        bool asNoTracking = true,
+        bool asSplitQuery = false
     ) where TKey : notnull
     {
-        Expression<Func<T, bool>> condition = valiFlow.BuildNegated();
-        IQueryable<T> query = ConfigureQuery(includes, asNoTracking);
-
-        query = query.Where(condition);
+        IQueryable<T> query = BuildQuery(valiFlow, true, includes, asNoTracking, asSplitQuery);
         query = ApplyOrdering(query, orderBy, ascending, thenBys);
         query = ApplyPagination(query, page, pageSize);
-
         return await Task.FromResult(query);
     }
 
@@ -143,16 +103,13 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
         Expression<Func<T, TKey>>? orderBy = null,
         bool ascending = true,
         IEnumerable<EfOrderThenBy<T, TKey>>? thenBys = null,
-        bool asNoTracking = false,
-        IEnumerable<Expression<Func<T, TProperty>>>? includes = null
+        IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
+        bool asNoTracking = true,
+        bool asSplitQuery = false
     ) where TKey : notnull
     {
-        Expression<Func<T, bool>> condition = valiFlow.Build();
-        IQueryable<T> query = ConfigureQuery(includes, asNoTracking);
-
-        query = query.Where(condition);
+        var query = BuildQuery(valiFlow, false, includes, asNoTracking, asSplitQuery);
         query = ApplyOrdering(query, orderBy, ascending, thenBys);
-
         return await Task.FromResult(query);
     }
 
@@ -163,21 +120,17 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
         Expression<Func<T, TKey>>? orderBy = null,
         bool ascending = true,
         IEnumerable<EfOrderThenBy<T, TKey>>? thenBys = null,
-        bool asNoTracking = false,
-        IEnumerable<Expression<Func<T, TProperty>>>? includes = null
+        IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
+        bool asNoTracking = true,
+        bool asSplitQuery = false
     ) where TKey : notnull
     {
         ValidationHelper.ValidatePageZero(page);
         ValidationHelper.ValidatePageSizeZero(pageSize);
 
-        Expression<Func<T, bool>> condition = valiFlow.Build();
-        IQueryable<T> query = ConfigureQuery(includes, asNoTracking);
-
-        query = query.Where(condition);
+        IQueryable<T> query = BuildQuery(valiFlow, false, includes, asNoTracking, asSplitQuery);
         query = ApplyOrdering(query, orderBy, ascending, thenBys);
-        query = ApplyPagination(query, page, pageSize);
-
-        return await Task.FromResult(query);
+        return await Task.FromResult(ApplyPagination(query, page, pageSize));
     }
 
     public async Task<IQueryable<T>> EvaluateTopAsync<TKey, TProperty>(
@@ -186,20 +139,16 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
         Expression<Func<T, TKey>>? orderBy = null,
         bool ascending = true,
         IEnumerable<EfOrderThenBy<T, TKey>>? thenBys = null,
-        bool asNoTracking = false,
-        IEnumerable<Expression<Func<T, TProperty>>>? includes = null
+        IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
+        bool asNoTracking = true,
+        bool asSplitQuery = false
     ) where TKey : notnull
     {
         ValidationHelper.ValidateCountZero(count);
 
-        Expression<Func<T, bool>> condition = valiFlow.Build();
-        IQueryable<T> query = ConfigureQuery(includes, asNoTracking);
-
-        query = query.Where(condition);
+        IQueryable<T> query = BuildQuery(valiFlow, false, includes, asNoTracking, asSplitQuery);
         query = ApplyOrdering(query, orderBy, ascending, thenBys);
-        query = query.Take(count);
-
-        return await Task.FromResult(query);
+        return await Task.FromResult(query.Take(count));
     }
 
     public async Task<IQueryable<T>> EvaluateDistinctAsync<TKey, TProperty>(
@@ -210,21 +159,15 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
         Expression<Func<T, TKey>>? orderBy = null,
         bool ascending = true,
         IEnumerable<EfOrderThenBy<T, TKey>>? thenBys = null,
-        bool asNoTracking = false,
-        IEnumerable<Expression<Func<T, TProperty>>>? includes = null
+        IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
+        bool asNoTracking = true,
+        bool asSplitQuery = false
     ) where TKey : notnull
     {
-        Expression<Func<T, bool>> condition = valiFlow.Build();
-        IQueryable<T> query = ConfigureQuery(includes, asNoTracking);
-
-        query = query.Where(condition);
-
-        IQueryable<T> distinctQuery = query.GroupBy(selector).Select(g => g.First());
-
-        distinctQuery = ApplyOrdering(distinctQuery, orderBy, ascending, thenBys);
-        distinctQuery = ApplyPagination(distinctQuery, page, pageSize);
-
-        return await Task.FromResult(distinctQuery);
+        IQueryable<T> query = BuildQuery(valiFlow, false, includes, asNoTracking, asSplitQuery);
+        query = query.GroupBy(selector).Select(g => g.First());
+        query = ApplyOrdering(query, orderBy, ascending, thenBys);
+        return await Task.FromResult(ApplyPagination(query, page, pageSize));
     }
 
     public async Task<IQueryable<T>> EvaluateDuplicatesAsync<TKey, TProperty>(
@@ -235,240 +178,154 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
         Expression<Func<T, TKey>>? orderBy = null,
         bool ascending = true,
         IEnumerable<EfOrderThenBy<T, TKey>>? thenBys = null,
-        bool asNoTracking = false,
-        IEnumerable<Expression<Func<T, TProperty>>>? includes = null
+        IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
+        bool asNoTracking = true,
+        bool asSplitQuery = false
     ) where TKey : notnull
     {
-        Expression<Func<T, bool>> condition = valiFlow.Build();
-        IQueryable<T> query = ConfigureQuery(includes, asNoTracking);
-
-        query = query.Where(condition);
-
-        IQueryable<T> duplicatesQuery = query.GroupBy(selector)
-            .Where(g => g.Count() > ConstantHelper.One)
-            .SelectMany(g => g);
-
-        duplicatesQuery = ApplyOrdering(duplicatesQuery, orderBy, ascending, thenBys);
-        duplicatesQuery = ApplyPagination(duplicatesQuery, page, pageSize);
-
-        return await Task.FromResult(duplicatesQuery);
+        IQueryable<T> query = BuildQuery(valiFlow, false, includes, asNoTracking, asSplitQuery);
+        query = query.GroupBy(selector).Where(g => g.Count() > ConstantHelper.One).SelectMany(g => g);
+        query = ApplyOrdering(query, orderBy, ascending, thenBys);
+        return await Task.FromResult(ApplyPagination(query, page, pageSize));
     }
 
     public async Task<T?> GetLastFailedAsync<TKey, TProperty>(
         ValiFlow<T> valiFlow,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
-        bool asNoTracking = false,
+        bool asNoTracking = true,
+        bool asSplitQuery = false,
         CancellationToken cancellationToken = default
     ) where TKey : notnull
     {
-        Expression<Func<T, bool>> condition = valiFlow.BuildNegated();
-        IQueryable<T> query = ConfigureQuery(includes, asNoTracking);
-
-        return await query.LastOrDefaultAsync(condition, cancellationToken);
+        IQueryable<T> query = BuildQuery(valiFlow, true, includes, asNoTracking, asSplitQuery);
+        return await ExecuteWithExceptionHandlingAsync(() => query.LastOrDefaultAsync(cancellationToken),
+            nameof(GetLastFailedAsync));
     }
 
     public async Task<T?> GetLastAsync<TProperty>(
         ValiFlow<T> valiFlow,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
-        bool asNoTracking = false,
+        bool asNoTracking = true,
+        bool asSplitQuery = false,
         CancellationToken cancellationToken = default
     )
     {
-        try
-        {
-            Expression<Func<T, bool>> condition = valiFlow.Build();
-            IQueryable<T> query = ConfigureQuery(includes, asNoTracking);
-
-            return await query.LastOrDefaultAsync(condition, cancellationToken);
-        }
-        catch (Exception ex)
-        {
-            throw new InvalidOperationException($"Error evaluating {UtilHelper.GetCurrentMethodName()}.", ex);
-        }
+        var query = BuildQuery(valiFlow, false, includes, asNoTracking, asSplitQuery);
+        return await ExecuteWithExceptionHandlingAsync(() => query.LastOrDefaultAsync(cancellationToken),
+            nameof(GetLastAsync));
     }
 
     public async Task<TResult> EvaluateMinAsync<TResult, TProperty>(
         ValiFlow<T> valiFlow,
         Expression<Func<T, TResult>> selector,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
-        bool asNoTracking = false,
+        bool asNoTracking = true,
+        bool asSplitQuery = false,
         CancellationToken cancellationToken = default
     ) where TResult : INumber<TResult>
     {
-        try
-        {
-            Expression<Func<T, bool>> condition = valiFlow.Build();
-            IQueryable<T> query = ConfigureQuery(includes, asNoTracking);
-
-            query = query.Where(condition);
-
-            return await query.Select(selector).MinAsync(cancellationToken);
-        }
-        catch (Exception ex)
-        {
-            throw new InvalidOperationException($"Error evaluating {UtilHelper.GetCurrentMethodName()}.", ex);
-        }
+        IQueryable<T> query = BuildQuery(valiFlow, false, includes, asNoTracking, asSplitQuery);
+        return await ExecuteWithExceptionHandlingAsync(() => query.Select(selector).MinAsync(cancellationToken),
+            nameof(EvaluateMinAsync));
     }
 
     public async Task<TResult> EvaluateMaxAsync<TResult, TProperty>(
         ValiFlow<T> valiFlow,
         Expression<Func<T, TResult>> selector,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
-        bool asNoTracking = false,
+        bool asNoTracking = true,
+        bool asSplitQuery = false,
         CancellationToken cancellationToken = default
     ) where TResult : INumber<TResult>
     {
-        try
-        {
-            Expression<Func<T, bool>> condition = valiFlow.Build();
-            IQueryable<T> query = ConfigureQuery(includes, asNoTracking);
-
-            query = query.Where(condition);
-
-            return await query.Select(selector).MaxAsync(cancellationToken);
-        }
-        catch (Exception ex)
-        {
-            throw new InvalidOperationException($"Error evaluating {UtilHelper.GetCurrentMethodName()}.", ex);
-        }
+        IQueryable<T> query = BuildQuery(valiFlow, false, includes, asNoTracking, asSplitQuery);
+        return await ExecuteWithExceptionHandlingAsync(() => query.Select(selector).MaxAsync(cancellationToken),
+            nameof(EvaluateMaxAsync));
     }
 
     public async Task<decimal> EvaluateAverageAsync<TResult, TProperty>(
         ValiFlow<T> valiFlow,
         Expression<Func<T, TResult>> selector,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
-        bool asNoTracking = false,
+        bool asNoTracking = true,
+        bool asSplitQuery = false,
         CancellationToken cancellationToken = default
     ) where TResult : INumber<TResult>
     {
-        try
-        {
-            Expression<Func<T, bool>> condition = valiFlow.Build();
-            IQueryable<T> query = ConfigureQuery(includes, asNoTracking);
-
-            query = query.Where(condition);
-
-            return await query.Select(selector).AverageAsync(x => Convert.ToDecimal(x), cancellationToken);
-        }
-        catch (Exception ex)
-        {
-            throw new InvalidOperationException($"Error evaluating {UtilHelper.GetCurrentMethodName()}.", ex);
-        }
+        var query = BuildQuery(valiFlow, false, includes, asNoTracking, asSplitQuery);
+        return await ExecuteWithExceptionHandlingAsync(
+            () => query.Select(selector).AverageAsync(x => Convert.ToDecimal(x), cancellationToken),
+            nameof(EvaluateAverageAsync));
     }
 
     public async Task<int> EvaluateSumAsync<TProperty>(
         ValiFlow<T> valiFlow,
         Expression<Func<T, int>> selector,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
-        bool asNoTracking = false,
+        bool asNoTracking = true,
+        bool asSplitQuery = false,
         CancellationToken cancellationToken = default
     )
     {
-        try
-        {
-            Expression<Func<T, bool>> condition = valiFlow.Build();
-            IQueryable<T> query = ConfigureQuery(includes, asNoTracking);
-
-            query = query.Where(condition);
-
-            return await query.Select(selector).SumAsync(cancellationToken);
-        }
-        catch (Exception ex)
-        {
-            throw new InvalidOperationException($"Error evaluating {UtilHelper.GetCurrentMethodName()}.", ex);
-        }
+        var query = BuildQuery(valiFlow, false, includes, asNoTracking, asSplitQuery);
+        return await ExecuteWithExceptionHandlingAsync(() => query.Select(selector).SumAsync(cancellationToken),
+            nameof(EvaluateSumAsync));
     }
 
     public async Task<long> EvaluateSumAsync<TProperty>(
         ValiFlow<T> valiFlow,
         Expression<Func<T, long>> selector,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
-        bool asNoTracking = false,
+        bool asNoTracking = true,
+        bool asSplitQuery = false,
         CancellationToken cancellationToken = default
     )
     {
-        try
-        {
-            Expression<Func<T, bool>> condition = valiFlow.Build();
-            IQueryable<T> query = ConfigureQuery(includes, asNoTracking);
-
-            query = query.Where(condition);
-
-            return await query.Select(selector).SumAsync(cancellationToken);
-        }
-        catch (Exception ex)
-        {
-            throw new InvalidOperationException($"Error evaluating {UtilHelper.GetCurrentMethodName()}.", ex);
-        }
+        var query = BuildQuery(valiFlow, false, includes, asNoTracking, asSplitQuery);
+        return await ExecuteWithExceptionHandlingAsync(() => query.Select(selector).SumAsync(cancellationToken),
+            nameof(EvaluateSumAsync));
     }
 
     public async Task<double> EvaluateSumAsync<TProperty>(
         ValiFlow<T> valiFlow,
         Expression<Func<T, double>> selector,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
-        bool asNoTracking = false,
+        bool asNoTracking = true,
+        bool asSplitQuery = false,
         CancellationToken cancellationToken = default
     )
     {
-        try
-        {
-            Expression<Func<T, bool>> condition = valiFlow.Build();
-            IQueryable<T> query = ConfigureQuery(includes, asNoTracking);
-
-            query = query.Where(condition);
-
-            return await query.Select(selector).SumAsync(cancellationToken);
-        }
-        catch (Exception ex)
-        {
-            throw new InvalidOperationException($"Error evaluating {UtilHelper.GetCurrentMethodName()}.", ex);
-        }
+        var query = BuildQuery(valiFlow, false, includes, asNoTracking, asSplitQuery);
+        return await ExecuteWithExceptionHandlingAsync(() => query.Select(selector).SumAsync(cancellationToken),
+            nameof(EvaluateSumAsync));
     }
 
     public async Task<decimal> EvaluateSumAsync<TProperty>(
         ValiFlow<T> valiFlow,
         Expression<Func<T, decimal>> selector,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
-        bool asNoTracking = false,
+        bool asNoTracking = true,
+        bool asSplitQuery = false,
         CancellationToken cancellationToken = default
     )
     {
-        try
-        {
-            Expression<Func<T, bool>> condition = valiFlow.Build();
-            IQueryable<T> query = ConfigureQuery(includes, asNoTracking);
-
-            query = query.Where(condition);
-
-            return await query.Select(selector).SumAsync(cancellationToken);
-        }
-        catch (Exception ex)
-        {
-            throw new InvalidOperationException($"Error evaluating {UtilHelper.GetCurrentMethodName()}.", ex);
-        }
+        var query = BuildQuery(valiFlow, false, includes, asNoTracking, asSplitQuery);
+        return await ExecuteWithExceptionHandlingAsync(() => query.Select(selector).SumAsync(cancellationToken),
+            nameof(EvaluateSumAsync));
     }
 
     public async Task<float> EvaluateSumAsync<TProperty>(
         ValiFlow<T> valiFlow,
         Expression<Func<T, float>> selector,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
-        bool asNoTracking = false,
+        bool asNoTracking = true,
+        bool asSplitQuery = false,
         CancellationToken cancellationToken = default
     )
     {
-        try
-        {
-            Expression<Func<T, bool>> condition = valiFlow.Build();
-            IQueryable<T> query = ConfigureQuery(includes, asNoTracking);
-
-            query = query.Where(condition);
-
-            return await query.Select(selector).SumAsync(cancellationToken);
-        }
-        catch (Exception ex)
-        {
-            throw new InvalidOperationException($"Error evaluating {UtilHelper.GetCurrentMethodName()}.", ex);
-        }
+        var query = BuildQuery(valiFlow, false, includes, asNoTracking, asSplitQuery);
+        return await ExecuteWithExceptionHandlingAsync(() => query.Select(selector).SumAsync(cancellationToken),
+            nameof(EvaluateSumAsync));
     }
 
     public async Task<TResult> EvaluateAggregateAsync<TResult, TProperty>(
@@ -476,80 +333,49 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
         Expression<Func<T, TResult>> selector,
         Func<TResult, TResult, TResult> aggregator,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
-        bool asNoTracking = false,
+        bool asNoTracking = true,
+        bool asSplitQuery = false,
         CancellationToken cancellationToken = default
     ) where TResult : INumber<TResult>
     {
-        try
-        {
-            Expression<Func<T, bool>> condition = valiFlow.Build();
-            IQueryable<T> query = ConfigureQuery(includes, asNoTracking);
-
-            query = query.Where(condition);
-
-            IEnumerable<TResult> values = await query.Select(selector).ToListAsync(cancellationToken);
-
-            return !values.Any() ? TResult.Zero : values.Aggregate(TResult.Zero, aggregator);
-        }
-        catch (Exception ex)
-        {
-            throw new InvalidOperationException($"Error evaluating {UtilHelper.GetCurrentMethodName()}.", ex);
-        }
+        IQueryable<T> query = BuildQuery(valiFlow, false, includes, asNoTracking, asSplitQuery);
+        List<TResult> values = await query.Select(selector).ToListAsync(cancellationToken);
+        return !values.Any() ? TResult.Zero : values.Aggregate(TResult.Zero, aggregator);
     }
 
     public async Task<Dictionary<TKey, List<T>>> EvaluateGroupedAsync<TKey, TProperty>(
         ValiFlow<T> valiFlow,
         Expression<Func<T, TKey>> keySelector,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
-        bool asNoTracking = false,
+        bool asNoTracking = true,
+        bool asSplitQuery = false,
         CancellationToken cancellationToken = default
     ) where TKey : notnull
     {
-        try
-        {
-            Expression<Func<T, bool>> condition = valiFlow.Build();
-            IQueryable<T> query = ConfigureQuery(includes, asNoTracking);
-
-            query = query.Where(condition);
-
-            return await query.GroupBy(keySelector)
-                .ToDictionaryAsync(
-                    g => g.Key,
-                    g => g.ToList(),
-                    cancellationToken);
-        }
-        catch (Exception ex)
-        {
-            throw new InvalidOperationException($"Error evaluating {UtilHelper.GetCurrentMethodName()}.", ex);
-        }
+        IQueryable<T> query = BuildQuery(valiFlow, false, includes, asNoTracking, asSplitQuery);
+        return await ExecuteWithExceptionHandlingAsync(() => query.GroupBy(keySelector)
+            .ToDictionaryAsync(g => g.Key, g => g.ToList(), cancellationToken), nameof(EvaluateGroupedAsync));
     }
 
     public async Task<Dictionary<TKey, int>> EvaluateCountByGroupAsync<TKey, TProperty>(
         ValiFlow<T> valiFlow,
         Func<T, TKey> keySelector,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
-        bool asNoTracking = false,
+        bool asNoTracking = true,
+        bool asSplitQuery = false,
         CancellationToken cancellationToken = default
     ) where TKey : notnull
     {
-        try
-        {
-            Expression<Func<T, bool>> condition = valiFlow.Build();
-            IQueryable<T> query = ConfigureQuery(includes, asNoTracking);
+        IQueryable<T> query = BuildQuery(valiFlow, false, includes, asNoTracking, asSplitQuery);
 
-            query = query.Where(condition);
+        return await ExecuteWithExceptionHandlingAsync(
+            async () =>
+            {
+                List<T> data = await query.ToListAsync(cancellationToken);
+                IEnumerable<IGrouping<TKey, T>> groups = data.GroupBy(keySelector);
 
-            IEnumerable<T> data = await query.ToListAsync(cancellationToken);
-            IEnumerable<IGrouping<TKey, T>> groups = data.GroupBy(keySelector);
-
-            Dictionary<TKey, int> result = groups.ToDictionary(g => g.Key, g => g.Count());
-
-            return result;
-        }
-        catch (Exception ex)
-        {
-            throw new InvalidOperationException($"Error evaluating {UtilHelper.GetCurrentMethodName()}.", ex);
-        }
+                return groups.ToDictionary(g => g.Key, g => g.Count());
+            }, nameof(EvaluateCountByGroupAsync));
     }
 
     public async Task<Dictionary<TKey, TResult>> EvaluateSumByGroupAsync<TKey, TResult, TProperty>(
@@ -557,32 +383,24 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
         Func<T, TKey> keySelector,
         Func<T, TResult> selector,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
-        bool asNoTracking = false,
+        bool asNoTracking = true,
+        bool asSplitQuery = false,
         CancellationToken cancellationToken = default
     ) where TKey : notnull where TResult : INumber<TResult>
     {
-        try
-        {
-            Expression<Func<T, bool>> condition = valiFlow.Build();
-            IQueryable<T> query = ConfigureQuery(includes, asNoTracking);
+        IQueryable<T> query = BuildQuery(valiFlow, false, includes, asNoTracking, asSplitQuery);
 
-            query = query.Where(condition);
+        return await ExecuteWithExceptionHandlingAsync(
+            async () =>
+            {
+                List<T> data = await query.ToListAsync(cancellationToken);
+                IEnumerable<IGrouping<TKey, T>> groups = data.GroupBy(keySelector);
 
-            IEnumerable<T> data = await query.ToListAsync(cancellationToken);
-            IEnumerable<IGrouping<TKey, T>> groups = data.GroupBy(keySelector);
-
-            Dictionary<TKey, TResult> result = groups
-                .ToDictionary(
+                return groups.ToDictionary(
                     g => g.Key,
                     g => g.Select(selector).Aggregate(TResult.Zero, (acc, x) => acc + x)
                 );
-
-            return result;
-        }
-        catch (Exception ex)
-        {
-            throw new InvalidOperationException($"Error evaluating {UtilHelper.GetCurrentMethodName()}.", ex);
-        }
+            }, nameof(EvaluateSumByGroupAsync));
     }
 
     public async Task<Dictionary<TKey, TResult>> EvaluateMinByGroupAsync<TKey, TResult, TProperty>(
@@ -590,32 +408,24 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
         Func<T, TKey> keySelector,
         Func<T, TResult> selector,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
-        bool asNoTracking = false,
+        bool asNoTracking = true,
+        bool asSplitQuery = false,
         CancellationToken cancellationToken = default
     ) where TKey : notnull where TResult : INumber<TResult>
     {
-        try
-        {
-            Expression<Func<T, bool>> condition = valiFlow.Build();
-            IQueryable<T> query = ConfigureQuery(includes, asNoTracking);
+        IQueryable<T> query = BuildQuery(valiFlow, false, includes, asNoTracking, asSplitQuery);
 
-            query = query.Where(condition);
+        return await ExecuteWithExceptionHandlingAsync(
+            async () =>
+            {
+                List<T> data = await query.ToListAsync(cancellationToken);
+                IEnumerable<IGrouping<TKey, T>> groups = data.GroupBy(keySelector);
 
-            IEnumerable<T> data = await query.ToListAsync(cancellationToken);
-            IEnumerable<IGrouping<TKey, T>> groups = data.GroupBy(keySelector);
-
-            Dictionary<TKey, TResult> result = groups
-                .ToDictionary(
+                return groups.ToDictionary(
                     g => g.Key,
                     g => g.Select(selector).Min() ?? TResult.Zero
                 );
-
-            return result;
-        }
-        catch (Exception ex)
-        {
-            throw new InvalidOperationException($"Error evaluating {UtilHelper.GetCurrentMethodName()}.", ex);
-        }
+            }, nameof(EvaluateMinByGroupAsync));
     }
 
     public async Task<Dictionary<TKey, TResult>> EvaluateMaxByGroupAsync<TKey, TResult, TProperty>(
@@ -623,32 +433,24 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
         Func<T, TKey> keySelector,
         Func<T, TResult> selector,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
-        bool asNoTracking = false,
+        bool asNoTracking = true,
+        bool asSplitQuery = false,
         CancellationToken cancellationToken = default
     ) where TKey : notnull where TResult : INumber<TResult>
     {
-        try
-        {
-            Expression<Func<T, bool>> condition = valiFlow.Build();
-            IQueryable<T> query = ConfigureQuery(includes, asNoTracking);
+        IQueryable<T> query = BuildQuery(valiFlow, false, includes, asNoTracking, asSplitQuery);
 
-            query = query.Where(condition);
+        return await ExecuteWithExceptionHandlingAsync(
+            async () =>
+            {
+                List<T> data = await query.ToListAsync(cancellationToken);
+                IEnumerable<IGrouping<TKey, T>> groups = data.GroupBy(keySelector);
 
-            IEnumerable<T> data = await query.ToListAsync(cancellationToken);
-            IEnumerable<IGrouping<TKey, T>> groups = data.GroupBy(keySelector);
-
-            Dictionary<TKey, TResult> result = groups
-                .ToDictionary(
+                return groups.ToDictionary(
                     g => g.Key,
                     g => g.Select(selector).Max() ?? TResult.Zero
                 );
-
-            return result;
-        }
-        catch (Exception ex)
-        {
-            throw new InvalidOperationException($"Error evaluating {UtilHelper.GetCurrentMethodName()}.", ex);
-        }
+            }, nameof(EvaluateMaxByGroupAsync));
     }
 
     public async Task<Dictionary<TKey, decimal>> EvaluateAverageByGroupAsync<TKey, TResult, TProperty>(
@@ -656,92 +458,64 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
         Func<T, TKey> keySelector,
         Func<T, TResult> selector,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
-        bool asNoTracking = false,
+        bool asNoTracking = true,
+        bool asSplitQuery = false,
         CancellationToken cancellationToken = default
     ) where TKey : notnull where TResult : INumber<TResult>
     {
-        try
-        {
-            Expression<Func<T, bool>> condition = valiFlow.Build();
-            IQueryable<T> query = ConfigureQuery(includes, asNoTracking);
+        IQueryable<T> query = BuildQuery(valiFlow, false, includes, asNoTracking, asSplitQuery);
 
-            query = query.Where(condition);
+        return await ExecuteWithExceptionHandlingAsync(
+            async () =>
+            {
+                List<T> data = await query.ToListAsync(cancellationToken);
+                IEnumerable<IGrouping<TKey, T>> groups = data.GroupBy(keySelector);
 
-            IEnumerable<T> data = await query.ToListAsync(cancellationToken);
-            IEnumerable<IGrouping<TKey, T>> groups = data.GroupBy(keySelector);
-
-            Dictionary<TKey, decimal> result = groups
-                .ToDictionary(
+                return groups.ToDictionary(
                     g => g.Key,
                     g => g.Select(selector).Average(x => Convert.ToDecimal(x))
                 );
-
-            return result;
-        }
-        catch (Exception ex)
-        {
-            throw new InvalidOperationException($"Error evaluating {UtilHelper.GetCurrentMethodName()}.", ex);
-        }
+            }, nameof(EvaluateAverageByGroupAsync));
     }
 
     public async Task<Dictionary<TKey, List<T>>> EvaluateDuplicatesByGroupAsync<TKey, TProperty>(
         ValiFlow<T> valiFlow,
         Func<T, TKey> keySelector,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
-        bool asNoTracking = false,
+        bool asNoTracking = true,
+        bool asSplitQuery = false,
         CancellationToken cancellationToken = default
     ) where TKey : notnull
     {
-        try
-        {
-            Expression<Func<T, bool>> condition = valiFlow.Build();
-            IQueryable<T> query = ConfigureQuery(includes, asNoTracking);
+        var query = BuildQuery(valiFlow, false, includes, asNoTracking, asSplitQuery);
 
-            query = query.Where(condition);
+        List<T> data = await query.ToListAsync(cancellationToken);
+        Dictionary<TKey, List<T>> result = data.GroupBy(keySelector)
+            .Where(g => g.Count() > ConstantHelper.One)
+            .ToDictionary(g => g.Key, g => g.ToList());
 
-            IEnumerable<T> data = await query.ToListAsync(cancellationToken);
-            IEnumerable<IGrouping<TKey, T>> groups = data.GroupBy(keySelector);
-
-            Dictionary<TKey, List<T>> result = groups
-                .Where(g => g.Count() > ConstantHelper.One)
-                .ToDictionary(g => g.Key, g => g.ToList());
-
-            return result;
-        }
-        catch (Exception ex)
-        {
-            throw new InvalidOperationException($"Error evaluating {UtilHelper.GetCurrentMethodName()}.", ex);
-        }
+        return await ExecuteWithExceptionHandlingAsync(() => Task.FromResult(result),
+            nameof(EvaluateDuplicatesByGroupAsync));
     }
 
     public async Task<Dictionary<TKey, T>> EvaluateUniquesByGroupAsync<TKey, TProperty>(
         ValiFlow<T> valiFlow,
         Func<T, TKey> keySelector,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
-        bool asNoTracking = false,
+        bool asNoTracking = true,
+        bool asSplitQuery = false,
         CancellationToken cancellationToken = default
     ) where TKey : notnull
     {
-        try
-        {
-            Expression<Func<T, bool>> condition = valiFlow.Build();
-            IQueryable<T> query = ConfigureQuery(includes, asNoTracking);
+        IQueryable<T> query = BuildQuery(valiFlow, false, includes, asNoTracking, asSplitQuery);
 
-            query = query.Where(condition);
+        List<T> data = await query.ToListAsync(cancellationToken);
+        Dictionary<TKey, T> result = data.GroupBy(keySelector)
+            .Where(g => g.Count() == ConstantHelper.One)
+            .ToDictionary(g => g.Key, g => g.First());
 
-            IEnumerable<T> data = await query.ToListAsync(cancellationToken);
-            IEnumerable<IGrouping<TKey, T>> groups = data.GroupBy(keySelector);
-
-            Dictionary<TKey, T> result = groups
-                .Where(g => g.Count() == ConstantHelper.One)
-                .ToDictionary(g => g.Key, g => g.First());
-
-            return result;
-        }
-        catch (Exception ex)
-        {
-            throw new InvalidOperationException($"Error evaluating {UtilHelper.GetCurrentMethodName()}.", ex);
-        }
+        return await ExecuteWithExceptionHandlingAsync(() => Task.FromResult(result),
+            nameof(EvaluateUniquesByGroupAsync));
     }
 
     public async Task<Dictionary<TKey, List<T>>> EvaluateTopByGroupAsync<TKey, TKey2, TProperty>(
@@ -751,35 +525,17 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
         Expression<Func<T, TKey2>>? orderBy = null,
         bool ascending = true,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
-        bool asNoTracking = false,
+        bool asNoTracking = true,
+        bool asSplitQuery = false,
         CancellationToken cancellationToken = default
     ) where TKey : notnull where TKey2 : notnull
     {
         ValidationHelper.ValidateCountZero(count);
 
-        try
-        {
-            Expression<Func<T, bool>> condition = valiFlow.Build();
-            IQueryable<T> query = ConfigureQuery(includes, asNoTracking);
-
-            query = query.Where(condition);
-            query = ApplyOrdering(query, orderBy, ascending, null);
-
-            List<T> data = await query.Take(count).ToListAsync(cancellationToken);
-
-            Dictionary<TKey, List<T>> result = data
-                .GroupBy(keySelector)
-                .ToDictionary(
-                    g => g.Key,
-                    g => g.ToList()
-                );
-
-            return result;
-        }
-        catch (Exception ex)
-        {
-            throw new InvalidOperationException($"Error evaluating {UtilHelper.GetCurrentMethodName()}.", ex);
-        }
+        IQueryable<T> query = BuildQuery(valiFlow, false, includes, asNoTracking, asSplitQuery);
+        query = ApplyOrdering(query, orderBy, ascending, null);
+        List<T> data = await query.Take(count).ToListAsync(cancellationToken);
+        return await Task.FromResult(data.GroupBy(keySelector).ToDictionary(g => g.Key, g => g.ToList()));
     }
 
     public async Task<IQueryable<T>> EvaluateQuery<TProperty, TKey>(
@@ -788,15 +544,12 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
         Expression<Func<T, TKey>>? orderBy = null,
         bool ascending = true,
         IEnumerable<EfOrderThenBy<T, TKey>>? thenBys = null,
-        bool asNoTracking = false
+        bool asNoTracking = true,
+        bool asSplitQuery = false
     ) where TKey : notnull
     {
-        Expression<Func<T, bool>> condition = valiFlow.Build();
-        IQueryable<T> query = ConfigureQuery(includes, asNoTracking);
-
-        query = query.Where(condition);
+        IQueryable<T> query = BuildQuery(valiFlow, false, includes, asNoTracking, asSplitQuery);
         query = ApplyOrdering(query, orderBy, ascending, thenBys);
-
         return await Task.FromResult(query);
     }
 
@@ -808,44 +561,32 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
         Expression<Func<T, TKey>>? orderBy = null,
         bool ascending = true,
         IEnumerable<EfOrderThenBy<T, TKey>>? thenBys = null,
-        bool asNoTracking = false,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
+        bool asNoTracking = true,
+        bool asSplitQuery = false,
         CancellationToken cancellationToken = default
-    )
-        where TKey : notnull
+    ) where TKey : notnull
     {
-        try
+        IQueryable<T> query = BuildQuery(valiFlow, false, includes, asNoTracking, asSplitQuery);
+        query = ApplyOrdering(query, orderBy, ascending, thenBys);
+
+        int currentBlock = (page - ConstantHelper.One) * pageSize / blockSize;
+        int blockOffset = currentBlock * blockSize;
+
+        IQueryable<T> blockQuery = query.Skip(blockOffset).Take(blockSize);
+        int totalItemsInBlock = await blockQuery.CountAsync(cancellationToken);
+        IEnumerable<T> blockData = await blockQuery.ToListAsync(cancellationToken);
+        IEnumerable<T> pageData = ApplyPaginationBlock(blockData, page, pageSize, blockSize);
+
+        return new PaginatedBlockResult<T>
         {
-            Expression<Func<T, bool>> condition = valiFlow.Build();
-            IQueryable<T> query = ConfigureQuery(includes, asNoTracking);
-
-            query = query.Where(condition);
-            query = ApplyOrdering(query, orderBy, ascending, thenBys);
-
-            int currentBlock = (page - ConstantHelper.One) * pageSize / blockSize;
-            int blockOffset = currentBlock * blockSize;
-
-            IQueryable<T> blockQuery = query.Skip(blockOffset).Take(blockSize);
-
-            int totalItemsInBlock = await blockQuery.CountAsync(cancellationToken);
-
-            IEnumerable<T> blockData = await blockQuery.ToListAsync(cancellationToken);
-            IEnumerable<T> pageData = ApplyPaginationBlock(blockData, page, pageSize, blockSize);
-
-            return new PaginatedBlockResult<T>
-            {
-                Items = pageData,
-                CurrentPage = page,
-                PageSize = pageSize,
-                BlockSize = blockSize,
-                TotalItemsInBlock = totalItemsInBlock,
-                HasMoreBlocks = totalItemsInBlock == blockSize
-            };
-        }
-        catch (Exception ex)
-        {
-            throw new InvalidOperationException($"Error evaluating {UtilHelper.GetCurrentMethodName()}.", ex);
-        }
+            Items = pageData,
+            CurrentPage = page,
+            PageSize = pageSize,
+            BlockSize = blockSize,
+            TotalItemsInBlock = totalItemsInBlock,
+            HasMoreBlocks = totalItemsInBlock == blockSize
+        };
     }
 
     public async Task<IQueryable<T>> GetPaginatedBlockQueryAsync<TKey, TProperty>(
@@ -856,19 +597,17 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
         Expression<Func<T, TKey>>? orderBy = null,
         bool ascending = true,
         IEnumerable<EfOrderThenBy<T, TKey>>? thenBys = null,
-        bool asNoTracking = false,
-        IEnumerable<Expression<Func<T, TProperty>>>? includes = null
+        IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
+        bool asNoTracking = true,
+        bool asSplitQuery = false
     ) where TKey : notnull
     {
-        Expression<Func<T, bool>> condition = valiFlow.Build();
-        IQueryable<T> query = ConfigureQuery(includes, asNoTracking);
-
-        query = query.Where(condition);
+        IQueryable<T> query = BuildQuery(valiFlow, false, includes, asNoTracking, asSplitQuery);
         query = ApplyOrdering(query, orderBy, ascending, thenBys);
 
-        int currentBlock = ((page - ConstantHelper.One) * pageSize) / blockSize;
+        int currentBlock = (page - ConstantHelper.One) * pageSize / blockSize;
         int blockOffset = currentBlock * blockSize;
-        int pageOffset = (((page - ConstantHelper.One) * pageSize)) % blockSize;
+        int pageOffset = (page - ConstantHelper.One) * pageSize % blockSize;
         int finalOffset = blockOffset + pageOffset;
 
         return await Task.FromResult(query.Skip(finalOffset).Take(pageSize));
@@ -876,202 +615,152 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
 
     public async Task<T> AddAsync(T entity, CancellationToken cancellationToken = default)
     {
-        try
-        {
-            await _dbContext.Set<T>().AddAsync(entity, cancellationToken);
-            return entity;
-        }
-        catch (Exception ex)
-        {
-            throw new InvalidOperationException($"Error al insertar la entidad en {UtilHelper.GetCurrentMethodName()}.", ex);
-        }
+        ValidationHelper.ValidateEntityNotNull(entity);
+        return await ExecuteWithExceptionHandlingAsync(
+            async () => (await _dbContext.Set<T>().AddAsync(entity, cancellationToken)).Entity, nameof(AddAsync));
     }
 
-    public async Task<IEnumerable<T>> AddRangeAsync(IEnumerable<T> entities, CancellationToken cancellationToken = default)
+    #endregion
+
+    #region Methods Write
+
+    public async Task<IEnumerable<T>> AddRangeAsync(IEnumerable<T> entities,
+        CancellationToken cancellationToken = default)
     {
         if (entities == null)
-            throw new ArgumentNullException(nameof(entities), "La colección de entidades no puede ser nula.");
+            throw new ArgumentNullException(nameof(entities), "The collection of entities cannot be null.");
 
         List<T> entityList = entities.ToList();
-    
-        if (!entityList.Any())
-            throw new ArgumentException("La colección de entidades no puede estar vacía.", nameof(entities));
 
-        try
-        {
-            await _dbContext.Set<T>().AddRangeAsync(entityList, cancellationToken);
-            return entityList;
-        }
-        catch (Exception ex)
-        {
-            throw new InvalidOperationException($"Error al agregar múltiples entidades en {UtilHelper.GetCurrentMethodName()}.", ex);
-        }
+        if (!entityList.Any())
+            throw new ArgumentException("The collection of entities cannot be empty.", nameof(entities));
+
+        return await ExecuteWithExceptionHandlingAsync<IEnumerable<T>>(
+            async () =>
+            {
+                await _dbContext.Set<T>().AddRangeAsync(entityList, cancellationToken);
+                return entityList;
+            }, nameof(AddRangeAsync));
     }
 
     public async Task<T> UpdateAsync(T entity)
     {
         ValidationHelper.ValidateEntityNotNull(entity);
-        try
-        {
-            _dbContext.Set<T>().Update(entity);
-            await Task.CompletedTask;
-            return entity;
-        }
-        catch (Exception ex)
-        {
-            throw new InvalidOperationException($"Error al actualizar la entidad en {UtilHelper.GetCurrentMethodName()}.", ex);
-        }
+        _dbContext.Set<T>().Update(entity);
+        await Task.CompletedTask;
+        return entity;
     }
 
     public async Task<IEnumerable<T>> UpdateRangeAsync(IEnumerable<T> entities)
     {
         if (entities == null)
-            throw new ArgumentNullException(nameof(entities), "La colección de entidades no puede ser nula o vacía.");
+            throw new ArgumentNullException(nameof(entities), "The collection of entities cannot be null.");
 
-        List<T> entityList = entities.ToList();
+        var entityList = entities.ToList();
 
         if (!entityList.Any())
-            throw new ArgumentException("La colección de entidades no puede estar vacía.", nameof(entities));
+            throw new ArgumentException("The collection of entities cannot be empty.", nameof(entities));
 
-        
-        try
-        {
-            _dbContext.Set<T>().UpdateRange(entityList);
-            await Task.CompletedTask;
-            return entityList;
-        }
-        catch (Exception ex)
-        {
-            throw new InvalidOperationException($"Error al actualizar múltiples entidades en {UtilHelper.GetCurrentMethodName()}.", ex);
-        }
+        _dbContext.Set<T>().UpdateRange(entityList);
+        await Task.CompletedTask;
+        return entityList;
     }
 
     public async Task DeleteAsync(T entity)
     {
         ValidationHelper.ValidateEntityNotNull(entity);
-        try
-        {
-            _dbContext.Set<T>().Remove(entity);
-            await Task.CompletedTask;
-        }
-        catch (Exception ex)
-        {
-            throw new InvalidOperationException($"Error al eliminar la entidad en {UtilHelper.GetCurrentMethodName()}.", ex);
-        }
+        _dbContext.Set<T>().Remove(entity);
+        await Task.CompletedTask;
     }
 
     public async Task DeleteRangeAsync(IEnumerable<T> entities)
     {
         if (entities == null)
-            throw new ArgumentNullException(nameof(entities), "La colección de entidades no puede ser nula.");
+            throw new ArgumentNullException(nameof(entities), "The collection of entities cannot be null.");
 
         List<T> entityList = entities.ToList();
 
         if (!entityList.Any())
-            throw new ArgumentException("La colección de entidades no puede estar vacía.", nameof(entities));
+            throw new ArgumentException("The collection of entities cannot be empty.", nameof(entities));
 
-        try
-        {
-            _dbContext.Set<T>().RemoveRange(entityList);
-            await Task.CompletedTask;
-        }
-        catch (Exception ex)
-        {
-            throw new InvalidOperationException($"Error al eliminar múltiples entidades en {UtilHelper.GetCurrentMethodName()}.", ex);
-        }
+        _dbContext.Set<T>().RemoveRange(entityList);
+        await Task.CompletedTask;
     }
 
 
     public async Task SaveChangesAsync(CancellationToken cancellationToken = default)
     {
-        try
-        {
-            await _dbContext.SaveChangesAsync(cancellationToken); 
-        }
-        catch (Exception ex)
-        {
-            throw new InvalidOperationException($"Error al guardar los cambios en {UtilHelper.GetCurrentMethodName()}.", ex);
-        }
+        await ExecuteWithExceptionHandlingAsync(() => _dbContext.SaveChangesAsync(cancellationToken),
+            nameof(SaveChangesAsync));
     }
 
-    public async Task<T> UpsertAsync(T entity, Expression<Func<T, bool>> matchCondition, CancellationToken cancellationToken = default)
+    public async Task<T> UpsertAsync(
+        T entity,
+        Expression<Func<T, bool>> matchCondition,
+        CancellationToken cancellationToken = default
+    )
     {
         ValidationHelper.ValidateEntityNotNull(entity);
-        try
+        T? existingEntity = await _dbContext.Set<T>().FirstOrDefaultAsync(matchCondition, cancellationToken);
+        if (existingEntity == null)
         {
-            var existingEntity = await _dbContext.Set<T>().FirstOrDefaultAsync(matchCondition, cancellationToken);
-            if (existingEntity == null)
+            await _dbContext.Set<T>().AddAsync(entity, cancellationToken);
+        }
+        else
+        {
+            _dbContext.Entry(existingEntity).CurrentValues.SetValues(entity);
+        }
+
+        return entity;
+    }
+
+    public async Task<IEnumerable<T>> UpsertRangeAsync<TProperty>(
+        IEnumerable<T> entities,
+        Func<T, TProperty> keySelector,
+        CancellationToken cancellationToken = default
+    ) where TProperty : notnull
+    {
+        if (entities == null)
+            throw new ArgumentNullException(nameof(entities), "The collection of entities cannot be null.");
+
+        List<T> entityList = entities.ToList();
+
+        if (!entityList.Any())
+            throw new ArgumentException("The collection of entities cannot be empty.", nameof(entities));
+
+        List<TProperty> keys = entityList.Select(keySelector).ToList();
+        List<T> existingEntities = await _dbContext.Set<T>()
+            .Where(e => keys.Contains(keySelector(e)))
+            .ToListAsync(cancellationToken);
+
+        Dictionary<TProperty, T> existingEntityDict = existingEntities.ToDictionary(keySelector, e => e);
+
+        foreach (T entity in entityList)
+        {
+            TProperty key = keySelector(entity);
+            if (existingEntityDict.TryGetValue(key, out var existingEntity))
             {
-                await _dbContext.Set<T>().AddAsync(entity, cancellationToken);
+                _dbContext.Entry(existingEntity).CurrentValues.SetValues(entity);
             }
             else
             {
-                _dbContext.Entry(existingEntity).CurrentValues.SetValues(entity);
-                return existingEntity;
+                await _dbContext.Set<T>().AddAsync(entity, cancellationToken);
             }
-            return entity;
         }
-        catch (Exception ex)
-        {
-            throw new InvalidOperationException($"Error al realizar upsert en {UtilHelper.GetCurrentMethodName()}.", ex);
-        }
+
+        return entityList;
     }
 
-    public async Task<IEnumerable<T>> UpsertRangeAsync<TProperty>(IEnumerable<T> entities, Func<T, TProperty> keySelector, CancellationToken cancellationToken = default) where TProperty : notnull
+
+    public async Task DeleteByConditionAsync(
+        Expression<Func<T, bool>> condition,
+        CancellationToken cancellationToken = default
+    )
     {
-        if (entities == null)
-            throw new ArgumentNullException(nameof(entities), "La colección de entidades no puede ser nula.");
-
-        List<T> entityList = entities.ToList();
-        if (!entityList.Any())
-            throw new ArgumentException("La colección de entidades no puede estar vacía.", nameof(entities));
-
-        try
-        {
-            var keys = entityList.Select(keySelector).ToList();
-
-            var existingEntities = await _dbContext.Set<T>()
-                .Where(e => keys.Contains(keySelector(e)))
-                .ToListAsync(cancellationToken);
-
-            var existingEntityDict = existingEntities.ToDictionary(keySelector, e => e);
-
-            foreach (var entity in entityList)
-            {
-                var key = keySelector(entity);
-                if (existingEntityDict.TryGetValue(key, out var existingEntity))
-                {
-                    _dbContext.Entry(existingEntity).CurrentValues.SetValues(entity);
-                }
-                else
-                {
-                    await _dbContext.Set<T>().AddAsync(entity, cancellationToken);
-                }
-            }
-            return entityList;
-        }
-        catch (Exception ex)
-        {
-            throw new InvalidOperationException($"Error al realizar upsert múltiple en {UtilHelper.GetCurrentMethodName()}.", ex);
-        }
+        List<T> entitiesToDelete = await _dbContext.Set<T>().Where(condition).ToListAsync(cancellationToken);
+        if (entitiesToDelete.Any()) _dbContext.Set<T>().RemoveRange(entitiesToDelete);
     }
 
-
-    public async Task DeleteByConditionAsync(Expression<Func<T, bool>> condition, CancellationToken cancellationToken = default)
-    {
-        try
-        {
-            var entitiesToDelete = await _dbContext.Set<T>().Where(condition).ToListAsync(cancellationToken);
-            if (entitiesToDelete.Any())
-            {
-                _dbContext.Set<T>().RemoveRange(entitiesToDelete);
-            }
-        }
-        catch (Exception ex)
-        {
-            throw new InvalidOperationException($"Error al eliminar por condición en {UtilHelper.GetCurrentMethodName()}.", ex);
-        }
-    }
 
     public async Task ExecuteTransactionAsync(Func<Task> operations, CancellationToken cancellationToken = default)
     {
@@ -1082,7 +771,7 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
         }
 
         await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
-        
+
         try
         {
             await operations();
@@ -1096,13 +785,19 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
             }
             catch (Exception rollbackEx)
             {
-                throw new InvalidOperationException($"Error al ejecutar transacción en {UtilHelper.GetCurrentMethodName()}. Falló rollback: {rollbackEx.Message}", ex);
+                throw new InvalidOperationException(
+                    $"Error executing transaction in {nameof(ExecuteTransactionAsync)}. Rollback failed: {rollbackEx.Message}",
+                    ex);
             }
-            throw new InvalidOperationException($"Error al ejecutar transacción en {UtilHelper.GetCurrentMethodName()}.", ex);
+
+            throw new InvalidOperationException($"Error executing transaction in {nameof(ExecuteTransactionAsync)}.",
+                ex);
         }
     }
 
-    #region Private
+    #endregion
+
+    #region Methods Private
 
     /// <summary>
     /// Applies the AsNoTracking option to the given query if specified.
@@ -1116,7 +811,7 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
     /// <returns>
     /// The modified query with AsNoTracking applied if requested; otherwise, the original query.
     /// </returns>
-    private IQueryable<T> ApplyAsNoTracking(IQueryable<T> query, bool asNoTracking = false)
+    private IQueryable<T> ApplyAsNoTracking(IQueryable<T> query, bool asNoTracking = true)
     {
         return asNoTracking ? query.AsNoTracking() : query;
     }
@@ -1188,6 +883,20 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
         return orderedQuery;
     }
 
+    private async Task<TValue> ExecuteWithExceptionHandlingAsync<TValue>(Func<Task<TValue>> operation,
+        string operationName)
+    {
+        try
+        {
+            return await operation();
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException($"Error executing {operationName} for entity type {typeof(T).Name}.",
+                ex);
+        }
+    }
+
     private IQueryable<T> ApplyPagination(IQueryable<T> query, int? page, int? pageSize)
     {
         if (!page.HasValue || !pageSize.HasValue) return query;
@@ -1207,7 +916,7 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
     {
         if (page <= ConstantHelper.ZeroInt)
             throw new ArgumentOutOfRangeException(nameof(page), "Page must be greater than zero.");
-        
+
         if (pageSize <= ConstantHelper.ZeroInt)
             throw new ArgumentOutOfRangeException(nameof(pageSize), "Page size must be greater than zero.");
 
@@ -1225,9 +934,17 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
         return query.Skip((page - ConstantHelper.One) * pageSize % blockSize).Take(pageSize).ToList();
     }
 
-    private IQueryable<T> ConfigureQuery<TProperty>(
-        IEnumerable<Expression<Func<T, TProperty>>>? includes,
-        bool asNoTracking
+    private IQueryable<T> ApplyAsSplitQuery(IQueryable<T> query, bool asSplitQuery = false)
+    {
+        return asSplitQuery ? query.AsSplitQuery() : query;
+    }
+
+    private IQueryable<T> BuildQuery<TProperty>(
+        ValiFlow<T> valiFlow,
+        bool negateCondition = false,
+        IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
+        bool asNoTracking = false,
+        bool asSplitQuery = false
     )
     {
         IQueryable<T> query = _dbContext.Set<T>().AsQueryable();
@@ -1235,7 +952,19 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
         ValidationHelper.ValidateQueryNotNull(query);
 
         query = ApplyAsNoTracking(query, asNoTracking);
-        query = ApplyIncludes(query, includes);
+
+        var includeList = includes?.ToList() ?? new List<Expression<Func<T, TProperty>>>();
+        if (includeList.Any())
+        {
+            query = ApplyIncludes(query, includeList);
+            if (asSplitQuery)
+            {
+                query = ApplyAsSplitQuery(query);
+            }
+        }
+
+        Expression<Func<T, bool>> condition = negateCondition ? valiFlow.BuildNegated() : valiFlow.Build();
+        query = query.Where(condition);
 
         return query;
     }

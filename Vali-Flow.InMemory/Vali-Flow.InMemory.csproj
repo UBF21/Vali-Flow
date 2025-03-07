@@ -28,10 +28,6 @@
     </ItemGroup>
 
     <ItemGroup>
-      <Folder Include="Classes\Repositories\" />
-    </ItemGroup>
-
-    <ItemGroup>
       <ProjectReference Include="..\Vali-Flow.Core\Vali-Flow.Core.csproj" />
     </ItemGroup>
 

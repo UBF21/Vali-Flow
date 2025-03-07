@@ -14,26 +14,33 @@ public interface IEvaluatorRead<T>
     Task<bool> EvaluateAnyAsync<TProperty>(
         ValiFlow<T> valiFlow,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
-        bool asNoTracking = false,
+        bool asNoTracking = true,
+        bool asSplitQuery = false,
         CancellationToken cancellationToken = default);
 
     Task<int> EvaluateCountAsync<TProperty>(
         ValiFlow<T> valiFlow,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
-        bool asNoTracking = false,
-        CancellationToken cancellationToken = default);
+        bool asNoTracking = true,
+        bool asSplitQuery = false,
+        CancellationToken cancellationToken = default
+    );
 
     Task<T?> GetFirstFailedAsync<TProperty>(
         ValiFlow<T> valiFlow,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
-        bool asNoTracking = false,
-        CancellationToken cancellationToken = default);
+        bool asNoTracking = true,
+        bool asSplitQuery = false,
+        CancellationToken cancellationToken = default
+    );
 
     Task<T?> GetFirstAsync<TProperty>(
         ValiFlow<T> valiFlow,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
-        bool asNoTracking = false,
-        CancellationToken cancellationToken = default);
+        bool asNoTracking = true,
+        bool asSplitQuery = false,
+        CancellationToken cancellationToken = default
+    );
 
     Task<IQueryable<T>> EvaluateAllFailedAsync<TKey, TProperty>(
         ValiFlow<T> valiFlow,
@@ -42,8 +49,10 @@ public interface IEvaluatorRead<T>
         Expression<Func<T, TKey>>? orderBy = null,
         bool ascending = true,
         IEnumerable<EfOrderThenBy<T, TKey>>? thenBys = null,
-        bool asNoTracking = false,
-        IEnumerable<Expression<Func<T, TProperty>>>? includes = null)
+        IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
+        bool asNoTracking = true,
+        bool asSplitQuery = false
+    )
         where TKey : notnull;
 
     Task<IQueryable<T>> EvaluateAllAsync<TKey, TProperty>(
@@ -51,9 +60,10 @@ public interface IEvaluatorRead<T>
         Expression<Func<T, TKey>>? orderBy = null,
         bool ascending = true,
         IEnumerable<EfOrderThenBy<T, TKey>>? thenBys = null,
-        bool asNoTracking = false,
-        IEnumerable<Expression<Func<T, TProperty>>>? includes = null)
-        where TKey : notnull;
+        IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
+        bool asNoTracking = true,
+        bool asSplitQuery = false
+    ) where TKey : notnull;
 
     Task<IQueryable<T>> EvaluatePagedAsync<TKey, TProperty>(
         ValiFlow<T> valiFlow,
@@ -62,8 +72,10 @@ public interface IEvaluatorRead<T>
         Expression<Func<T, TKey>>? orderBy = null,
         bool ascending = true,
         IEnumerable<EfOrderThenBy<T, TKey>>? thenBys = null,
-        bool asNoTracking = false,
-        IEnumerable<Expression<Func<T, TProperty>>>? includes = null)
+        IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
+        bool asNoTracking = true,
+        bool asSplitQuery = false
+    )
         where TKey : notnull;
 
     Task<IQueryable<T>> EvaluateTopAsync<TKey, TProperty>(
@@ -72,9 +84,10 @@ public interface IEvaluatorRead<T>
         Expression<Func<T, TKey>>? orderBy = null,
         bool ascending = true,
         IEnumerable<EfOrderThenBy<T, TKey>>? thenBys = null,
-        bool asNoTracking = false,
-        IEnumerable<Expression<Func<T, TProperty>>>? includes = null)
-        where TKey : notnull;
+        IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
+        bool asNoTracking = true,
+        bool asSplitQuery = false
+    ) where TKey : notnull;
 
     Task<IQueryable<T>> EvaluateDistinctAsync<TKey, TProperty>(
         ValiFlow<T> valiFlow,
@@ -84,9 +97,10 @@ public interface IEvaluatorRead<T>
         Expression<Func<T, TKey>>? orderBy = null,
         bool ascending = true,
         IEnumerable<EfOrderThenBy<T, TKey>>? thenBys = null,
-        bool asNoTracking = false,
-        IEnumerable<Expression<Func<T, TProperty>>>? includes = null)
-        where TKey : notnull;
+        IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
+        bool asNoTracking = true,
+        bool asSplitQuery = false
+    ) where TKey : notnull;
 
     Task<IQueryable<T>> EvaluateDuplicatesAsync<TKey, TProperty>(
         ValiFlow<T> valiFlow,
@@ -96,28 +110,33 @@ public interface IEvaluatorRead<T>
         Expression<Func<T, TKey>>? orderBy = null,
         bool ascending = true,
         IEnumerable<EfOrderThenBy<T, TKey>>? thenBys = null,
-        bool asNoTracking = false,
-        IEnumerable<Expression<Func<T, TProperty>>>? includes = null)
-        where TKey : notnull;
+        IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
+        bool asNoTracking = true,
+        bool asSplitQuery = false
+    ) where TKey : notnull;
 
     Task<T?> GetLastFailedAsync<TKey, TProperty>(
         ValiFlow<T> valiFlow,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
-        bool asNoTracking = false,
-        CancellationToken cancellationToken = default)
-        where TKey : notnull;
+        bool asNoTracking = true,
+        bool asSplitQuery = false,
+        CancellationToken cancellationToken = default
+    ) where TKey : notnull;
 
     Task<T?> GetLastAsync<TProperty>(
         ValiFlow<T> valiFlow,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
-        bool asNoTracking = false,
-        CancellationToken cancellationToken = default);
+        bool asNoTracking = true,
+        bool asSplitQuery = false,
+        CancellationToken cancellationToken = default
+    );
 
     Task<TResult> EvaluateMinAsync<TResult, TProperty>(
         ValiFlow<T> valiFlow,
         Expression<Func<T, TResult>> selector,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
-        bool asNoTracking = false,
+        bool asNoTracking = true,
+        bool asSplitQuery = false,
         CancellationToken cancellationToken = default
     ) where TResult : INumber<TResult>;
 
@@ -125,7 +144,8 @@ public interface IEvaluatorRead<T>
         ValiFlow<T> valiFlow,
         Expression<Func<T, TResult>> selector,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
-        bool asNoTracking = false,
+        bool asNoTracking = true,
+        bool asSplitQuery = false,
         CancellationToken cancellationToken = default
     ) where TResult : INumber<TResult>;
 
@@ -133,7 +153,8 @@ public interface IEvaluatorRead<T>
         ValiFlow<T> valiFlow,
         Expression<Func<T, TResult>> selector,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
-        bool asNoTracking = false,
+        bool asNoTracking = true,
+        bool asSplitQuery = false,
         CancellationToken cancellationToken = default
     ) where TResult : INumber<TResult>;
 
@@ -141,7 +162,8 @@ public interface IEvaluatorRead<T>
         ValiFlow<T> valiFlow,
         Expression<Func<T, int>> selector,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
-        bool asNoTracking = false,
+        bool asNoTracking = true,
+        bool asSplitQuery = false,
         CancellationToken cancellationToken = default
     );
 
@@ -149,7 +171,8 @@ public interface IEvaluatorRead<T>
         ValiFlow<T> valiFlow,
         Expression<Func<T, long>> selector,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
-        bool asNoTracking = false,
+        bool asNoTracking = true,
+        bool asSplitQuery = false,
         CancellationToken cancellationToken = default
     );
 
@@ -157,7 +180,8 @@ public interface IEvaluatorRead<T>
         ValiFlow<T> valiFlow,
         Expression<Func<T, double>> selector,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
-        bool asNoTracking = false,
+        bool asNoTracking = true,
+        bool asSplitQuery = false,
         CancellationToken cancellationToken = default
     );
 
@@ -165,7 +189,8 @@ public interface IEvaluatorRead<T>
         ValiFlow<T> valiFlow,
         Expression<Func<T, decimal>> selector,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
-        bool asNoTracking = false,
+        bool asNoTracking = true,
+        bool asSplitQuery = false,
         CancellationToken cancellationToken = default
     );
 
@@ -173,7 +198,8 @@ public interface IEvaluatorRead<T>
         ValiFlow<T> valiFlow,
         Expression<Func<T, float>> selector,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
-        bool asNoTracking = false,
+        bool asNoTracking = true,
+        bool asSplitQuery = false,
         CancellationToken cancellationToken = default
     );
 
@@ -182,7 +208,8 @@ public interface IEvaluatorRead<T>
         Expression<Func<T, TResult>> selector,
         Func<TResult, TResult, TResult> aggregator,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
-        bool asNoTracking = false,
+        bool asNoTracking = true,
+        bool asSplitQuery = false,
         CancellationToken cancellationToken = default
     ) where TResult : INumber<TResult>;
 
@@ -191,7 +218,8 @@ public interface IEvaluatorRead<T>
         ValiFlow<T> valiFlow,
         Expression<Func<T, TKey>> keySelector,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
-        bool asNoTracking = false,
+        bool asNoTracking = true,
+        bool asSplitQuery = false,
         CancellationToken cancellationToken = default
     ) where TKey : notnull;
 
@@ -200,7 +228,8 @@ public interface IEvaluatorRead<T>
         ValiFlow<T> valiFlow,
         Func<T, TKey> keySelector,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
-        bool asNoTracking = false,
+        bool asNoTracking = true,
+        bool asSplitQuery = false,
         CancellationToken cancellationToken = default
     ) where TKey : notnull;
 
@@ -210,7 +239,8 @@ public interface IEvaluatorRead<T>
         Func<T, TKey> keySelector,
         Func<T, TResult> selector,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
-        bool asNoTracking = false,
+        bool asNoTracking = true,
+        bool asSplitQuery = false,
         CancellationToken cancellationToken = default
     ) where TResult : INumber<TResult> where TKey : notnull;
 
@@ -220,7 +250,8 @@ public interface IEvaluatorRead<T>
         Func<T, TKey> keySelector,
         Func<T, TResult> selector,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
-        bool asNoTracking = false,
+        bool asNoTracking = true,
+        bool asSplitQuery = false,
         CancellationToken cancellationToken = default
     ) where TResult : INumber<TResult> where TKey : notnull;
 
@@ -230,7 +261,8 @@ public interface IEvaluatorRead<T>
         Func<T, TKey> keySelector,
         Func<T, TResult> selector,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
-        bool asNoTracking = false,
+        bool asNoTracking = true,
+        bool asSplitQuery = false,
         CancellationToken cancellationToken = default
     ) where TResult : INumber<TResult> where TKey : notnull;
 
@@ -240,7 +272,8 @@ public interface IEvaluatorRead<T>
         Func<T, TKey> keySelector,
         Func<T, TResult> selector,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
-        bool asNoTracking = false,
+        bool asNoTracking = true,
+        bool asSplitQuery = false,
         CancellationToken cancellationToken = default
     ) where TResult : INumber<TResult> where TKey : notnull;
 
@@ -249,7 +282,8 @@ public interface IEvaluatorRead<T>
         ValiFlow<T> valiFlow,
         Func<T, TKey> keySelector,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
-        bool asNoTracking = false,
+        bool asNoTracking = true,
+        bool asSplitQuery = false,
         CancellationToken cancellationToken = default
     ) where TKey : notnull;
 
@@ -258,7 +292,8 @@ public interface IEvaluatorRead<T>
         ValiFlow<T> valiFlow,
         Func<T, TKey> keySelector,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
-        bool asNoTracking = false,
+        bool asNoTracking = true,
+        bool asSplitQuery = false,
         CancellationToken cancellationToken = default
     ) where TKey : notnull;
 
@@ -270,7 +305,8 @@ public interface IEvaluatorRead<T>
         Expression<Func<T, TKey2>>? orderBy = null,
         bool ascending = true,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
-        bool asNoTracking = false,
+        bool asNoTracking = true,
+        bool asSplitQuery = false,
         CancellationToken cancellationToken = default
     ) where TKey : notnull where TKey2 : notnull;
 
@@ -280,7 +316,8 @@ public interface IEvaluatorRead<T>
         Expression<Func<T, TKey>>? orderBy = null,
         bool ascending = true,
         IEnumerable<EfOrderThenBy<T, TKey>>? thenBys = null,
-        bool asNoTracking = false
+        bool asNoTracking = true,
+        bool asSplitQuery = false
     ) where TKey : notnull;
 
     Task<PaginatedBlockResult<T>> GetPaginatedBlockAsync<TKey, TProperty>(
@@ -291,8 +328,9 @@ public interface IEvaluatorRead<T>
         Expression<Func<T, TKey>>? orderBy = null,
         bool ascending = true,
         IEnumerable<EfOrderThenBy<T, TKey>>? thenBys = null,
-        bool asNoTracking = false,
         IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
+        bool asNoTracking = true,
+        bool asSplitQuery = false,
         CancellationToken cancellationToken = default
     ) where TKey : notnull;
 
@@ -304,7 +342,8 @@ public interface IEvaluatorRead<T>
         Expression<Func<T, TKey>>? orderBy = null,
         bool ascending = true,
         IEnumerable<EfOrderThenBy<T, TKey>>? thenBys = null,
-        bool asNoTracking = false,
-        IEnumerable<Expression<Func<T, TProperty>>>? includes = null
+        IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
+        bool asNoTracking = true,
+        bool asSplitQuery = false
     ) where TKey : notnull;
 }
