@@ -248,8 +248,7 @@ public abstract class EvaluatorBase<T, TProperty> : IInMemoryEvaluatorRead<T>, I
         ValiFlow<T>? valiFlow = null,
         bool negateCondition = false
     ) where TKey : notnull
-        => Evaluator.EvaluateTopByGroup(entities, keySelector, count, orderBy, ascending, valiFlow,
-            negateCondition);
+        => Evaluator.EvaluateTopByGroup(entities, keySelector, count, orderBy, ascending, valiFlow, negateCondition);
 
     public bool Add(T entity, IEnumerable<T>? entities) => Evaluator.Add(entity, entities);
     
