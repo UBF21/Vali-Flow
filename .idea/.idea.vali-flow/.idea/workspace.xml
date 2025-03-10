@@ -34,12 +34,12 @@
     &quot;assignee&quot;: &quot;FelipeMontenegro-IDS&quot;
   }
 }</component>
-  <component name="GithubPullRequestsUISettings"><![CDATA[{
-  "selectedUrlAndAccountId": {
-    "url": "https://github.com/UBF21/vali-flow.git",
-    "accountId": "7276f141-500b-4f40-ab3e-097cc210c82c"
+  <component name="GithubPullRequestsUISettings">{
+  &quot;selectedUrlAndAccountId&quot;: {
+    &quot;url&quot;: &quot;https://github.com/UBF21/vali-flow.git&quot;,
+    &quot;accountId&quot;: &quot;7276f141-500b-4f40-ab3e-097cc210c82c&quot;
   }
-}]]></component>
+}</component>
   <component name="HighlightingSettingsPerFile">
     <setting file="file://$APPLICATION_CONFIG_DIR$/resharper-host/DecompilerCache/decompiler/3442bdbe7a07406dbd4e05fe7357d408c40e00/4d/c91dd509/IEnumerable`1.cs" root0="SKIP_HIGHLIGHTING" />
     <setting file="file://$APPLICATION_CONFIG_DIR$/resharper-host/DecompilerCache/decompiler/a11fb02b10e04f8883113b5389cc1b4fb85f8/11/84988e72/EntityFrameworkQueryableExtensions.cs" root0="SKIP_HIGHLIGHTING" />
