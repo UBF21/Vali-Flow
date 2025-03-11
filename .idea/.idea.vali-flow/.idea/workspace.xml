@@ -9,13 +9,8 @@
   <component name="ChangeListManager">
     <list default="true" id="aa4fc315-c37b-4ab3-b9cc-02a55a2255c8" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/.idea.vali-flow/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.vali-flow/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Vali-Flow.InMemory/Classes/Options/InMemoryThenBy.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Vali-Flow.InMemory/Classes/Options/InMemoryThenBy.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Vali-Flow.InMemory/Classes/Repositories/EvaluatorBase.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Vali-Flow.InMemory/Classes/Repositories/EvaluatorBase.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Vali-Flow.InMemory/Interfaces/Evaluators/Read/IInMemoryEvaluatorRead.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Vali-Flow.InMemory/Interfaces/Evaluators/Read/IInMemoryEvaluatorRead.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Vali-Flow.InMemory/Interfaces/Evaluators/Write/IInMemoryEvaluatorWrite.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Vali-Flow.InMemory/Interfaces/Evaluators/Write/IInMemoryEvaluatorWrite.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Vali-Flow/Classes/Options/EfOrderThenBy.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Vali-Flow/Classes/Options/EfOrderThenBy.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Vali-Flow/Classes/Results/PaginatedBlockResult.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Vali-Flow/Classes/Results/PaginatedBlockResult.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Vali-Flow/Interfaces/Evaluators/Read/IEvaluatorRead.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Vali-Flow/Interfaces/Evaluators/Read/IEvaluatorRead.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Vali-Flow.Core/Interfaces/Types/INumericExpression.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Vali-Flow.Core/Interfaces/Types/INumericExpression.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Vali-Flow/Interfaces/Evaluators/Write/IEvaluatorWrite.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Vali-Flow/Interfaces/Evaluators/Write/IEvaluatorWrite.cs" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -76,6 +71,7 @@
     &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
     &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
     &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;reference.settings.ide.settings.uml&quot;,
     &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
 }</component>
@@ -245,7 +241,15 @@
       <option name="project" value="LOCAL" />
       <updated>1741219243121</updated>
     </task>
-    <option name="localTasksCounter" value="15" />
+    <task id="LOCAL-00015" summary="fixup! registro de carpetas.">
+      <option name="closed" value="true" />
+      <created>1741613289646</created>
+      <option name="number" value="00015" />
+      <option name="presentableId" value="LOCAL-00015" />
+      <option name="project" value="LOCAL" />
+      <updated>1741613289646</updated>
+    </task>
+    <option name="localTasksCounter" value="16" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -253,6 +257,39 @@
   </component>
   <component name="UnityCheckinConfiguration" checkUnsavedScenes="true" />
   <component name="UnityProjectConfiguration" hasMinimizedUI="false" />
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="OPEN_GENERIC_TABS">
+      <map>
+        <entry key="e4662795-ecd9-4a53-b96c-759b8b83dcd8" value="TOOL_WINDOW" />
+      </map>
+    </option>
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State />
+          </value>
+        </entry>
+        <entry key="e4662795-ecd9-4a53-b96c-759b8b83dcd8">
+          <value>
+            <State>
+              <option name="FILTERS">
+                <map>
+                  <entry key="range">
+                    <value>
+                      <list>
+                        <option value="49dcbf227b90198520cc58f7f9df40cfce4efd78..2b55188dcc44ea543b949d976ca3a61b17120f9f" />
+                      </list>
+                    </value>
+                  </entry>
+                </map>
+              </option>
+            </State>
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
   <component name="VcsManagerConfiguration">
     <option name="CLEAR_INITIAL_COMMIT_MESSAGE" value="true" />
     <MESSAGE value="-Creación de nueva estructura para el builder de expresiones para linq o fuentes de datos en general (ValiFlow)." />
@@ -269,7 +306,8 @@
     <MESSAGE value="- Eliminando métodos del BaseExpression.cs&#10;&#10;-Cambiando de Object a TValue para evitar boxing de inferencia de datos CollectionExpression.cs.&#10;&#10;-Cambiando de Object a TValue para evitar boxing de inferencia de datos ComparisonExpression.cs." />
     <MESSAGE value="Desacoplando los métodos evaluadores para implementarlos por repositorio y separando la responsabilidad de Read y write para de esta manera interactuar con la el dbcontext.&#10;&#10;Queda pendiente crear algo similar para los evaluadores en memoria." />
     <MESSAGE value="-Re-Estructuración de ValiFlow." />
-    <option name="LAST_COMMIT_MESSAGE" value="-Re-Estructuración de ValiFlow." />
+    <MESSAGE value="fixup! registro de carpetas." />
+    <option name="LAST_COMMIT_MESSAGE" value="fixup! registro de carpetas." />
   </component>
   <component name="XSLT-Support.FileAssociations.UIState">
     <expand />
