@@ -7,6 +7,7 @@ using Vali_Flow.Core.Builder;
 using Vali_Flow.Core.Utils;
 using Vali_Flow.Interfaces.Evaluators.Read;
 using Vali_Flow.Interfaces.Evaluators.Write;
+using Vali_Flow.Interfaces.Specification;
 
 namespace Vali_Flow.Classes.Evaluators;
 
@@ -28,345 +29,276 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
         return await Task.FromResult(condition(entity));
     }
 
-    public async Task<bool> EvaluateAnyAsync<TProperty>(
-        ValiFlow<T> valiFlow,
-        IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
-        bool asNoTracking = true,
-        bool asSplitQuery = false,
+    public async Task<bool> EvaluateAnyAsync(
+        ISpecification<T> specification,
         CancellationToken cancellationToken = default
     )
     {
-        IQueryable<T> query = BuildQuery(valiFlow, false, includes, asNoTracking, asSplitQuery);
+        IQueryable<T> query = BuildQuery(specification);
         return await ExecuteWithExceptionHandlingAsync(() => query.AnyAsync(cancellationToken),
             nameof(EvaluateAnyAsync));
     }
 
-    public async Task<int> EvaluateCountAsync<TProperty>(
-        ValiFlow<T> valiFlow,
-        IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
-        bool asNoTracking = true,
-        bool asSplitQuery = false,
+    public async Task<int> EvaluateCountAsync(
+        ISpecification<T> specification,
         CancellationToken cancellationToken = default
     )
     {
-        IQueryable<T> query = BuildQuery(valiFlow, false, includes, asNoTracking, asSplitQuery);
+        IQueryable<T> query = BuildQuery(specification);
         return await ExecuteWithExceptionHandlingAsync(() => query.CountAsync(cancellationToken),
             nameof(EvaluateCountAsync));
     }
 
-    public async Task<T?> GetFirstFailedAsync<TProperty>(
-        ValiFlow<T> valiFlow,
-        IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
-        bool asNoTracking = true,
-        bool asSplitQuery = false,
+    public async Task<T?> GetFirstFailedAsync(
+        ISpecification<T> specification,
         CancellationToken cancellationToken = default
     )
     {
-        var query = BuildQuery(valiFlow, true, includes, asNoTracking, asSplitQuery);
+        var query = BuildQuery(specification, true);
         return await ExecuteWithExceptionHandlingAsync(() => query.FirstOrDefaultAsync(cancellationToken),
             nameof(GetFirstFailedAsync));
     }
 
-    public async Task<T?> GetFirstAsync<TProperty>(
-        ValiFlow<T> valiFlow,
-        IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
-        bool asNoTracking = true,
-        bool asSplitQuery = false,
+    public async Task<T?> GetFirstAsync(
+        ISpecification<T> specification,
         CancellationToken cancellationToken = default
     )
     {
-        var query = BuildQuery(valiFlow, false, includes, asNoTracking, asSplitQuery);
+        var query = BuildQuery(specification);
         return await ExecuteWithExceptionHandlingAsync(() => query.FirstOrDefaultAsync(cancellationToken),
             nameof(GetFirstAsync));
     }
 
-    public async Task<IQueryable<T>> EvaluateAllFailedAsync<TKey, TProperty>(
-        ValiFlow<T> valiFlow,
+    public async Task<IQueryable<T>> EvaluateAllFailedAsync<TKey>(
+        ISpecification<T> specification,
         int? page = null,
         int? pageSize = null,
         Expression<Func<T, TKey>>? orderBy = null,
         bool ascending = true,
-        IEnumerable<EfOrderThenBy<T, TKey>>? thenBys = null,
-        IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
-        bool asNoTracking = true,
-        bool asSplitQuery = false
+        IEnumerable<EfOrderThenBy<T, TKey>>? thenBys = null
     ) where TKey : notnull
     {
-        IQueryable<T> query = BuildQuery(valiFlow, true, includes, asNoTracking, asSplitQuery);
+        IQueryable<T> query = BuildQuery(specification, true);
         query = ApplyOrdering(query, orderBy, ascending, thenBys);
         query = ApplyPagination(query, page, pageSize);
         return await Task.FromResult(query);
     }
 
-    public async Task<IQueryable<T>> EvaluateAllAsync<TKey, TProperty>(
-        ValiFlow<T> valiFlow,
+    public async Task<IQueryable<T>> EvaluateAllAsync<TKey>(
+        ISpecification<T> specification,
         Expression<Func<T, TKey>>? orderBy = null,
         bool ascending = true,
-        IEnumerable<EfOrderThenBy<T, TKey>>? thenBys = null,
-        IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
-        bool asNoTracking = true,
-        bool asSplitQuery = false
+        IEnumerable<EfOrderThenBy<T, TKey>>? thenBys = null
     ) where TKey : notnull
     {
-        var query = BuildQuery(valiFlow, false, includes, asNoTracking, asSplitQuery);
+        var query = BuildQuery(specification);
         query = ApplyOrdering(query, orderBy, ascending, thenBys);
         return await Task.FromResult(query);
     }
 
-    public async Task<IQueryable<T>> EvaluatePagedAsync<TKey, TProperty>(
-        ValiFlow<T> valiFlow,
+    public async Task<IQueryable<T>> EvaluatePagedAsync<TKey>(
+        ISpecification<T> specification,
         int page = ConstantHelper.One,
         int pageSize = ConstantHelper.Ten,
         Expression<Func<T, TKey>>? orderBy = null,
         bool ascending = true,
-        IEnumerable<EfOrderThenBy<T, TKey>>? thenBys = null,
-        IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
-        bool asNoTracking = true,
-        bool asSplitQuery = false
+        IEnumerable<EfOrderThenBy<T, TKey>>? thenBys = null
     ) where TKey : notnull
     {
         ValidationHelper.ValidatePageZero(page);
         ValidationHelper.ValidatePageSizeZero(pageSize);
 
-        IQueryable<T> query = BuildQuery(valiFlow, false, includes, asNoTracking, asSplitQuery);
+        IQueryable<T> query = BuildQuery(specification);
         query = ApplyOrdering(query, orderBy, ascending, thenBys);
         return await Task.FromResult(ApplyPagination(query, page, pageSize));
     }
 
-    public async Task<IQueryable<T>> EvaluateTopAsync<TKey, TProperty>(
-        ValiFlow<T> valiFlow,
+    public async Task<IQueryable<T>> EvaluateTopAsync<TKey>(
+        ISpecification<T> specification,
         int count,
         Expression<Func<T, TKey>>? orderBy = null,
         bool ascending = true,
-        IEnumerable<EfOrderThenBy<T, TKey>>? thenBys = null,
-        IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
-        bool asNoTracking = true,
-        bool asSplitQuery = false
+        IEnumerable<EfOrderThenBy<T, TKey>>? thenBys = null
     ) where TKey : notnull
     {
         ValidationHelper.ValidateCountZero(count);
 
-        IQueryable<T> query = BuildQuery(valiFlow, false, includes, asNoTracking, asSplitQuery);
+        IQueryable<T> query = BuildQuery(specification);
         query = ApplyOrdering(query, orderBy, ascending, thenBys);
         return await Task.FromResult(query.Take(count));
     }
 
-    public async Task<IQueryable<T>> EvaluateDistinctAsync<TKey, TProperty>(
-        ValiFlow<T> valiFlow,
+    public async Task<IQueryable<T>> EvaluateDistinctAsync<TKey>(
+        ISpecification<T> specification,
         Expression<Func<T, TKey>> selector,
         int? page = null,
         int? pageSize = null,
         Expression<Func<T, TKey>>? orderBy = null,
         bool ascending = true,
-        IEnumerable<EfOrderThenBy<T, TKey>>? thenBys = null,
-        IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
-        bool asNoTracking = true,
-        bool asSplitQuery = false
+        IEnumerable<EfOrderThenBy<T, TKey>>? thenBys = null
     ) where TKey : notnull
     {
-        IQueryable<T> query = BuildQuery(valiFlow, false, includes, asNoTracking, asSplitQuery);
+        IQueryable<T> query = BuildQuery(specification);
         query = query.GroupBy(selector).Select(g => g.First());
         query = ApplyOrdering(query, orderBy, ascending, thenBys);
         return await Task.FromResult(ApplyPagination(query, page, pageSize));
     }
 
-    public async Task<IQueryable<T>> EvaluateDuplicatesAsync<TKey, TProperty>(
-        ValiFlow<T> valiFlow,
+    public async Task<IQueryable<T>> EvaluateDuplicatesAsync<TKey>(
+        ISpecification<T> specification,
         Expression<Func<T, TKey>> selector,
         int? page = null,
         int? pageSize = null,
         Expression<Func<T, TKey>>? orderBy = null,
         bool ascending = true,
-        IEnumerable<EfOrderThenBy<T, TKey>>? thenBys = null,
-        IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
-        bool asNoTracking = true,
-        bool asSplitQuery = false
+        IEnumerable<EfOrderThenBy<T, TKey>>? thenBys = null
     ) where TKey : notnull
     {
-        IQueryable<T> query = BuildQuery(valiFlow, false, includes, asNoTracking, asSplitQuery);
+        IQueryable<T> query = BuildQuery(specification);
         query = query.GroupBy(selector).Where(g => g.Count() > ConstantHelper.One).SelectMany(g => g);
         query = ApplyOrdering(query, orderBy, ascending, thenBys);
         return await Task.FromResult(ApplyPagination(query, page, pageSize));
     }
 
-    public async Task<T?> GetLastFailedAsync<TKey, TProperty>(
-        ValiFlow<T> valiFlow,
-        IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
-        bool asNoTracking = true,
-        bool asSplitQuery = false,
+    public async Task<T?> GetLastFailedAsync(
+        ISpecification<T> specification,
         CancellationToken cancellationToken = default
-    ) where TKey : notnull
+    )
     {
-        IQueryable<T> query = BuildQuery(valiFlow, true, includes, asNoTracking, asSplitQuery);
+        IQueryable<T> query = BuildQuery(specification, true);
         return await ExecuteWithExceptionHandlingAsync(() => query.LastOrDefaultAsync(cancellationToken),
             nameof(GetLastFailedAsync));
     }
 
-    public async Task<T?> GetLastAsync<TProperty>(
-        ValiFlow<T> valiFlow,
-        IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
-        bool asNoTracking = true,
-        bool asSplitQuery = false,
+    public async Task<T?> GetLastAsync(
+        ISpecification<T> specification,
         CancellationToken cancellationToken = default
     )
     {
-        var query = BuildQuery(valiFlow, false, includes, asNoTracking, asSplitQuery);
+        var query = BuildQuery(specification);
         return await ExecuteWithExceptionHandlingAsync(() => query.LastOrDefaultAsync(cancellationToken),
             nameof(GetLastAsync));
     }
 
-    public async Task<TResult> EvaluateMinAsync<TResult, TProperty>(
-        ValiFlow<T> valiFlow,
+    public async Task<TResult> EvaluateMinAsync<TResult>(
+        ISpecification<T> specification,
         Expression<Func<T, TResult>> selector,
-        IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
-        bool asNoTracking = true,
-        bool asSplitQuery = false,
         CancellationToken cancellationToken = default
     ) where TResult : INumber<TResult>
     {
-        IQueryable<T> query = BuildQuery(valiFlow, false, includes, asNoTracking, asSplitQuery);
+        IQueryable<T> query = BuildQuery(specification);
         return await ExecuteWithExceptionHandlingAsync(() => query.Select(selector).MinAsync(cancellationToken),
             nameof(EvaluateMinAsync));
     }
 
-    public async Task<TResult> EvaluateMaxAsync<TResult, TProperty>(
-        ValiFlow<T> valiFlow,
+    public async Task<TResult> EvaluateMaxAsync<TResult>(
+        ISpecification<T> specification,
         Expression<Func<T, TResult>> selector,
-        IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
-        bool asNoTracking = true,
-        bool asSplitQuery = false,
         CancellationToken cancellationToken = default
     ) where TResult : INumber<TResult>
     {
-        IQueryable<T> query = BuildQuery(valiFlow, false, includes, asNoTracking, asSplitQuery);
+        IQueryable<T> query = BuildQuery(specification);
         return await ExecuteWithExceptionHandlingAsync(() => query.Select(selector).MaxAsync(cancellationToken),
             nameof(EvaluateMaxAsync));
     }
 
-    public async Task<decimal> EvaluateAverageAsync<TResult, TProperty>(
-        ValiFlow<T> valiFlow,
+    public async Task<decimal> EvaluateAverageAsync<TResult>(
+        ISpecification<T> specification,
         Expression<Func<T, TResult>> selector,
-        IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
-        bool asNoTracking = true,
-        bool asSplitQuery = false,
         CancellationToken cancellationToken = default
     ) where TResult : INumber<TResult>
     {
-        var query = BuildQuery(valiFlow, false, includes, asNoTracking, asSplitQuery);
+        var query = BuildQuery(specification);
         return await ExecuteWithExceptionHandlingAsync(
             () => query.Select(selector).AverageAsync(x => Convert.ToDecimal(x), cancellationToken),
             nameof(EvaluateAverageAsync));
     }
 
-    public async Task<int> EvaluateSumAsync<TProperty>(
-        ValiFlow<T> valiFlow,
+    public async Task<int> EvaluateSumAsync(
+        ISpecification<T> specification,
         Expression<Func<T, int>> selector,
-        IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
-        bool asNoTracking = true,
-        bool asSplitQuery = false,
         CancellationToken cancellationToken = default
     )
     {
-        var query = BuildQuery(valiFlow, false, includes, asNoTracking, asSplitQuery);
+        var query = BuildQuery(specification);
         return await ExecuteWithExceptionHandlingAsync(() => query.Select(selector).SumAsync(cancellationToken),
             nameof(EvaluateSumAsync));
     }
 
-    public async Task<long> EvaluateSumAsync<TProperty>(
-        ValiFlow<T> valiFlow,
+    public async Task<long> EvaluateSumAsync(
+        ISpecification<T> specification,
         Expression<Func<T, long>> selector,
-        IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
-        bool asNoTracking = true,
-        bool asSplitQuery = false,
         CancellationToken cancellationToken = default
     )
     {
-        var query = BuildQuery(valiFlow, false, includes, asNoTracking, asSplitQuery);
+        var query = BuildQuery(specification);
         return await ExecuteWithExceptionHandlingAsync(() => query.Select(selector).SumAsync(cancellationToken),
             nameof(EvaluateSumAsync));
     }
 
-    public async Task<double> EvaluateSumAsync<TProperty>(
-        ValiFlow<T> valiFlow,
+    public async Task<double> EvaluateSumAsync(
+        ISpecification<T> specification,
         Expression<Func<T, double>> selector,
-        IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
-        bool asNoTracking = true,
-        bool asSplitQuery = false,
         CancellationToken cancellationToken = default
     )
     {
-        var query = BuildQuery(valiFlow, false, includes, asNoTracking, asSplitQuery);
+        var query = BuildQuery(specification);
         return await ExecuteWithExceptionHandlingAsync(() => query.Select(selector).SumAsync(cancellationToken),
             nameof(EvaluateSumAsync));
     }
 
-    public async Task<decimal> EvaluateSumAsync<TProperty>(
-        ValiFlow<T> valiFlow,
+    public async Task<decimal> EvaluateSumAsync(
+        ISpecification<T> specification,
         Expression<Func<T, decimal>> selector,
-        IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
-        bool asNoTracking = true,
-        bool asSplitQuery = false,
         CancellationToken cancellationToken = default
     )
     {
-        var query = BuildQuery(valiFlow, false, includes, asNoTracking, asSplitQuery);
+        var query = BuildQuery(specification);
         return await ExecuteWithExceptionHandlingAsync(() => query.Select(selector).SumAsync(cancellationToken),
             nameof(EvaluateSumAsync));
     }
 
-    public async Task<float> EvaluateSumAsync<TProperty>(
-        ValiFlow<T> valiFlow,
+    public async Task<float> EvaluateSumAsync(
+        ISpecification<T> specification,
         Expression<Func<T, float>> selector,
-        IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
-        bool asNoTracking = true,
-        bool asSplitQuery = false,
         CancellationToken cancellationToken = default
     )
     {
-        var query = BuildQuery(valiFlow, false, includes, asNoTracking, asSplitQuery);
+        var query = BuildQuery(specification);
         return await ExecuteWithExceptionHandlingAsync(() => query.Select(selector).SumAsync(cancellationToken),
             nameof(EvaluateSumAsync));
     }
 
-    public async Task<TResult> EvaluateAggregateAsync<TResult, TProperty>(
-        ValiFlow<T> valiFlow,
+    public async Task<TResult> EvaluateAggregateAsync<TResult>(
+        ISpecification<T> specification,
         Expression<Func<T, TResult>> selector,
         Func<TResult, TResult, TResult> aggregator,
-        IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
-        bool asNoTracking = true,
-        bool asSplitQuery = false,
         CancellationToken cancellationToken = default
     ) where TResult : INumber<TResult>
     {
-        IQueryable<T> query = BuildQuery(valiFlow, false, includes, asNoTracking, asSplitQuery);
+        IQueryable<T> query = BuildQuery(specification);
         List<TResult> values = await query.Select(selector).ToListAsync(cancellationToken);
         return !values.Any() ? TResult.Zero : values.Aggregate(TResult.Zero, aggregator);
     }
 
-    public async Task<Dictionary<TKey, List<T>>> EvaluateGroupedAsync<TKey, TProperty>(
-        ValiFlow<T> valiFlow,
+    public async Task<Dictionary<TKey, List<T>>> EvaluateGroupedAsync<TKey>(
+        ISpecification<T> specification,
         Expression<Func<T, TKey>> keySelector,
-        IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
-        bool asNoTracking = true,
-        bool asSplitQuery = false,
         CancellationToken cancellationToken = default
     ) where TKey : notnull
     {
-        IQueryable<T> query = BuildQuery(valiFlow, false, includes, asNoTracking, asSplitQuery);
+        IQueryable<T> query = BuildQuery(specification);
         return await ExecuteWithExceptionHandlingAsync(() => query.GroupBy(keySelector)
             .ToDictionaryAsync(g => g.Key, g => g.ToList(), cancellationToken), nameof(EvaluateGroupedAsync));
     }
 
-    public async Task<Dictionary<TKey, int>> EvaluateCountByGroupAsync<TKey, TProperty>(
-        ValiFlow<T> valiFlow,
+    public async Task<Dictionary<TKey, int>> EvaluateCountByGroupAsync<TKey>(
+        ISpecification<T> specification,
         Func<T, TKey> keySelector,
-        IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
-        bool asNoTracking = true,
-        bool asSplitQuery = false,
         CancellationToken cancellationToken = default
     ) where TKey : notnull
     {
-        IQueryable<T> query = BuildQuery(valiFlow, false, includes, asNoTracking, asSplitQuery);
+        IQueryable<T> query = BuildQuery(specification);
 
         return await ExecuteWithExceptionHandlingAsync(
             async () =>
@@ -378,17 +310,14 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
             }, nameof(EvaluateCountByGroupAsync));
     }
 
-    public async Task<Dictionary<TKey, TResult>> EvaluateSumByGroupAsync<TKey, TResult, TProperty>(
-        ValiFlow<T> valiFlow,
+    public async Task<Dictionary<TKey, TResult>> EvaluateSumByGroupAsync<TKey, TResult>(
+        ISpecification<T> specification,
         Func<T, TKey> keySelector,
         Func<T, TResult> selector,
-        IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
-        bool asNoTracking = true,
-        bool asSplitQuery = false,
         CancellationToken cancellationToken = default
     ) where TKey : notnull where TResult : INumber<TResult>
     {
-        IQueryable<T> query = BuildQuery(valiFlow, false, includes, asNoTracking, asSplitQuery);
+        IQueryable<T> query = BuildQuery(specification);
 
         return await ExecuteWithExceptionHandlingAsync(
             async () =>
@@ -403,17 +332,14 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
             }, nameof(EvaluateSumByGroupAsync));
     }
 
-    public async Task<Dictionary<TKey, TResult>> EvaluateMinByGroupAsync<TKey, TResult, TProperty>(
-        ValiFlow<T> valiFlow,
+    public async Task<Dictionary<TKey, TResult>> EvaluateMinByGroupAsync<TKey, TResult>(
+        ISpecification<T> specification,
         Func<T, TKey> keySelector,
         Func<T, TResult> selector,
-        IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
-        bool asNoTracking = true,
-        bool asSplitQuery = false,
         CancellationToken cancellationToken = default
     ) where TKey : notnull where TResult : INumber<TResult>
     {
-        IQueryable<T> query = BuildQuery(valiFlow, false, includes, asNoTracking, asSplitQuery);
+        IQueryable<T> query = BuildQuery(specification);
 
         return await ExecuteWithExceptionHandlingAsync(
             async () =>
@@ -428,17 +354,14 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
             }, nameof(EvaluateMinByGroupAsync));
     }
 
-    public async Task<Dictionary<TKey, TResult>> EvaluateMaxByGroupAsync<TKey, TResult, TProperty>(
-        ValiFlow<T> valiFlow,
+    public async Task<Dictionary<TKey, TResult>> EvaluateMaxByGroupAsync<TKey, TResult>(
+        ISpecification<T> specification,
         Func<T, TKey> keySelector,
         Func<T, TResult> selector,
-        IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
-        bool asNoTracking = true,
-        bool asSplitQuery = false,
         CancellationToken cancellationToken = default
     ) where TKey : notnull where TResult : INumber<TResult>
     {
-        IQueryable<T> query = BuildQuery(valiFlow, false, includes, asNoTracking, asSplitQuery);
+        IQueryable<T> query = BuildQuery(specification);
 
         return await ExecuteWithExceptionHandlingAsync(
             async () =>
@@ -453,17 +376,14 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
             }, nameof(EvaluateMaxByGroupAsync));
     }
 
-    public async Task<Dictionary<TKey, decimal>> EvaluateAverageByGroupAsync<TKey, TResult, TProperty>(
-        ValiFlow<T> valiFlow,
+    public async Task<Dictionary<TKey, decimal>> EvaluateAverageByGroupAsync<TKey, TResult>(
+        ISpecification<T> specification,
         Func<T, TKey> keySelector,
         Func<T, TResult> selector,
-        IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
-        bool asNoTracking = true,
-        bool asSplitQuery = false,
         CancellationToken cancellationToken = default
     ) where TKey : notnull where TResult : INumber<TResult>
     {
-        IQueryable<T> query = BuildQuery(valiFlow, false, includes, asNoTracking, asSplitQuery);
+        IQueryable<T> query = BuildQuery(specification);
 
         return await ExecuteWithExceptionHandlingAsync(
             async () =>
@@ -478,16 +398,13 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
             }, nameof(EvaluateAverageByGroupAsync));
     }
 
-    public async Task<Dictionary<TKey, List<T>>> EvaluateDuplicatesByGroupAsync<TKey, TProperty>(
-        ValiFlow<T> valiFlow,
+    public async Task<Dictionary<TKey, List<T>>> EvaluateDuplicatesByGroupAsync<TKey>(
+        ISpecification<T> specification,
         Func<T, TKey> keySelector,
-        IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
-        bool asNoTracking = true,
-        bool asSplitQuery = false,
         CancellationToken cancellationToken = default
     ) where TKey : notnull
     {
-        var query = BuildQuery(valiFlow, false, includes, asNoTracking, asSplitQuery);
+        var query = BuildQuery(specification);
 
         List<T> data = await query.ToListAsync(cancellationToken);
         Dictionary<TKey, List<T>> result = data.GroupBy(keySelector)
@@ -498,16 +415,13 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
             nameof(EvaluateDuplicatesByGroupAsync));
     }
 
-    public async Task<Dictionary<TKey, T>> EvaluateUniquesByGroupAsync<TKey, TProperty>(
-        ValiFlow<T> valiFlow,
+    public async Task<Dictionary<TKey, T>> EvaluateUniquesByGroupAsync<TKey>(
+        ISpecification<T> specification,
         Func<T, TKey> keySelector,
-        IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
-        bool asNoTracking = true,
-        bool asSplitQuery = false,
         CancellationToken cancellationToken = default
     ) where TKey : notnull
     {
-        IQueryable<T> query = BuildQuery(valiFlow, false, includes, asNoTracking, asSplitQuery);
+        IQueryable<T> query = BuildQuery(specification);
 
         List<T> data = await query.ToListAsync(cancellationToken);
         Dictionary<TKey, T> result = data.GroupBy(keySelector)
@@ -518,56 +432,47 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
             nameof(EvaluateUniquesByGroupAsync));
     }
 
-    public async Task<Dictionary<TKey, List<T>>> EvaluateTopByGroupAsync<TKey, TKey2, TProperty>(
-        ValiFlow<T> valiFlow,
+    public async Task<Dictionary<TKey, List<T>>> EvaluateTopByGroupAsync<TKey, TKey2>(
+        ISpecification<T> specification,
         Func<T, TKey> keySelector,
         int count,
         Expression<Func<T, TKey2>>? orderBy = null,
         bool ascending = true,
-        IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
-        bool asNoTracking = true,
-        bool asSplitQuery = false,
         CancellationToken cancellationToken = default
     ) where TKey : notnull where TKey2 : notnull
     {
         ValidationHelper.ValidateCountZero(count);
 
-        IQueryable<T> query = BuildQuery(valiFlow, false, includes, asNoTracking, asSplitQuery);
+        IQueryable<T> query = BuildQuery(specification);
         query = ApplyOrdering(query, orderBy, ascending, null);
         List<T> data = await query.Take(count).ToListAsync(cancellationToken);
         return await Task.FromResult(data.GroupBy(keySelector).ToDictionary(g => g.Key, g => g.ToList()));
     }
 
-    public async Task<IQueryable<T>> EvaluateQuery<TProperty, TKey>(
-        ValiFlow<T> valiFlow,
-        IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
+    public async Task<IQueryable<T>> EvaluateQuery<TKey>(
+        ISpecification<T> specification,
         Expression<Func<T, TKey>>? orderBy = null,
         bool ascending = true,
-        IEnumerable<EfOrderThenBy<T, TKey>>? thenBys = null,
-        bool asNoTracking = true,
-        bool asSplitQuery = false
+        IEnumerable<EfOrderThenBy<T, TKey>>? thenBys = null
     ) where TKey : notnull
     {
-        IQueryable<T> query = BuildQuery(valiFlow, false, includes, asNoTracking, asSplitQuery);
+        IQueryable<T> query = BuildQuery(specification);
         query = ApplyOrdering(query, orderBy, ascending, thenBys);
         return await Task.FromResult(query);
     }
 
-    public async Task<PaginatedBlockResult<T>> GetPaginatedBlockAsync<TKey, TProperty>(
-        ValiFlow<T> valiFlow,
+    public async Task<PaginatedBlockResult<T>> GetPaginatedBlockAsync<TKey>(
+        ISpecification<T> specification,
         int blockSize = ConstantHelper.Thousand,
         int page = ConstantHelper.One,
         int pageSize = ConstantHelper.OneHundred,
         Expression<Func<T, TKey>>? orderBy = null,
         bool ascending = true,
         IEnumerable<EfOrderThenBy<T, TKey>>? thenBys = null,
-        IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
-        bool asNoTracking = true,
-        bool asSplitQuery = false,
         CancellationToken cancellationToken = default
     ) where TKey : notnull
     {
-        IQueryable<T> query = BuildQuery(valiFlow, false, includes, asNoTracking, asSplitQuery);
+        IQueryable<T> query = BuildQuery(specification);
         query = ApplyOrdering(query, orderBy, ascending, thenBys);
 
         int currentBlock = (page - ConstantHelper.One) * pageSize / blockSize;
@@ -589,20 +494,17 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
         };
     }
 
-    public async Task<IQueryable<T>> GetPaginatedBlockQueryAsync<TKey, TProperty>(
-        ValiFlow<T> valiFlow,
+    public async Task<IQueryable<T>> GetPaginatedBlockQueryAsync<TKey>(
+        ISpecification<T> specification,
         int blockSize = ConstantHelper.Thousand,
         int page = ConstantHelper.One,
         int pageSize = ConstantHelper.OneHundred,
         Expression<Func<T, TKey>>? orderBy = null,
         bool ascending = true,
-        IEnumerable<EfOrderThenBy<T, TKey>>? thenBys = null,
-        IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
-        bool asNoTracking = true,
-        bool asSplitQuery = false
+        IEnumerable<EfOrderThenBy<T, TKey>>? thenBys = null
     ) where TKey : notnull
     {
-        IQueryable<T> query = BuildQuery(valiFlow, false, includes, asNoTracking, asSplitQuery);
+        IQueryable<T> query = BuildQuery(specification);
         query = ApplyOrdering(query, orderBy, ascending, thenBys);
 
         int currentBlock = (page - ConstantHelper.One) * pageSize / blockSize;
@@ -613,16 +515,16 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
         return await Task.FromResult(query.Skip(finalOffset).Take(pageSize));
     }
 
+    #endregion
+
+    #region Methods Write
+
     public async Task<T> AddAsync(T entity, CancellationToken cancellationToken = default)
     {
         ValidationHelper.ValidateEntityNotNull(entity);
         return await ExecuteWithExceptionHandlingAsync(
             async () => (await _dbContext.Set<T>().AddAsync(entity, cancellationToken)).Entity, nameof(AddAsync));
     }
-
-    #endregion
-
-    #region Methods Write
 
     public async Task<IEnumerable<T>> AddRangeAsync(IEnumerable<T> entities,
         CancellationToken cancellationToken = default)
@@ -820,7 +722,6 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
     /// <summary>
     /// Applies the specified include expressions to an <see cref="IQueryable{T}"/> query.
     /// </summary>
-    /// <typeparam name="TProperty">The type of the related entities to be included.</typeparam>
     /// <param name="query">The base query to which the includes will be applied.</param>
     /// <param name="includes">
     /// A collection of include expressions defining related entities to be loaded.
@@ -829,13 +730,14 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
     /// <returns>
     /// The modified query with the specified includes applied, or the original query if no includes are provided.
     /// </returns>
-    private IQueryable<T> ApplyIncludes<TProperty>(
-        IQueryable<T> query,
-        IEnumerable<Expression<Func<T, TProperty>>>? includes = null)
+    private IQueryable<T> ApplyIncludes(IQueryable<T> query, IEnumerable<IIncludeExpression<T>>? includes)
     {
         if (includes != null)
         {
-            query = includes.Aggregate(query, (current, include) => current.Include(include));
+            foreach (var include in includes)
+            {
+                query = include.ApplyInclude(query);
+            }
         }
 
         return query;
@@ -939,31 +841,31 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
         return asSplitQuery ? query.AsSplitQuery() : query;
     }
 
-    private IQueryable<T> BuildQuery<TProperty>(
-        ValiFlow<T> valiFlow,
-        bool negateCondition = false,
-        IEnumerable<Expression<Func<T, TProperty>>>? includes = null,
-        bool asNoTracking = false,
-        bool asSplitQuery = false
+    private IQueryable<T> BuildQuery(
+        ISpecification<T> specification,
+        bool negateCondition = false
     )
     {
         IQueryable<T> query = _dbContext.Set<T>().AsQueryable();
 
         ValidationHelper.ValidateQueryNotNull(query);
 
-        query = ApplyAsNoTracking(query, asNoTracking);
+        query = ApplyAsNoTracking(query, specification.AsNoTracking);
 
-        var includeList = includes?.ToList() ?? new List<Expression<Func<T, TProperty>>>();
-        if (includeList.Any())
+        var includeList = specification.Includes;
+        
+        if (includeList != null)
         {
             query = ApplyIncludes(query, includeList);
-            if (asSplitQuery)
+            
+            if (specification.AsSplitQuery)
             {
                 query = ApplyAsSplitQuery(query);
             }
         }
 
-        Expression<Func<T, bool>> condition = negateCondition ? valiFlow.BuildNegated() : valiFlow.Build();
+        Expression<Func<T, bool>> condition =
+            negateCondition ? specification.Filter.BuildNegated() : specification.Filter.Build();
         query = query.Where(condition);
 
         return query;

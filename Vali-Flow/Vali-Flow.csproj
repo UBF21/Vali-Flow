@@ -2,7 +2,7 @@
 
     <PropertyGroup>
         <TargetFramework>net7.0</TargetFramework>
-        <RootNamespace>Vali-Flow</RootNamespace>
+        <RootNamespace>Vali_Flow</RootNamespace>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <Title>Vali-Flow</Title>
@@ -17,7 +17,7 @@
         </PackageReleaseNotes>
         <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
         <Copyright>Copyright © 2025 - FM. Todos los derechos reservados.</Copyright>
-        <Version>1.0.1</Version>
+        <Version>1.0.0</Version>
         <PackageIcon>logo.png</PackageIcon>
         <PackageId>Vali-Flow</PackageId>
         <Product>Vali-Flow</Product>
