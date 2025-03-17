@@ -8,8 +8,19 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="aa4fc315-c37b-4ab3-b9cc-02a55a2255c8" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/Vali-Flow/Classes/Options/EfThenInclude.cs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Vali-Flow/Classes/Specification/BasicSpecification.cs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Vali-Flow/Classes/Specification/QuerySpecification.cs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Vali-Flow/Interfaces/Options/IEfThenInclude.cs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Vali-Flow/Interfaces/Specification/IBasicSpecification.cs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Vali-Flow/Interfaces/Specification/IQuerySpecification.cs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/.idea.vali-flow/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.vali-flow/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/vali-flow/Classes/Evaluators/ValiFlowEvaluator.cs" beforeDir="false" afterPath="$PROJECT_DIR$/vali-flow/Classes/Evaluators/ValiFlowEvaluator.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Vali-Flow/Classes/Evaluators/ValiFlowEvaluator.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Vali-Flow/Classes/Evaluators/ValiFlowEvaluator.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Vali-Flow/Classes/Specification/IncludeExpression.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Vali-Flow/Classes/Options/EfInclude.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Vali-Flow/Classes/Specification/Specification.cs" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Vali-Flow/Interfaces/Evaluators/Read/IEvaluatorRead.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Vali-Flow/Interfaces/Evaluators/Read/IEvaluatorRead.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Vali-Flow/Interfaces/Specification/IIncludeExpression.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Vali-Flow/Interfaces/Options/IEfInclude.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Vali-Flow/Interfaces/Specification/ISpecification.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Vali-Flow/Interfaces/Specification/ISpecification.cs" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -31,7 +42,7 @@
   <component name="GithubPullRequestsUISettings"><![CDATA[{
   "selectedUrlAndAccountId": {
     "url": "https://github.com/UBF21/vali-flow.git",
-    "accountId": "7276f141-500b-4f40-ab3e-097cc210c82c"
+    "accountId": "0dfbef2b-d0f6-4540-8e93-2f88dc95410a"
   }
 }]]></component>
   <component name="HighlightingSettingsPerFile">
@@ -39,14 +50,13 @@
     <setting file="file://$APPLICATION_CONFIG_DIR$/resharper-host/DecompilerCache/decompiler/a11fb02b10e04f8883113b5389cc1b4fb85f8/11/84988e72/EntityFrameworkQueryableExtensions.cs" root0="SKIP_HIGHLIGHTING" />
     <setting file="file://$APPLICATION_CONFIG_DIR$/resharper-host/SourcesCache/67818da183a0c61cb12efd51eff113abd0238f8e25f75580148096acdd4a6be3/Aggregate.cs" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/Vali-Flow/Classes/Evaluators/ValiFlowEvaluator.cs" root0="FORCE_HIGHLIGHTING" />
-    <setting file="mock:///Users/isw21/RiderProjects/vali-flow/Vali-Flow/Classes/Evaluators/ValiFlowEvaluator.cs" root0="SKIP_HIGHLIGHTING" />
-    <setting file="mock:///Users/isw21/RiderProjects/vali-flow/Vali-Flow/Interfaces/Evaluators/Read/IEvaluatorRead.cs" root0="SKIP_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/Vali-Flow/Interfaces/Evaluators/Read/IEvaluatorRead.cs" root0="FORCE_HIGHLIGHTING" />
     <setting file="file:///usr/local/share/dotnet/sdk/7.0.410/Sdks/Microsoft.NET.Sdk/Sdk/Sdk.props" root0="FORCE_HIGHLIGHTING" />
     <setting file="file:///usr/local/share/dotnet/sdk/7.0.410/Sdks/Microsoft.NET.Sdk/Sdk/Sdk.targets" root0="FORCE_HIGHLIGHTING" />
   </component>
   <component name="MetaFilesCheckinStateConfiguration" checkMetaFiles="true" />
   <component name="ProblemsViewState">
-    <option name="selectedTabId" value="SWEA" />
+    <option name="selectedTabId" value="CurrentFile" />
   </component>
   <component name="ProjectColorInfo">{
   &quot;associatedIndex&quot;: 0
@@ -133,6 +143,7 @@
       <workItem from="1741909536758" duration="701000" />
       <workItem from="1741912334874" duration="6955000" />
       <workItem from="1742178321758" duration="1927000" />
+      <workItem from="1742229022485" duration="5962000" />
     </task>
     <task id="LOCAL-00001" summary="-Creación de nueva estructura para el builder de expresiones para linq o fuentes de datos en general (ValiFlow).">
       <option name="closed" value="true" />
@@ -330,7 +341,8 @@
     <MESSAGE value="fixup! registro de carpetas." />
     <MESSAGE value="-Agregando documentación de código a las interfaces." />
     <MESSAGE value="Agregando un patrón specification a vali-flow para darle limpieza a los métodos." />
-    <option name="LAST_COMMIT_MESSAGE" value="Agregando un patrón specification a vali-flow para darle limpieza a los métodos." />
+    <MESSAGE value="-Creación de nuevos parámetros para especificaciones como orderBy ,orderThenBy,top page y size.&#10;&#10;- restructuración de métodos evaluadores." />
+    <option name="LAST_COMMIT_MESSAGE" value="-Creación de nuevos parámetros para especificaciones como orderBy ,orderThenBy,top page y size.&#10;&#10;- restructuración de métodos evaluadores." />
   </component>
   <component name="XSLT-Support.FileAssociations.UIState">
     <expand />

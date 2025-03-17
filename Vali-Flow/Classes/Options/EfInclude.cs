@@ -1,15 +1,15 @@
 using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
-using Vali_Flow.Interfaces.Specification;
+using Vali_Flow.Interfaces.Options;
 
-namespace Vali_Flow.Classes.Specification;
+namespace Vali_Flow.Classes.Options;
 
 /// <summary>
 /// Represents an inclusion expression that can be applied to an IQueryable to include related properties of a specific type.
 /// </summary>
 /// <typeparam name="T">The type of entity to which the inclusion applies.</typeparam>
 /// <typeparam name="TProperty">The type of the related property to include.</typeparam>
-public class IncludeExpression<T, TProperty> : IIncludeExpression<T> where T : class
+public class EfInclude<T, TProperty> : IEfInclude<T> where T : class
 {
     /// <summary>
     /// Gets the expression that defines the related property to include.
@@ -17,11 +17,11 @@ public class IncludeExpression<T, TProperty> : IIncludeExpression<T> where T : c
     private Expression<Func<T, TProperty>> Expression { get; }
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="IncludeExpression{T, TProperty}"/> class with an inclusion expression.
+    /// Initializes a new instance of the <see cref="EfInclude{T,TProperty}"/> class with an inclusion expression.
     /// </summary>
     /// <param name="expression">The expression that defines the related property to include. Cannot be null.</param>
     /// <exception cref="ArgumentNullException">Thrown if the <paramref name="expression"/> parameter is null.</exception>
-    public IncludeExpression(Expression<Func<T, TProperty>> expression)
+    public EfInclude(Expression<Func<T, TProperty>> expression)
     {
         Expression = expression ?? throw new ArgumentNullException(nameof(expression));
     }

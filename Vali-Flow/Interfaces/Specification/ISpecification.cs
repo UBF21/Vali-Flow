@@ -18,17 +18,7 @@ public interface ISpecification<T>
     /// <summary>
     /// Gets a collection of inclusion expressions for related properties, if any.
     /// </summary>
-    IEnumerable<IIncludeExpression<T>>? Includes { get; }
-    
-    /// <summary>
-    /// Gets the primary ordering expression, if any.
-    /// </summary>
-    IEfOrderBy<T>? OrderBy { get; }
-
-    /// <summary>
-    /// Gets a collection of secondary ordering expressions (ThenBy), if any.
-    /// </summary>
-    IEnumerable<IEfOrderThenBy<T>>? ThenBys { get; }
+    IEnumerable<IEfInclude<T>>? Includes { get; }
     
     /// <summary>
     /// Gets a value indicating whether the query should be executed without change tracking (no tracking).
@@ -39,24 +29,4 @@ public interface ISpecification<T>
     /// Gets a value indicating whether the query should be executed as a split query.
     /// </summary>
     bool AsSplitQuery { get; }  
-    
-    /// <summary>
-    /// Gets the page number for pagination, if specified.
-    /// </summary>
-    int? Page { get; }
-
-    /// <summary>
-    /// Gets the number of items per page for pagination, if specified.
-    /// </summary>
-    int? PageSize { get; }
-    
-    /// <summary>
-    /// Gets the maximum number of items to take (top), if specified.
-    /// </summary>
-    int? Top { get; }
-    
-    /// <summary>
-    /// Gets the block size for paginated block queries, if specified.
-    /// </summary>
-    int? BlockSize { get; }
 }

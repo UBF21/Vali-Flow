@@ -1,10 +1,10 @@
-namespace Vali_Flow.Interfaces.Specification;
+namespace Vali_Flow.Interfaces.Options;
 
 /// <summary>
 /// Represents an inclusion expression that can be applied to an IQueryable to include related properties.
 /// </summary>
 /// <typeparam name="T">The type of entity to which the inclusion is applied.</typeparam>
-public interface IIncludeExpression<T>
+public interface IEfInclude<T>
 {
     /// <summary>
     /// Applies the inclusion expression to an IQueryable to include related properties.
