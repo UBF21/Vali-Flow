@@ -68,20 +68,37 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
             nameof(GetFirstAsync));
     }
 
-    public async Task<IQueryable<T>> EvaluateAllFailedAsync(ISpecification<T> specification)
+    public Task<IQueryable<T>> EvaluateQueryFailedAsync(ISpecification<T> specification)
+    {
+        throw new NotImplementedException();
+    }
+
+    public Task<IQueryable<T>> EvaluateQueryAsync(ISpecification<T> specification)
+    {
+        throw new NotImplementedException();
+    }
+
+    /*     
+    public async Task<IQueryable<T>> EvaluateQueryFailedAsync(ISpecification<T> specification)
     {
         IQueryable<T> query = BuildQuery(specification, true);
         query = ApplyOrdering(query, specification);
         query = ApplyPagination(query, specification);
         return await Task.FromResult(query);
     }
-
+     */
+/* 
     public async Task<IQueryable<T>> EvaluateAllAsync(ISpecification<T> specification)
     {
         var query = BuildQuery(specification);
         query = ApplyOrdering(query, specification);
         return await Task.FromResult(query);
     }
+    
+ */
+
+    
+/*
 
     public async Task<IQueryable<T>> EvaluatePagedAsync(ISpecification<T> specification)
     {
@@ -96,6 +113,7 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
         query = ApplyOrdering(query, specification);
         return await Task.FromResult(query.Take(specification.Top ?? ConstantHelper.Fifty));
     }
+ */
 
     public async Task<IQueryable<T>> EvaluateDistinctAsync<TKey>(
         ISpecification<T> specification,
@@ -453,6 +471,8 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
         };
     }
     
+    /*
+     
     public async Task<IQueryable<T>> GetPaginatedBlockQueryAsync(ISpecification<T> specification)
     {
         if (!specification.Page.HasValue || !specification.PageSize.HasValue || !specification.BlockSize.HasValue)
@@ -480,6 +500,7 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
 
         return await Task.FromResult(query.Skip(finalOffset).Take(pageSize));
     }
+     */
 
     #endregion
 

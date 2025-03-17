@@ -65,13 +65,15 @@ public interface IEvaluatorRead<T>
         CancellationToken cancellationToken = default
     );
 
-    Task<IQueryable<T>> EvaluateAllFailedAsync(ISpecification<T> specification);
+    Task<IQueryable<T>> EvaluateQueryFailedAsync(ISpecification<T> specification);
 
-    Task<IQueryable<T>> EvaluateAllAsync(ISpecification<T> specification);
+    //Task<IQueryable<T>> EvaluateAllAsync(ISpecification<T> specification);
     
-    Task<IQueryable<T>> EvaluatePagedAsync(ISpecification<T> specification);
+    //Task<IQueryable<T>> EvaluatePagedAsync(ISpecification<T> specification);
     
-    Task<IQueryable<T>> EvaluateTopAsync(ISpecification<T> specification);
+    //Task<IQueryable<T>> EvaluateTopAsync(ISpecification<T> specification);
+    
+    Task<IQueryable<T>> EvaluateQueryAsync(ISpecification<T> specification);
 
     Task<IQueryable<T>> EvaluateDistinctAsync<TKey>(
         ISpecification<T> specification,
@@ -358,17 +360,13 @@ public interface IEvaluatorRead<T>
         CancellationToken cancellationToken = default
     ) where TKey : notnull;
 
-    Task<IQueryable<T>> EvaluateQuery(ISpecification<T> specification);
+    //Task<IQueryable<T>> EvaluateQuery(ISpecification<T> specification);
 
     Task<PaginatedBlockResult<T>> GetPaginatedBlockAsync(
         ISpecification<T> specification,
         CancellationToken cancellationToken = default
     );
 
-    /// <summary>
-    /// Asynchronously retrieves a queryable collection of a paginated block of entities based on the specified specification.
-    /// </summary>
-    /// <param name="specification">The specification defining the filtering and inclusion criteria.</param>
-    /// <returns>A task that represents the asynchronous operation, returning an IQueryable of paginated block entities.</returns>
-    Task<IQueryable<T>> GetPaginatedBlockQueryAsync(ISpecification<T> specification);
+
+    //Task<IQueryable<T>> GetPaginatedBlockQueryAsync(ISpecification<T> specification);
 }
