@@ -38,13 +38,13 @@ public class StringExpression<TBuilder, T> : IStringExpression<TBuilder, T>
         return _builder.Add(selector, predicate);
     }
 
-    public TBuilder Empty(Expression<Func<T, string?>> selector)
+    public TBuilder NullOrEmpty(Expression<Func<T, string?>> selector)
     {
         Expression<Func<string?, bool>> predicate = val => string.IsNullOrEmpty(val);
         return _builder.Add(selector, predicate);
     }
 
-    public TBuilder NotEmpty(Expression<Func<T, string?>> selector)
+    public TBuilder NotNullOrEmpty(Expression<Func<T, string?>> selector)
     {
         Expression<Func<string?, bool>> predicate = val => !string.IsNullOrEmpty(val);
         return _builder.Add(selector, predicate);
@@ -69,9 +69,9 @@ public class StringExpression<TBuilder, T> : IStringExpression<TBuilder, T>
         return _builder.Add(selector, predicate);
     }
 
-    public TBuilder Contains(Expression<Func<T, string>> selector, string value)
+    public TBuilder Contains(Expression<Func<T, string>> selector, string value,StringComparison comparison = StringComparison.OrdinalIgnoreCase)
     {
-        Expression<Func<string, bool>> predicate = val => val.Contains(value);
+        Expression<Func<string, bool>> predicate = val => val.Contains(value,comparison);
         return _builder.Add(selector, predicate);
     }
 
@@ -146,7 +146,7 @@ public class StringExpression<TBuilder, T> : IStringExpression<TBuilder, T>
         return _builder.Add(selector, predicate);
     }
 
-    public TBuilder Contains(string value, params Expression<Func<T, string>>[] selectors)
+    public TBuilder Contains(string value,StringComparison comparison = StringComparison.OrdinalIgnoreCase, params Expression<Func<T, string>>[] selectors)
     {
         if (string.IsNullOrWhiteSpace(value))
             throw new ArgumentNullException($"{nameof(value)} is null or empty or contains whitespace.");
@@ -157,7 +157,7 @@ public class StringExpression<TBuilder, T> : IStringExpression<TBuilder, T>
         foreach (Expression<Func<T, string>> selector in selectors)
         {
             Expression<Func<string, bool>> predicate = val =>
-                searchTerms.Any(term => val.ToUpper().Contains(term.ToUpper()));
+                searchTerms.Any(term => val.Contains(term,comparison));
             _builder.Add(selector, predicate);
         }
 

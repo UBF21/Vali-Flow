@@ -8,19 +8,18 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="aa4fc315-c37b-4ab3-b9cc-02a55a2255c8" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/Vali-Flow/Classes/Options/EfThenInclude.cs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Vali-Flow/Classes/Specification/BasicSpecification.cs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Vali-Flow/Classes/Specification/QuerySpecification.cs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Vali-Flow/Interfaces/Options/IEfThenInclude.cs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Vali-Flow/Interfaces/Specification/IBasicSpecification.cs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Vali-Flow/Interfaces/Specification/IQuerySpecification.cs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/vali-flow-test/DbConext/AppDbContext.cs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/vali-flow-test/Models/ListarModuloQuery.cs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/vali-flow-test/Models/Modulo.cs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/.idea.vali-flow/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.vali-flow/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Vali-Flow/Classes/Evaluators/ValiFlowEvaluator.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Vali-Flow/Classes/Evaluators/ValiFlowEvaluator.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Vali-Flow/Classes/Specification/IncludeExpression.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Vali-Flow/Classes/Options/EfInclude.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Vali-Flow/Classes/Specification/Specification.cs" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Vali-Flow/Interfaces/Evaluators/Read/IEvaluatorRead.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Vali-Flow/Interfaces/Evaluators/Read/IEvaluatorRead.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Vali-Flow/Interfaces/Specification/IIncludeExpression.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Vali-Flow/Interfaces/Options/IEfInclude.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Vali-Flow/Interfaces/Specification/ISpecification.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Vali-Flow/Interfaces/Specification/ISpecification.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Vali-Flow.Core/Builder/ValiFlow.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Vali-Flow.Core/Builder/ValiFlow.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Vali-Flow.Core/Classes/Base/BaseExpression.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Vali-Flow.Core/Classes/Base/BaseExpression.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Vali-Flow.Core/Classes/Types/StringExpression.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Vali-Flow.Core/Classes/Types/StringExpression.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Vali-Flow.Core/Interfaces/Types/IStringExpression.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Vali-Flow.Core/Interfaces/Types/IStringExpression.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Vali-Flow.Core/Vali-Flow.Core.csproj" beforeDir="false" afterPath="$PROJECT_DIR$/Vali-Flow.Core/Vali-Flow.Core.csproj" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Vali-Flow.InMemory/Vali-Flow.InMemory.csproj" beforeDir="false" afterPath="$PROJECT_DIR$/Vali-Flow.InMemory/Vali-Flow.InMemory.csproj" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/vali-flow-test/Program.cs" beforeDir="false" afterPath="$PROJECT_DIR$/vali-flow-test/Program.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/vali-flow-test/vali-flow-test.csproj" beforeDir="false" afterPath="$PROJECT_DIR$/vali-flow-test/vali-flow-test.csproj" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -39,12 +38,12 @@
     &quot;assignee&quot;: &quot;FelipeMontenegro-IDS&quot;
   }
 }</component>
-  <component name="GithubPullRequestsUISettings"><![CDATA[{
-  "selectedUrlAndAccountId": {
-    "url": "https://github.com/UBF21/vali-flow.git",
-    "accountId": "0dfbef2b-d0f6-4540-8e93-2f88dc95410a"
+  <component name="GithubPullRequestsUISettings">{
+  &quot;selectedUrlAndAccountId&quot;: {
+    &quot;url&quot;: &quot;https://github.com/UBF21/vali-flow.git&quot;,
+    &quot;accountId&quot;: &quot;0dfbef2b-d0f6-4540-8e93-2f88dc95410a&quot;
   }
-}]]></component>
+}</component>
   <component name="HighlightingSettingsPerFile">
     <setting file="file://$APPLICATION_CONFIG_DIR$/resharper-host/DecompilerCache/decompiler/3442bdbe7a07406dbd4e05fe7357d408c40e00/4d/c91dd509/IEnumerable`1.cs" root0="SKIP_HIGHLIGHTING" />
     <setting file="file://$APPLICATION_CONFIG_DIR$/resharper-host/DecompilerCache/decompiler/a11fb02b10e04f8883113b5389cc1b4fb85f8/11/84988e72/EntityFrameworkQueryableExtensions.cs" root0="SKIP_HIGHLIGHTING" />
@@ -71,7 +70,7 @@
   </component>
   <component name="PropertiesComponent">{
   &quot;keyToString&quot;: {
-    &quot;.NET Project.vali-flow-test.executor&quot;: &quot;Debug&quot;,
+    &quot;.NET Project.vali-flow-test.executor&quot;: &quot;Run&quot;,
     &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
     &quot;git-widget-placeholder&quot;: &quot;main&quot;,
@@ -144,6 +143,13 @@
       <workItem from="1741912334874" duration="6955000" />
       <workItem from="1742178321758" duration="1927000" />
       <workItem from="1742229022485" duration="5962000" />
+      <workItem from="1742304020770" duration="1677000" />
+      <workItem from="1742574398847" duration="193000" />
+      <workItem from="1742598974453" duration="656000" />
+      <workItem from="1743712374648" duration="1085000" />
+      <workItem from="1744118858473" duration="7028000" />
+      <workItem from="1744126345298" duration="4176000" />
+      <workItem from="1744149956366" duration="491000" />
     </task>
     <task id="LOCAL-00001" summary="-Creación de nueva estructura para el builder de expresiones para linq o fuentes de datos en general (ValiFlow).">
       <option name="closed" value="true" />

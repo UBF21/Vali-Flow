@@ -6,35 +6,59 @@ namespace Vali_Flow.Core.Classes.Base;
 public class BaseExpression<TBuilder, T> : IExpression<TBuilder, T>
     where TBuilder : BaseExpression<TBuilder, T>, new()
 {
-     private readonly HashSet<Expression<Func<T, bool>>> _conditions = new();
-    private Expression<Func<T, bool>>? _orCondition;
-    private bool _isAnd = true;
+    private readonly List<(Expression<Func<T, bool>> Condition, bool IsAnd)> _conditions = new();
+    private bool _nextIsAnd = true;
+    private List<Expression<Func<T, bool>>> _groupConditions = new();
 
     public Expression<Func<T, bool>> Build()
     {
-        if (!_conditions.Any() && _orCondition is null)
+        if (!_conditions.Any() && (!_groupConditions.Any()))
         {
-            return _ => true; // Devuelve una expresión que siempre es true si no hay condiciones.
+            return _ => true;
         }
 
-        var andCondition = _conditions
-            .DefaultIfEmpty(_ => true) // Si no hay condiciones, devuelve una que siempre es true.
-            .Aggregate(And);
+        var parameter = Expression.Parameter(typeof(T), "x");
+        Expression body = null;
 
-        return _orCondition is null ? andCondition : Or(andCondition, _orCondition);
+        // Combinar las condiciones principales
+        foreach (var (condition, isAnd) in _conditions)
+        {
+            var conditionBody = new ParameterReplacer(condition.Parameters[0], parameter).Visit(condition.Body);
+            body = body == null
+                ? conditionBody
+                : isAnd
+                    ? Expression.AndAlso(body, conditionBody)
+                    : Expression.OrElse(body, conditionBody);
+        }
+
+        // Si hay un grupo de condiciones (por ejemplo, combinadas con OR), combinarlas
+        if (_groupConditions.Any())
+        {
+            Expression groupBody = null;
+            foreach (var condition in _groupConditions)
+            {
+                var conditionBody = new ParameterReplacer(condition.Parameters[0], parameter).Visit(condition.Body);
+                groupBody = groupBody == null
+                    ? conditionBody
+                    : Expression.OrElse(groupBody, conditionBody);
+            }
+
+            body = body == null
+                ? groupBody
+                : _nextIsAnd
+                    ? Expression.AndAlso(body, groupBody)
+                    : Expression.OrElse(body, groupBody);
+        }
+
+        return Expression.Lambda<Func<T, bool>>(body, parameter);
     }
 
     public Expression<Func<T, bool>> BuildNegated()
     {
         Expression<Func<T, bool>> condition = Build();
-        
-        ParameterExpression parameter = condition.Parameters.First();
-        UnaryExpression negatedBody = Expression.Not(condition.Body);
-        
-        Expression<Func<T, bool>> negatedCondition = Expression.Lambda<Func<T, bool>>(negatedBody, parameter);
-        
-        return negatedCondition;
-
+        var parameter = condition.Parameters[0];
+        var negatedBody = Expression.Not(condition.Body);
+        return Expression.Lambda<Func<T, bool>>(negatedBody, parameter);
     }
 
     public TBuilder Add(Expression<Func<T, bool>> expression)
@@ -42,17 +66,16 @@ public class BaseExpression<TBuilder, T> : IExpression<TBuilder, T>
         if (expression == null) throw new ArgumentNullException(nameof(expression));
         EnsureValidCondition(expression);
 
-        if (_isAnd)
+        if (_groupConditions != null && _groupConditions.Any())
         {
-            _conditions.Add(expression);
+            _groupConditions.Add(expression);
         }
         else
         {
-            _orCondition = _orCondition is null
-                ? expression
-                : Or(_orCondition, expression);
+            _conditions.Add((expression, _nextIsAnd));
         }
 
+        _nextIsAnd = true; // Restablecer a AND por defecto
         return (TBuilder)this;
     }
 
@@ -63,78 +86,64 @@ public class BaseExpression<TBuilder, T> : IExpression<TBuilder, T>
 
         EnsureValidCondition(predicate);
 
-        ParameterExpression parameter = Expression.Parameter(typeof(T), "Type");
-        InvocationExpression selectorBody = Expression.Invoke(selector, parameter);
-        InvocationExpression predicateBody = Expression.Invoke(predicate, selectorBody);
+        var parameter = selector.Parameters[0];
+        var selectorBody = selector.Body;
+        var predicateBody = new ParameterReplacer(predicate.Parameters[0], selectorBody).Visit(predicate.Body);
 
         Expression<Func<T, bool>> combinedCondition = Expression.Lambda<Func<T, bool>>(predicateBody, parameter);
 
         return Add(combinedCondition);
     }
 
-    public TBuilder AddSubGroup(Action<IExpression<TBuilder,T>> group)
+    public TBuilder AddSubGroup(Action<IExpression<TBuilder, T>> group)
     {
         TBuilder groupBuilderInstance = new TBuilder();
         group(groupBuilderInstance);
 
-        // Construir la condición del grupo
         Expression<Func<T, bool>> groupCondition = groupBuilderInstance.Build();
-
-        // Verificar si la condición es trivial (si es null o una constante true)
         EnsureValidCondition(groupCondition);
 
-        // Si la condición no es trivial, agregarla
         return Add(groupCondition);
     }
 
     public TBuilder And()
     {
-        _isAnd = true;
+        _nextIsAnd = true;
+        _groupConditions = null; // Finalizar cualquier grupo de OR
         return (TBuilder)this;
     }
 
     public TBuilder Or()
     {
-        _isAnd = false;
+        _nextIsAnd = false;
+        if (_conditions.Any() && _groupConditions == null)
+        {
+            // Mover la última condición de _conditions a _groupConditions para iniciar el grupo
+            var lastCondition = _conditions.Last().Condition;
+            _conditions.RemoveAt(_conditions.Count - 1);
+            _groupConditions = new List<Expression<Func<T, bool>>> { lastCondition };
+        }
+        else if (_groupConditions == null)
+        {
+            _groupConditions = new List<Expression<Func<T, bool>>>();
+        }
+
         return (TBuilder)this;
     }
 
-    /// <summary>
-    /// Combina dos expresiones de tipo <see>
-    ///     <cref>Expression{Func{T, bool}}</cref>
-    /// </see>
-    /// utilizando una operación lógica "AND".
-    /// </summary>
-    /// <param name="first">La primera expresión a combinar.</param>
-    /// <param name="second">La segunda expresión a combinar.</param>
-    /// <returns>Una nueva expresión que representa la combinación de ambas expresiones con un "AND" lógico.</returns>
-    /// <exception cref="ArgumentNullException">Lanza si alguna de las expresiones proporcionadas es nula.</exception>
     private Expression<Func<T, bool>> And(Expression<Func<T, bool>> first, Expression<Func<T, bool>> second)
     {
-        ParameterExpression parameter = Expression.Parameter(typeof(T));
-        BinaryExpression body =
-            Expression.AndAlso(Expression.Invoke(first, parameter), Expression.Invoke(second, parameter));
+        var parameter = first.Parameters[0];
+        var secondBody = new ParameterReplacer(second.Parameters[0], parameter).Visit(second.Body);
+        var body = Expression.AndAlso(first.Body, secondBody);
         return Expression.Lambda<Func<T, bool>>(body, parameter);
     }
 
-    /// <summary>
-    /// Combina dos expresiones de tipo <see>
-    ///     <cref>Expression{Func{T, bool}}</cref>
-    /// </see>
-    /// utilizando una operación lógica "OR".
-    /// </summary>
-    /// <param name="first">La primera expresión a combinar.</param>
-    /// <param name="second">La segunda expresión a combinar.</param>
-    /// <returns>Una nueva expresión que representa la combinación de ambas expresiones con un "OR" lógico.</returns>
-    /// <exception cref="ArgumentNullException">Lanza si alguna de las expresiones proporcionadas es nula.</exception>
     private Expression<Func<T, bool>> Or(Expression<Func<T, bool>> first, Expression<Func<T, bool>> second)
     {
-        var parameter = Expression.Parameter(typeof(T));
-        var body = Expression.OrElse(
-            Expression.Invoke(first, parameter),
-            Expression.Invoke(second, parameter)
-        );
-
+        var parameter = first.Parameters[0];
+        var secondBody = new ParameterReplacer(second.Parameters[0], parameter).Visit(second.Body);
+        var body = Expression.OrElse(first.Body, secondBody);
         return Expression.Lambda<Func<T, bool>>(body, parameter);
     }
 
@@ -142,16 +151,12 @@ public class BaseExpression<TBuilder, T> : IExpression<TBuilder, T>
     {
         switch (condition.Body)
         {
-            // Verificar si la condición es una constante que siempre es 'true'
             case ConstantExpression constant when constant.Value is bool value && value:
                 throw new ArgumentException("The condition provided has no effect because it is always 'true'.");
-            // Verificar si la condición es una constante que siempre es 'false'
             case ConstantExpression constantFalse when constantFalse.Value is bool valueFalse && !valueFalse:
                 throw new ArgumentException("The condition provided has no effect because it is always 'false'.");
-            // Verificar si la condición es una constante de tipo nulo (como x => null)
             case ConstantExpression constantNull when constantNull.Value == null:
                 throw new ArgumentException("The condition provided has no effect because it is always 'null'.");
-            // Verificar si la condición está comparando a '0' (ejemplo: x => 0)
             case BinaryExpression binaryExpression when
                 binaryExpression.Left is ConstantExpression leftConstant &&
                 leftConstant.Value is int leftValue && leftValue == 0:
@@ -163,20 +168,33 @@ public class BaseExpression<TBuilder, T> : IExpression<TBuilder, T>
     {
         switch (condition.Body)
         {
-            // Verificar si la condición es una constante que siempre es 'true'
             case ConstantExpression constant when constant.Value is bool value && value:
                 throw new ArgumentException("The condition provided has no effect because it is always 'true'.");
-            // Verificar si la condición es una constante que siempre es 'false'
             case ConstantExpression constantFalse when constantFalse.Value is bool valueFalse && !valueFalse:
                 throw new ArgumentException("The condition provided has no effect because it is always 'false'.");
-            // Verificar si la condición es una constante de tipo nulo (como x => null)
             case ConstantExpression constantNull when constantNull.Value == null:
                 throw new ArgumentException("The condition provided has no effect because it is always 'null'.");
-            // Verificar si la condición está comparando a '0' (ejemplo: x => 0)
             case BinaryExpression binaryExpression when
                 binaryExpression.Left is ConstantExpression leftConstant &&
                 leftConstant.Value is int leftValue && leftValue == 0:
                 throw new ArgumentException("The condition provided has no effect because it is always '0'.");
+        }
+    }
+
+    private class ParameterReplacer : ExpressionVisitor
+    {
+        private readonly ParameterExpression _oldParameter;
+        private readonly Expression _newExpression;
+
+        public ParameterReplacer(ParameterExpression oldParameter, Expression newExpression)
+        {
+            _oldParameter = oldParameter;
+            _newExpression = newExpression;
+        }
+
+        protected override Expression VisitParameter(ParameterExpression node)
+        {
+            return node == _oldParameter ? _newExpression : base.VisitParameter(node);
         }
     }
 }

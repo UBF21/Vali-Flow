@@ -9,7 +9,7 @@ namespace Vali_Flow.Core.Interfaces.Types;
 /// <typeparam name="T">The type of the entity being validated.</typeparam>
 public interface IStringExpression<out TBuilder, T>
 {
-     /// <summary>
+    /// <summary>
     /// Ensures that the selected string has a minimum length.
     /// </summary>
     /// <param name="selector">Expression to select the string property.</param>
@@ -38,14 +38,14 @@ public interface IStringExpression<out TBuilder, T>
     /// </summary>
     /// <param name="selector">Expression to select the string property.</param>
     /// <returns>The builder instance for method chaining.</returns>
-    TBuilder Empty(Expression<Func<T, string?>> selector);
+    TBuilder NullOrEmpty(Expression<Func<T, string?>> selector);
 
     /// <summary>
     /// Ensures that the selected string is not empty.
     /// </summary>
     /// <param name="selector">Expression to select the string property.</param>
     /// <returns>The builder instance for method chaining.</returns>
-    TBuilder NotEmpty(Expression<Func<T, string?>> selector);
+    TBuilder NotNullOrEmpty(Expression<Func<T, string?>> selector);
 
     /// <summary>
     /// Ensures that the selected string is a valid email address.
@@ -75,8 +75,10 @@ public interface IStringExpression<out TBuilder, T>
     /// </summary>
     /// <param name="selector">Expression to select the string property.</param>
     /// <param name="value">The value that the string should contain.</param>
+    /// <param name="comparison">Allow values to be case sensitive or case insensitive</param>
     /// <returns>The builder instance for method chaining.</returns>
-    TBuilder Contains(Expression<Func<T, string>> selector, string value);
+    TBuilder Contains(Expression<Func<T, string>> selector, string value,
+        StringComparison comparison = StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
     /// Ensures that the selected string has an exact length.
@@ -161,6 +163,7 @@ public interface IStringExpression<out TBuilder, T>
     /// Adds a validation rule to check if any of the specified string properties contain at least one of the given search terms.
     /// </summary>
     /// <param name="value">The search string containing one or more words.</param>
+    /// <param name="comparison">Allow values to be case sensitive or case insensitive</param>
     /// <param name="selectors">The expressions selecting the string properties to search within.</param>
     /// <returns>The current builder instance with the applied validation rule.</returns>
     /// <exception cref="ArgumentNullException">
@@ -172,5 +175,6 @@ public interface IStringExpression<out TBuilder, T>
     /// - The validation succeeds if at least one term is found in any of the specified properties.
     /// - The comparison is case-insensitive.
     /// </remarks>
-    TBuilder Contains(string value, params Expression<Func<T, string>>[] selectors);
+    TBuilder Contains(string value, StringComparison comparison = StringComparison.OrdinalIgnoreCase,
+        params Expression<Func<T, string>>[] selectors);
 }

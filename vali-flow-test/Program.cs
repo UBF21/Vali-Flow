@@ -1,51 +1,117 @@
-﻿// See https://aka.ms/new-console-template for more information
-
-using System.Text;
+﻿using System.Linq.Expressions;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using vali_flow_test.DbConext;
 using vali_flow_test.Models;
 using Vali_Flow.Core.Builder;
 
-//source of data (Database,Collections,etc)
-List<User> users = new List<User>
+var options = new DbContextOptionsBuilder<AppDbContext>()
+    .UseInMemoryDatabase(databaseName: "TestDatabase")
+    .LogTo(Console.WriteLine, LogLevel.Information) // Habilitar logging para ver las consultas SQL
+    .Options;
+
+await using var context = new AppDbContext(options);
+
+await SeedData(context);
+
+var request = new ListarModuloQuery
 {
-    new User
-    {
-        Name = "Alice", IsActive = true, Age = 25, JsonData = "{\"key\":\"value\"}",
-        Base64Data = Convert.ToBase64String(Encoding.UTF8.GetBytes("Hello Alice"))
-    },
-    new User { Name = "Bob", IsActive = false, Age = 17, JsonData = "{invalidJsonData}", Base64Data = "SGVsbG8gQm9i" },
-    new User
-    {
-        Name = "Pablito", IsActive = true, Age = 30, JsonData = "{\"name\":\"Pablito\",\"role\":\"admin\"}",
-        Base64Data = Convert.ToBase64String(Encoding.UTF8.GetBytes("Secret Data"))
-    },
-    new User
-    {
-        Name = "Charlie", IsActive = true, Age = 20, JsonData = "{\"city\":\"New York\",\"temperature\":22}",
-        Base64Data = "InvalidBase64Data=="
-    }
+    Search = null,
+    UbicacionId = Guid.Empty,
+    ClasificacionId = Guid.Empty
 };
 
-//Builder the Expresiones 
-var builder = new ValiFlow<User>()
-    .NotNull(x => x.Name) // Ensures the field is not null.
-    .IsTrue(x => x.IsActive) // Ensures the boolean field is true.
-    .GreaterThan(x => x.Age, 18) // Ensures the numeric field is greater than the specified value (18 in this case).
-    .IsJson(x => x.JsonData) // Ensures the field contains a valid JSON string.
-    .IsBase64(x => x.Base64Data); // Ensures the field contains a valid Base64-encoded string.
+await TestExpression(context, request);
 
-//valid row collection 
-// var usersValid = builder.EvaluateAll(users);
-// string jsonOutput =  JsonConvert.SerializeObject(usersValid, Formatting.Indented);
-// Console.WriteLine(jsonOutput);
+static async Task SeedData(AppDbContext context)
+{
+    // Limpiar la base de datos
+    context.Modulos.RemoveRange(context.Modulos);
+    await context.SaveChangesAsync();
 
-//Get Build Expression 
-var expressionResult = builder.Build();
+    // Agregar datos de prueba
+    var modulos = new List<Modulo>
+    {
+        new Modulo
+        {
+            Id = Guid.NewGuid(),
+            Nombre = "Modulo1",
+            CustomerId = Guid.NewGuid(),
+            UbicacionId = Guid.NewGuid(),
+            ClasificacionId = Guid.NewGuid(),
+            Deleted = null
+        },
+        new Modulo
+        {
+            Id = Guid.NewGuid(),
+            Nombre = "Modulo2",
+            CustomerId = Guid.NewGuid(),
+            UbicacionId = Guid.NewGuid(),
+            ClasificacionId = Guid.NewGuid(),
+            Deleted = DateTime.Now // Marcado como eliminado
+        },
+        new Modulo()
+        {
+            Id = Guid.NewGuid(),
+            Nombre = "TestModulo",
+            CustomerId = Guid.NewGuid(),
+            UbicacionId = Guid.NewGuid(),
+            ClasificacionId = Guid.NewGuid(),
+            Deleted = null
+        }
+    };
 
-//rows passing the expression
-// foreach (var user in users)
-// {
-//     var result = builder.Evaluate(user);
-//     string value = result ? $" {user.Name} es válido" : $" {user.Name} no es válido";
-//     Console.WriteLine(value);
-// }
-//
+    context.Modulos.AddRange(modulos);
+    await context.SaveChangesAsync();
+
+    Console.WriteLine($"Datos de prueba agregados: {modulos.Count} módulos.");
+}
+
+static async Task TestExpression(AppDbContext context, ListarModuloQuery request)
+{
+    try
+    {
+        var builder = new ValiFlow<Modulo>();
+        builder
+            .Null(x => x.Deleted)
+            .And()
+            // .AddSubGroup(group =>
+            //     group.Add(x => string.IsNullOrEmpty(request.Search))
+            //         .Or()
+            //         .Add(x => x.Nombre.ToLower().Contains(request.Search.ToLower())));
+        .NullOrEmpty(x => request.Search)
+        .Or()
+        .Contains(x => x.Nombre,request.Search);
+        // .And()
+        // .Add(x => x.CustomerId.Equals(Guid.NewGuid()))
+        // .And()
+        // .Add(x => request.UbicacionId.Equals(Guid.Empty))
+        // .Or()
+        // .Add(x => x.UbicacionId.Equals(request.UbicacionId))
+        // .And()
+        // .Add(x => request.ClasificacionId.Equals(Guid.Empty))
+        // .Or()
+        // .Add(x => x.ClasificacionId.Equals(request.ClasificacionId));
+
+        Expression<Func<Modulo, bool>> expression = builder.Build();
+
+        // Ejecutar la consulta
+        var modulos = await context.Modulos
+            .Where(expression)
+            .ToListAsync();
+
+        Console.WriteLine($"Módulos encontrados: {modulos.Count}");
+        foreach (var modulo in modulos)
+        {
+            Console.WriteLine($" - {modulo.Nombre} (Id: {modulo.Id})");
+        }
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Error: {ex.Message}");
+        if (ex.InnerException != null)
+        {
+            Console.WriteLine($"Inner Exception: {ex.InnerException.Message}");
+        }
+    }
+}

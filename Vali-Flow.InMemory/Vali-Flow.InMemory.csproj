@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFramework>net7.0</TargetFramework>
+        <TargetFrameworks>net7.0;net8.0;net9.0</TargetFrameworks>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <RootNamespace>Vali-Flow.InMemory</RootNamespace>
@@ -21,7 +21,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <None Update="logo.png">
+      <None Include="logo.png">
         <Pack>True</Pack>
         <PackagePath></PackagePath>
       </None>

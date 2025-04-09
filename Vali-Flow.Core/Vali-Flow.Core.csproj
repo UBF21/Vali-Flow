@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFrameworks>net6.0;net7.0;net8.0;net9.0</TargetFrameworks>
+        <TargetFrameworks>net7.0;net8.0;net9.0</TargetFrameworks>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <RootNamespace>Vali_Flow.Core</RootNamespace>
@@ -13,8 +13,14 @@
         <Copyright>Copyright © 2025 - FM. Todos los derechos reservados.</Copyright>
         <RepositoryUrl>https://github.com/UBF21/vali-flow</RepositoryUrl>
         <PackageReleaseNotes>
+            Version 1.0.3
+            - Fixed operator precedence for And/Or operations in BaseExpression. Now correctly groups conditions combined with OR, ensuring expressions like `x => x.Deleted == null &amp;&amp; (string.IsNullOrEmpty(request.Search) || x.Nombre.Contains(request.Search))` are generated as expected.
+            - Replaced `^1` operator with `_conditions.Count - 1` in And/Or methods to ensure compatibility with C# versions prior to 8.0, resolving compilation errors.
+            - Added `Contains` method with support for `StringComparison.OrdinalIgnoreCase`, allowing case-insensitive string comparisons without using `ToLower()` or `ToUpper()`. Improves readability and performance.
+            - Improved consistency between `Add().Or().Add()` and `AddSubGroup`, ensuring both approaches produce the same correct results.
+            - Enhanced code readability and maintainability by encapsulating case-insensitive comparison logic in the `Contains` method.
         </PackageReleaseNotes>
-        <Version>1.0.2</Version>
+        <Version>1.0.3</Version>
         <PackageIcon>logo.png</PackageIcon>
         <PackageId>Vali-Flow.Core</PackageId>
         <Product>Vali-Flow.Core</Product>

@@ -7,7 +7,7 @@ using Vali_Flow.Core.Interfaces.Types;
 
 namespace Vali_Flow.Core.Builder;
 
-public class ValiFlow<T>: BaseExpression<ValiFlow<T>, T>,
+public class ValiFlow<T> : BaseExpression<ValiFlow<T>, T>,
     IBooleanExpression<ValiFlow<T>, T>, IComparisonExpression<ValiFlow<T>, T>,
     ICollectionExpression<ValiFlow<T>, T>, IStringExpression<ValiFlow<T>, T>,
     INumericExpression<ValiFlow<T>, T>
@@ -31,9 +31,11 @@ public class ValiFlow<T>: BaseExpression<ValiFlow<T>, T>,
 
     public ValiFlow<T> IsFalse(Func<T, bool> selector) => _booleanExpression.IsFalse(selector);
 
-    public ValiFlow<T> NotNull<TProperty>(Expression<Func<T, TProperty?>> selector) => _comparisonExpression.NotNull(selector);
+    public ValiFlow<T> NotNull<TProperty>(Expression<Func<T, TProperty?>> selector) =>
+        _comparisonExpression.NotNull(selector);
 
-    public ValiFlow<T> Null<TProperty>(Expression<Func<T, TProperty?>> selector) => _comparisonExpression.Null(selector);
+    public ValiFlow<T> Null<TProperty>(Expression<Func<T, TProperty?>> selector) =>
+        _comparisonExpression.Null(selector);
 
     public ValiFlow<T> EqualTo<TValue>(Expression<Func<T, TValue>> selector, TValue value)
         where TValue : IEquatable<TValue> => _comparisonExpression.EqualTo(selector, value);
@@ -83,11 +85,11 @@ public class ValiFlow<T>: BaseExpression<ValiFlow<T>, T>,
     public ValiFlow<T> RegexMatch(Expression<Func<T, string?>> selector, string pattern)
         => _stringExpression.RegexMatch(selector, pattern);
 
-    public ValiFlow<T> Empty(Expression<Func<T, string?>> selector)
-        => _stringExpression.Empty(selector);
+    public ValiFlow<T> NullOrEmpty(Expression<Func<T, string?>> selector)
+        => _stringExpression.NullOrEmpty(selector);
 
-    public ValiFlow<T> NotEmpty(Expression<Func<T, string?>> selector)
-        => _stringExpression.NotEmpty(selector);
+    public ValiFlow<T> NotNullOrEmpty(Expression<Func<T, string?>> selector)
+        => _stringExpression.NotNullOrEmpty(selector);
 
     public ValiFlow<T> IsEmail(Expression<Func<T, string?>> selector)
         => _stringExpression.IsEmail(selector);
@@ -98,8 +100,9 @@ public class ValiFlow<T>: BaseExpression<ValiFlow<T>, T>,
     public ValiFlow<T> StartsWith(Expression<Func<T, string>> selector, string value)
         => _stringExpression.StartsWith(selector, value);
 
-    public ValiFlow<T> Contains(Expression<Func<T, string>> selector, string value)
-        => _stringExpression.Contains(selector, value);
+    public ValiFlow<T> Contains(Expression<Func<T, string>> selector, string value,
+        StringComparison comparison = StringComparison.OrdinalIgnoreCase)
+        => _stringExpression.Contains(selector, value, comparison);
 
     public ValiFlow<T> ExactLength(Expression<Func<T, string?>> selector, int length)
         => _stringExpression.ExactLength(selector, length);
@@ -128,14 +131,15 @@ public class ValiFlow<T>: BaseExpression<ValiFlow<T>, T>,
     public ValiFlow<T> IsBase64(Expression<Func<T, string?>> selector)
         => _stringExpression.IsBase64(selector);
 
-    public ValiFlow<T> IsNotJson(Expression<Func<T, string?>> selector) 
+    public ValiFlow<T> IsNotJson(Expression<Func<T, string?>> selector)
         => _stringExpression.IsNotJson(selector);
 
-    public ValiFlow<T> IsNotBase64(Expression<Func<T, string?>> selector) 
+    public ValiFlow<T> IsNotBase64(Expression<Func<T, string?>> selector)
         => _stringExpression.IsNotBase64(selector);
 
-    public ValiFlow<T> Contains(string value, params Expression<Func<T, string>>[] selectors) 
-        => _stringExpression.Contains(value, selectors);
+    public ValiFlow<T> Contains(string value, StringComparison comparison = StringComparison.OrdinalIgnoreCase,
+        params Expression<Func<T, string>>[] selectors)
+        => _stringExpression.Contains(value, comparison, selectors);
 
     public ValiFlow<T> Zero(Expression<Func<T, int>> selector)
         => _numericExpression.Zero(selector);
@@ -160,25 +164,25 @@ public class ValiFlow<T>: BaseExpression<ValiFlow<T>, T>,
 
     public ValiFlow<T> NotZero(Expression<Func<T, long>> selector)
         => _numericExpression.NotZero(selector);
-    
+
     public ValiFlow<T> NotZero(Expression<Func<T, float>> selector)
         => _numericExpression.NotZero(selector);
-    
+
     public ValiFlow<T> NotZero(Expression<Func<T, double>> selector)
         => _numericExpression.NotZero(selector);
 
     public ValiFlow<T> NotZero(Expression<Func<T, decimal>> selector)
         => _numericExpression.NotZero(selector);
-    
+
     public ValiFlow<T> NotZero(Expression<Func<T, short>> selector)
         => _numericExpression.NotZero(selector);
-    
+
     public ValiFlow<T> InRange(Expression<Func<T, int>> selector, int min, int max)
         => _numericExpression.InRange(selector, min, max);
-    
+
     public ValiFlow<T> InRange(Expression<Func<T, long>> selector, long min, long max)
         => _numericExpression.InRange(selector, min, max);
-    
+
     public ValiFlow<T> InRange(Expression<Func<T, float>> selector, float min, float max)
         => _numericExpression.InRange(selector, min, max);
 
@@ -187,22 +191,22 @@ public class ValiFlow<T>: BaseExpression<ValiFlow<T>, T>,
 
     public ValiFlow<T> InRange(Expression<Func<T, decimal>> selector, decimal min, decimal max)
         => _numericExpression.InRange(selector, min, max);
-    
+
     public ValiFlow<T> InRange(Expression<Func<T, short>> selector, short min, short max)
         => _numericExpression.InRange(selector, min, max);
 
     public ValiFlow<T> InRange(Expression<Func<T, int>> selector, Expression<Func<T, int>> minSelector,
         Expression<Func<T, int>> maxSelector)
         => _numericExpression.InRange(selector, minSelector, maxSelector);
-    
+
     public ValiFlow<T> InRange(Expression<Func<T, long>> selector, Expression<Func<T, long>> minSelector,
         Expression<Func<T, long>> maxSelector)
         => _numericExpression.InRange(selector, minSelector, maxSelector);
-    
+
     public ValiFlow<T> InRange(Expression<Func<T, float>> selector, Expression<Func<T, float>> minSelector,
         Expression<Func<T, float>> maxSelector)
         => _numericExpression.InRange(selector, minSelector, maxSelector);
-    
+
     public ValiFlow<T> InRange(Expression<Func<T, double>> selector, Expression<Func<T, double>> minSelector,
         Expression<Func<T, double>> maxSelector)
         => _numericExpression.InRange(selector, minSelector, maxSelector);
@@ -214,22 +218,22 @@ public class ValiFlow<T>: BaseExpression<ValiFlow<T>, T>,
     public ValiFlow<T> InRange(Expression<Func<T, short>> selector, Expression<Func<T, short>> minSelector,
         Expression<Func<T, short>> maxSelector)
         => _numericExpression.InRange(selector, minSelector, maxSelector);
-    
+
     public ValiFlow<T> GreaterThan(Expression<Func<T, int>> selector, int value)
         => _numericExpression.GreaterThan(selector, value);
 
     public ValiFlow<T> GreaterThan(Expression<Func<T, long>> selector, long value)
         => _numericExpression.GreaterThan(selector, value);
-    
+
     public ValiFlow<T> GreaterThan(Expression<Func<T, float>> selector, float value)
         => _numericExpression.GreaterThan(selector, value);
-    
+
     public ValiFlow<T> GreaterThan(Expression<Func<T, double>> selector, double value)
         => _numericExpression.GreaterThan(selector, value);
 
     public ValiFlow<T> GreaterThan(Expression<Func<T, decimal>> selector, decimal value)
         => _numericExpression.GreaterThan(selector, value);
-    
+
     public ValiFlow<T> GreaterThan(Expression<Func<T, short>> selector, short value)
         => _numericExpression.GreaterThan(selector, value);
 
@@ -238,7 +242,7 @@ public class ValiFlow<T>: BaseExpression<ValiFlow<T>, T>,
 
     public ValiFlow<T> GreaterThanOrEqualTo(Expression<Func<T, long>> selector, long value)
         => _numericExpression.GreaterThanOrEqualTo(selector, value);
-    
+
     public ValiFlow<T> GreaterThanOrEqualTo(Expression<Func<T, float>> selector, float value)
         => _numericExpression.GreaterThanOrEqualTo(selector, value);
 
@@ -253,16 +257,16 @@ public class ValiFlow<T>: BaseExpression<ValiFlow<T>, T>,
 
     public ValiFlow<T> LessThan(Expression<Func<T, int>> selector, int value)
         => _numericExpression.LessThan(selector, value);
-    
+
     public ValiFlow<T> LessThan(Expression<Func<T, long>> selector, long value)
         => _numericExpression.LessThan(selector, value);
-    
+
     public ValiFlow<T> LessThan(Expression<Func<T, float>> selector, float value)
         => _numericExpression.LessThan(selector, value);
-    
+
     public ValiFlow<T> LessThan(Expression<Func<T, double>> selector, double value)
         => _numericExpression.LessThan(selector, value);
-    
+
     public ValiFlow<T> LessThan(Expression<Func<T, decimal>> selector, decimal value)
         => _numericExpression.LessThan(selector, value);
 
@@ -271,13 +275,13 @@ public class ValiFlow<T>: BaseExpression<ValiFlow<T>, T>,
 
     public ValiFlow<T> LessThanOrEqualTo(Expression<Func<T, int>> selector, int value)
         => _numericExpression.LessThanOrEqualTo(selector, value);
-    
+
     public ValiFlow<T> LessThanOrEqualTo(Expression<Func<T, long>> selector, long value)
         => _numericExpression.LessThanOrEqualTo(selector, value);
-    
+
     public ValiFlow<T> LessThanOrEqualTo(Expression<Func<T, float>> selector, float value)
         => _numericExpression.LessThanOrEqualTo(selector, value);
-    
+
     public ValiFlow<T> LessThanOrEqualTo(Expression<Func<T, double>> selector, double value)
         => _numericExpression.LessThanOrEqualTo(selector, value);
 
@@ -286,46 +290,46 @@ public class ValiFlow<T>: BaseExpression<ValiFlow<T>, T>,
 
     public ValiFlow<T> LessThanOrEqualTo(Expression<Func<T, short>> selector, short value)
         => _numericExpression.LessThanOrEqualTo(selector, value);
-    
+
     public ValiFlow<T> Positive(Expression<Func<T, int>> selector)
         => _numericExpression.Positive(selector);
-    
+
     public ValiFlow<T> Positive(Expression<Func<T, long>> selector)
         => _numericExpression.Positive(selector);
-    
+
     public ValiFlow<T> Positive(Expression<Func<T, float>> selector)
         => _numericExpression.Positive(selector);
 
     public ValiFlow<T> Positive(Expression<Func<T, double>> selector)
         => _numericExpression.Positive(selector);
-    
+
     public ValiFlow<T> Positive(Expression<Func<T, decimal>> selector)
         => _numericExpression.Positive(selector);
-    
+
     public ValiFlow<T> Positive(Expression<Func<T, short>> selector)
         => _numericExpression.Positive(selector);
 
     public ValiFlow<T> Negative(Expression<Func<T, int>> selector)
         => _numericExpression.Negative(selector);
-    
+
     public ValiFlow<T> Negative(Expression<Func<T, long>> selector)
         => _numericExpression.Negative(selector);
-    
+
     public ValiFlow<T> Negative(Expression<Func<T, float>> selector)
         => _numericExpression.Negative(selector);
 
     public ValiFlow<T> Negative(Expression<Func<T, double>> selector)
         => _numericExpression.Negative(selector);
-    
+
     public ValiFlow<T> Negative(Expression<Func<T, decimal>> selector)
         => _numericExpression.Negative(selector);
-    
+
     public ValiFlow<T> Negative(Expression<Func<T, short>> selector)
         => _numericExpression.Negative(selector);
-    
+
     public ValiFlow<T> MinValue(Expression<Func<T, int>> selector, int minValue)
         => _numericExpression.MinValue(selector, minValue);
-    
+
     public ValiFlow<T> MinValue(Expression<Func<T, long>> selector, long minValue)
         => _numericExpression.MinValue(selector, minValue);
 
@@ -334,16 +338,16 @@ public class ValiFlow<T>: BaseExpression<ValiFlow<T>, T>,
 
     public ValiFlow<T> MinValue(Expression<Func<T, double>> selector, double minValue)
         => _numericExpression.MinValue(selector, minValue);
-    
+
     public ValiFlow<T> MinValue(Expression<Func<T, decimal>> selector, decimal minValue)
         => _numericExpression.MinValue(selector, minValue);
-    
+
     public ValiFlow<T> MinValue(Expression<Func<T, short>> selector, short minValue)
         => _numericExpression.MinValue(selector, minValue);
-    
+
     public ValiFlow<T> MaxValue(Expression<Func<T, int>> selector, int maxValue)
         => _numericExpression.MinValue(selector, maxValue);
-    
+
     public ValiFlow<T> MaxValue(Expression<Func<T, long>> selector, long maxValue)
         => _numericExpression.MinValue(selector, maxValue);
 
@@ -352,10 +356,10 @@ public class ValiFlow<T>: BaseExpression<ValiFlow<T>, T>,
 
     public ValiFlow<T> MaxValue(Expression<Func<T, double>> selector, double maxValue)
         => _numericExpression.MinValue(selector, maxValue);
-    
+
     public ValiFlow<T> MaxValue(Expression<Func<T, decimal>> selector, decimal maxValue)
         => _numericExpression.MinValue(selector, maxValue);
-    
+
     public ValiFlow<T> MaxValue(Expression<Func<T, short>> selector, short maxValue)
         => _numericExpression.MinValue(selector, maxValue);
 }
