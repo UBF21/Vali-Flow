@@ -14,7 +14,6 @@ public class QuerySpecification<T> : BasicSpecification<T>, IQuerySpecification<
     private int? _page;
     private int? _pageSize;
     private int? _top;
-    private int? _blockSize;
     
     /// <summary>
     /// Gets the primary ordering expression, if any.
@@ -40,11 +39,6 @@ public class QuerySpecification<T> : BasicSpecification<T>, IQuerySpecification<
     /// Gets the maximum number of items to take (top), if specified.
     /// </summary>
     public int? Top => _top;
-
-    /// <summary>
-    /// Gets the block size for paginated block queries, if specified.
-    /// </summary>
-    public int? BlockSize => _blockSize;
     
     /// <summary>
     /// Initializes a new instance of the <see cref="QuerySpecification{T}"/> class with a validation filter.
@@ -173,19 +167,6 @@ public class QuerySpecification<T> : BasicSpecification<T>, IQuerySpecification<
     {
         if (top < 1) throw new ArgumentException("Top must be greater than or equal to 1.", nameof(top));
         _top = top;
-        return this;
-    }
-    
-    /// <summary>
-    /// Sets the block size for paginated block queries.
-    /// </summary>
-    /// <param name="blockSize">The block size (must be greater than or equal to 1).</param>
-    /// <returns>The current specification instance for method chaining.</returns>
-    /// <exception cref="ArgumentException">Thrown if <paramref name="blockSize"/> is less than 1.</exception>
-    public QuerySpecification<T> WithBlockSize(int blockSize)
-    {
-        if (blockSize < 1) throw new ArgumentException("BlockSize must be greater than or equal to 1.", nameof(blockSize));
-        _blockSize = blockSize;
         return this;
     }
 }

@@ -8,18 +8,8 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="aa4fc315-c37b-4ab3-b9cc-02a55a2255c8" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/vali-flow-test/DbConext/AppDbContext.cs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/vali-flow-test/Models/ListarModuloQuery.cs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/vali-flow-test/Models/Modulo.cs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/.idea.vali-flow/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.vali-flow/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Vali-Flow.Core/Builder/ValiFlow.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Vali-Flow.Core/Builder/ValiFlow.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Vali-Flow.Core/Classes/Base/BaseExpression.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Vali-Flow.Core/Classes/Base/BaseExpression.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Vali-Flow.Core/Classes/Types/StringExpression.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Vali-Flow.Core/Classes/Types/StringExpression.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Vali-Flow.Core/Interfaces/Types/IStringExpression.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Vali-Flow.Core/Interfaces/Types/IStringExpression.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Vali-Flow.Core/Vali-Flow.Core.csproj" beforeDir="false" afterPath="$PROJECT_DIR$/Vali-Flow.Core/Vali-Flow.Core.csproj" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Vali-Flow.InMemory/Vali-Flow.InMemory.csproj" beforeDir="false" afterPath="$PROJECT_DIR$/Vali-Flow.InMemory/Vali-Flow.InMemory.csproj" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/vali-flow-test/Program.cs" beforeDir="false" afterPath="$PROJECT_DIR$/vali-flow-test/Program.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/vali-flow-test/vali-flow-test.csproj" beforeDir="false" afterPath="$PROJECT_DIR$/vali-flow-test/vali-flow-test.csproj" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -52,6 +42,11 @@
     <setting file="file://$PROJECT_DIR$/Vali-Flow/Interfaces/Evaluators/Read/IEvaluatorRead.cs" root0="FORCE_HIGHLIGHTING" />
     <setting file="file:///usr/local/share/dotnet/sdk/7.0.410/Sdks/Microsoft.NET.Sdk/Sdk/Sdk.props" root0="FORCE_HIGHLIGHTING" />
     <setting file="file:///usr/local/share/dotnet/sdk/7.0.410/Sdks/Microsoft.NET.Sdk/Sdk/Sdk.targets" root0="FORCE_HIGHLIGHTING" />
+  </component>
+  <component name="JsbtTreeLayoutManager">
+    <layout place="tools.popupGrunt">
+      <scroll-view-position x="0" y="0" />
+    </layout>
   </component>
   <component name="MetaFilesCheckinStateConfiguration" checkMetaFiles="true" />
   <component name="ProblemsViewState">

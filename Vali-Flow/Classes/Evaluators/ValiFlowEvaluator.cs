@@ -66,9 +66,9 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
         ValidateSpecificationForQuery(specification);
 
         IQueryable<T> query = BuildAndOrderQuery(specification, negateFilter: true);
-        query = ApplyPaginatedBlockQuery(query, specification);
+        //query = ApplyPaginatedBlockQuery(query, specification);
         query = ApplyPagination(query, specification);
-
+        
         return await Task.FromResult(query);
     }
 
@@ -77,7 +77,7 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
         ValidateSpecificationForQuery(specification);
 
         IQueryable<T> query = BuildAndOrderQuery(specification);
-        query = ApplyPaginatedBlockQuery(query, specification);
+        //query = ApplyPaginatedBlockQuery(query, specification);
         query = ApplyPagination(query, specification);
 
         return await Task.FromResult(query);
@@ -396,49 +396,6 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
         return await Task.FromResult(data.GroupBy(keySelector).ToDictionary(g => g.Key, g => g.ToList()));
     }
 
-    public async Task<PaginatedBlockResult<T>> GetPaginatedBlockAsync(IQuerySpecification<T> specification,
-        CancellationToken cancellationToken = default)
-    {
-        ValidateSpecificationForQuery(specification);
-
-        if (!specification.Page.HasValue || !specification.PageSize.HasValue || !specification.BlockSize.HasValue)
-        {
-            throw new InvalidOperationException(
-                "Page, PageSize, and BlockSize must be specified for paginated block queries.");
-        }
-
-        int page = specification.Page.Value;
-        int pageSize = specification.PageSize.Value;
-        int blockSize = specification.BlockSize.Value;
-
-        if (page < ConstantHelper.One || pageSize < ConstantHelper.One || blockSize < ConstantHelper.One)
-        {
-            throw new InvalidOperationException("Page, PageSize, and BlockSize must be greater than or equal to 1.");
-        }
-
-        IQueryable<T> query = BuildAndOrderQuery(specification);
-        query = ApplyOrdering(query, specification);
-
-        int pagesPerBlock = blockSize / pageSize;
-        int currentBlock = (page - ConstantHelper.One) / pagesPerBlock;
-        int blockOffset = currentBlock * blockSize;
-
-        IQueryable<T> blockQuery = query.Skip(blockOffset).Take(blockSize);
-        int totalItemsInBlock = await blockQuery.CountAsync(cancellationToken);
-        IEnumerable<T> blockData = await blockQuery.ToListAsync(cancellationToken);
-        IEnumerable<T> pageData = ApplyPaginationBlock(blockData, specification);
-
-        return new PaginatedBlockResult<T>
-        {
-            Items = pageData,
-            CurrentPage = page,
-            PageSize = pageSize,
-            BlockSize = blockSize,
-            TotalItemsInBlock = totalItemsInBlock,
-            HasMoreBlocks = totalItemsInBlock == blockSize
-        };
-    }
-
     #endregion
 
     #region Methods Write
@@ -709,13 +666,13 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
     /// <returns>The modified query with pagination applied.</returns>
     private IQueryable<T> ApplyPagination(IQueryable<T> query, IQuerySpecification<T> specification)
     {
-        if (specification is { Page: not null, PageSize: not null, BlockSize: null })
+        if (specification is { Page: not null, PageSize: not null })
         {
             int skip = (specification.Page.Value - ConstantHelper.One) * specification.PageSize.Value;
             int take = specification.PageSize.Value;
             query = query.Skip(skip).Take(take);
         }
-        else if (specification is { Top: not null, BlockSize: null, Page: null })
+        else if (specification is { Top: not null, Page: null })
         {
             query = query.Take(specification.Top.Value);
         }
@@ -723,7 +680,8 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
         return query;
     }
 
-    /// <summary>
+    /*
+         /// <summary>
     /// Applies paginated block logic to the query based on the specification's Page, PageSize, and BlockSize properties.
     /// </summary>
     /// <param name="query">The IQueryable instance to modify.</param>
@@ -732,24 +690,19 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
     /// <exception cref="InvalidOperationException">Thrown if Page, PageSize, or BlockSize are invalid.</exception>
     private IQueryable<T> ApplyPaginatedBlockQuery(IQueryable<T> query, IQuerySpecification<T> specification)
     {
-        if (!specification.Page.HasValue || !specification.PageSize.HasValue || !specification.BlockSize.HasValue)
+        if (!specification.Page.HasValue || !specification.PageSize.HasValue)
         {
             return query;
         }
 
         int page = specification.Page.Value;
         int pageSize = specification.PageSize.Value;
-        int blockSize = specification.BlockSize.Value;
 
-        if (page < ConstantHelper.One || pageSize < ConstantHelper.One || blockSize < ConstantHelper.One)
+        if (page < ConstantHelper.One || pageSize < ConstantHelper.One)
         {
-            throw new InvalidOperationException("Page, PageSize, and BlockSize must be greater than or equal to 1.");
+            throw new InvalidOperationException("Page and PageSize must be greater than or equal to 1.");
         }
-
-        if (blockSize % pageSize != ConstantHelper.ZeroInt)
-        {
-            throw new InvalidOperationException("BlockSize must be a multiple of PageSize.");
-        }
+        
 
         int pagesPerBlock = blockSize / pageSize;
         int currentBlock = (page - ConstantHelper.One) / pagesPerBlock;
@@ -758,32 +711,9 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
         int finalOffset = blockOffset + pageOffset;
 
         return query.Skip(finalOffset).Take(pageSize);
-    }
+    }   
 
-    private IEnumerable<T> ApplyPaginationBlock(
-        IEnumerable<T> query,
-        IQuerySpecification<T> specification)
-    {
-        if (!specification.Page.HasValue || !specification.PageSize.HasValue || !specification.BlockSize.HasValue)
-        {
-            throw new InvalidOperationException(
-                "Page, PageSize, and BlockSize must be specified for block pagination.");
-        }
-
-        int page = specification.Page.Value;
-        int pageSize = specification.PageSize.Value;
-        int blockSize = specification.BlockSize.Value;
-
-        if (page < ConstantHelper.One || pageSize < ConstantHelper.One || blockSize < ConstantHelper.One)
-        {
-            throw new InvalidOperationException("Page, PageSize, and BlockSize must be greater than or equal to 1.");
-        }
-
-        int pagesPerBlock = blockSize / pageSize;
-        int blockSkip = ((page - ConstantHelper.One) % pagesPerBlock) * pageSize;
-
-        return query.Skip(blockSkip).Take(pageSize).ToList();
-    }
+     */
 
     private IQueryable<T> ApplyAsSplitQuery(IQueryable<T> query, bool asSplitQuery = false)
     {
@@ -874,20 +804,9 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
             throw new InvalidOperationException("PageSize must be greater than or equal to 1.");
         }
 
-        if (specification.BlockSize is < ConstantHelper.One)
-        {
-            throw new InvalidOperationException("BlockSize must be greater than or equal to 1.");
-        }
-
         if (specification.Top is < ConstantHelper.One)
         {
             throw new InvalidOperationException("Top must be greater than or equal to 1.");
-        }
-
-        if (specification is { BlockSize: not null, PageSize: not null } &&
-            specification.BlockSize.Value % specification.PageSize.Value != ConstantHelper.ZeroInt)
-        {
-            throw new InvalidOperationException("BlockSize must be a multiple of PageSize.");
         }
     }
 

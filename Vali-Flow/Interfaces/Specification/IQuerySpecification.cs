@@ -42,8 +42,4 @@ public interface IQuerySpecification<T> : ISpecification<T> where T : class
     /// </summary>
     int? Top { get; }
     
-    /// <summary>
-    /// Gets the block size for paginated block queries, if specified.
-    /// </summary>
-    int? BlockSize { get; }
 }

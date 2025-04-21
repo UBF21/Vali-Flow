@@ -3,6 +3,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using vali_flow_test.DbConext;
 using vali_flow_test.Models;
+using Vali_Flow.Classes.Evaluators;
+using Vali_Flow.Classes.Specification;
 using Vali_Flow.Core.Builder;
 
 var options = new DbContextOptionsBuilder<AppDbContext>()
@@ -92,16 +94,18 @@ static async Task TestExpression(AppDbContext context, ListarModuloQuery request
         // .Add(x => request.ClasificacionId.Equals(Guid.Empty))
         // .Or()
         // .Add(x => x.ClasificacionId.Equals(request.ClasificacionId));
+        
+        var dbcontext = new ValiFlowEvaluator<Modulo>(context);
 
-        Expression<Func<Modulo, bool>> expression = builder.Build();
 
+        var especification = new QuerySpecification<Modulo>(builder);
+        
         // Ejecutar la consulta
-        var modulos = await context.Modulos
-            .Where(expression)
-            .ToListAsync();
+        var modulos = await dbcontext.EvaluateQueryAsync(especification);
+        var data = modulos.ToList();
 
-        Console.WriteLine($"Módulos encontrados: {modulos.Count}");
-        foreach (var modulo in modulos)
+        Console.WriteLine($"Módulos encontrados: {data.Count()}");
+        foreach (var modulo in data)
         {
             Console.WriteLine($" - {modulo.Nombre} (Id: {modulo.Id})");
         }

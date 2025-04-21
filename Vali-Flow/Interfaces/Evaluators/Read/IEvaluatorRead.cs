@@ -420,34 +420,5 @@ public interface IEvaluatorRead<T> where T : class
         Func<T, TKey> keySelector,
         CancellationToken cancellationToken = default
     ) where TKey : notnull;
-
-    /// <summary>
-    /// Retrieves a paginated block of entities based on the specified <see cref="IQuerySpecification{T}"/>.
-    /// The method applies block-based pagination, where entities are divided into blocks of a specified size, and a specific page within the block is returned.
-    /// </summary>
-    /// <param name="specification">
-    /// The query specification defining the filtering, ordering, and pagination criteria for the query. Must not be null.
-    /// The <see cref="IQuerySpecification{T}.Page"/>, <see cref="IQuerySpecification{T}.PageSize"/>, and <see cref="IQuerySpecification{T}.BlockSize"/> properties must be specified.
-    /// </param>
-    /// <param name="cancellationToken">A token to cancel the asynchronous operation. Default is <see cref="CancellationToken.None"/>.</param>
-    /// <returns>
-    /// A task that resolves to a <see cref="PaginatedBlockResult{T}"/> containing the paginated entities within the specified block,
-    /// along with metadata such as the current page, page size, block size, total items in the block, and whether there are more blocks.
-    /// </returns>
-    /// <exception cref="ArgumentNullException">
-    /// Thrown if <paramref name="specification"/> is null.
-    /// </exception>
-    /// <exception cref="InvalidOperationException">
-    /// Thrown if the specification contains invalid properties, such as a null filter, invalid pagination values (e.g., <see cref="IQuerySpecification{T}.Page"/> less than 1),
-    /// or if <see cref="IQuerySpecification{T}.BlockSize"/> is not a multiple of <see cref="IQuerySpecification{T}.PageSize"/>.
-    /// </exception>
-    /// <exception cref="OperationCanceledException">
-    /// Thrown if the operation is canceled via the <paramref name="cancellationToken"/>.
-    /// </exception>
-    /// <remarks>
-    /// This method requires that <see cref="IQuerySpecification{T}.Page"/>, <see cref="IQuerySpecification{T}.PageSize"/>, and <see cref="IQuerySpecification{T}.BlockSize"/>
-    /// are specified in the <paramref name="specification"/>. The block size must be a multiple of the page size to ensure consistent pagination.
-    /// The method first retrieves the entire block of entities and then applies pagination within that block to return the requested page.
-    /// </remarks>
-    Task<PaginatedBlockResult<T>> GetPaginatedBlockAsync(IQuerySpecification<T> specification, CancellationToken cancellationToken = default);
+    
 }
