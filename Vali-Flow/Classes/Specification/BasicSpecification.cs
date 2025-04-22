@@ -16,6 +16,7 @@ public class BasicSpecification<T>: IBasicSpecification<T> where T : class
     private readonly List<IEfInclude<T>> _includes = new();
     private bool _asNoTracking = true;
     private bool _asSplitQuery;
+    private bool _ignoreQueryFilters;
     
     /// <summary>
     /// Gets the validation flow used to filter the entities.
@@ -38,6 +39,19 @@ public class BasicSpecification<T>: IBasicSpecification<T> where T : class
     public bool AsSplitQuery => _asSplitQuery;
     
     /// <summary>
+    /// Gets a value indicating whether global query filters configured on the entity type should be ignored for this specification.
+    /// </summary>
+    /// <remarks>
+    /// When set to <see langword="true"/>, this property instructs Entity Framework Core to bypass any global query filters 
+    /// defined on the entity type (e.g., soft delete filters or tenant-specific filters) when executing the query. 
+    /// This is useful for scenarios where you need to retrieve entities that would otherwise be excluded by global filters, 
+    /// such as retrieving soft-deleted records or accessing data across all tenants in a multi-tenant application.
+    /// Use this property with caution, as ignoring global filters may expose sensitive data or break application logic 
+    /// that relies on these filters for data isolation.
+    /// </remarks>
+    public bool IgnoreQueryFilters => _ignoreQueryFilters;
+    
+    /// <summary>
     /// Initializes a new instance of the <see cref="BasicSpecification{T}"/> class with a validation filter.
     /// </summary>
     /// <param name="filter">The validation flow that defines the filtering criteria. Cannot be null.</param>
@@ -53,16 +67,19 @@ public class BasicSpecification<T>: IBasicSpecification<T> where T : class
     /// <param name="filter">The validation flow that defines the filtering criteria. Cannot be null.</param>
     /// <param name="asNoTracking">Indicates whether the query should be executed without change tracking. Default is true.</param>
     /// <param name="asSplitQuery">Indicates whether the query should be executed as a split query. Default is false.</param>
+    /// <param name="ignoreQueryFilters">Indicates whether global query filters should be ignored. Default is false.</param>
     /// <exception cref="ArgumentNullException">Thrown if the <paramref name="filter"/> parameter is null.</exception>
     public BasicSpecification(
         ValiFlow<T> filter,
         bool asNoTracking = true,
-        bool asSplitQuery = false
+        bool asSplitQuery = false,
+        bool ignoreQueryFilters = false
     )
     {
         _filter = filter ?? throw new ArgumentNullException(nameof(filter), "The filter cannot be null.");
         _asNoTracking = asNoTracking;
         _asSplitQuery = asSplitQuery;
+        _ignoreQueryFilters = ignoreQueryFilters;
     }
     
     /// <summary>
@@ -120,6 +137,25 @@ public class BasicSpecification<T>: IBasicSpecification<T> where T : class
     public BasicSpecification<T> WithAsSplitQuery(bool asSplitQuery)
     {
         _asSplitQuery = asSplitQuery;
+        return this;
+    }
+
+    /// <summary>
+    /// Configures whether global query filters configured on the entity type should be ignored for this specification.
+    /// </summary>
+    /// <param name="ignoreQueryFilters">A value indicating whether to ignore global query filters. 
+    /// When set to <see langword="true"/>, Entity Framework Core bypasses any global query filters defined on the entity type.</param>
+    /// <returns>The current instance of <see cref="BasicSpecification{T}"/> for method chaining.</returns>
+    /// <remarks>
+    /// This method allows you to specify whether global query filters (e.g., soft delete filters or tenant-specific filters) 
+    /// should be ignored when executing the query. This is useful for scenarios where you need to retrieve entities that would 
+    /// otherwise be excluded by global filters, such as retrieving soft-deleted records or accessing data across all tenants 
+    /// in a multi-tenant application. Use this setting with caution, as ignoring global filters may expose sensitive data 
+    /// or break application logic that relies on these filters for data isolation.
+    /// </remarks>
+    public BasicSpecification<T> WithIgnoreQueryFilters(bool ignoreQueryFilters)
+    {
+        _ignoreQueryFilters = ignoreQueryFilters;
         return this;
     }
 }

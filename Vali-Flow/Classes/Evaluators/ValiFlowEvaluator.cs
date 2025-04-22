@@ -1,7 +1,6 @@
 using System.Linq.Expressions;
 using System.Numerics;
 using Microsoft.EntityFrameworkCore;
-using Vali_Flow.Classes.Results;
 using Vali_Flow.Core.Builder;
 using Vali_Flow.Core.Utils;
 using Vali_Flow.Interfaces.Evaluators.Read;
@@ -68,7 +67,7 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
         IQueryable<T> query = BuildAndOrderQuery(specification, negateFilter: true);
         //query = ApplyPaginatedBlockQuery(query, specification);
         query = ApplyPagination(query, specification);
-        
+
         return await Task.FromResult(query);
     }
 
@@ -237,154 +236,330 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
         IQueryable<T> query = BuildBasicQuery(specification);
         return await ExecuteWithExceptionHandlingAsync(() =>
         {
-            return query.GroupBy(keySelector)
+            return query
+                .GroupBy(keySelector)
                 .ToDictionaryAsync(g => g.Key, g => g.ToList(), cancellationToken);
         }, nameof(EvaluateGroupedAsync));
     }
 
     public async Task<Dictionary<TKey, int>> EvaluateCountByGroupAsync<TKey>(
         IBasicSpecification<T> specification,
-        Func<T, TKey> keySelector,
+        Expression<Func<T, TKey>> keySelector,
+        CancellationToken cancellationToken = default
+    ) where TKey : notnull
+    {
+        IQueryable<T> query = BuildBasicQuery(specification);
+        return await ExecuteWithExceptionHandlingAsync(
+            () => query
+                .GroupBy(keySelector)
+                .Select(g => new { g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.Key, x => x.Count, cancellationToken),
+            nameof(EvaluateCountByGroupAsync));
+    }
+
+    public async Task<Dictionary<TKey, int>> EvaluateSumByGroupAsync<TKey>(
+        IBasicSpecification<T> specification,
+        Expression<Func<T, TKey>> keySelector,
+        Expression<Func<T, int>> selector,
+        CancellationToken cancellationToken = default
+    ) where TKey : notnull
+    {
+        IQueryable<T> query = BuildBasicQuery(specification);
+        return await ExecuteWithExceptionHandlingAsync(
+            () => query
+                .GroupBy(keySelector)
+                .Select(g => new { g.Key, Sum = g.Sum(selector.Compile()) })
+                .ToDictionaryAsync(x => x.Key, x => x.Sum, cancellationToken),
+            nameof(EvaluateSumByGroupAsync));
+    }
+
+    public async Task<Dictionary<TKey, long>> EvaluateSumByGroupAsync<TKey>(
+        IBasicSpecification<T> specification,
+        Expression<Func<T, TKey>> keySelector,
+        Expression<Func<T, long>> selector,
+        CancellationToken cancellationToken = default
+    ) where TKey : notnull
+    {
+        IQueryable<T> query = BuildBasicQuery(specification);
+        return await ExecuteWithExceptionHandlingAsync(
+            () => query
+                .GroupBy(keySelector)
+                .Select(g => new { g.Key, Sum = g.Sum(selector.Compile()) })
+                .ToDictionaryAsync(x => x.Key, x => x.Sum, cancellationToken),
+            nameof(EvaluateSumByGroupAsync));
+    }
+
+    public async Task<Dictionary<TKey, float>> EvaluateSumByGroupAsync<TKey>(
+        IBasicSpecification<T> specification,
+        Expression<Func<T, TKey>> keySelector,
+        Expression<Func<T, float>> selector,
+        CancellationToken cancellationToken = default
+    ) where TKey : notnull
+    {
+        IQueryable<T> query = BuildBasicQuery(specification);
+        return await ExecuteWithExceptionHandlingAsync(
+            () => query
+                .GroupBy(keySelector)
+                .Select(g => new { g.Key, Sum = g.Sum(selector.Compile()) })
+                .ToDictionaryAsync(x => x.Key, x => x.Sum, cancellationToken),
+            nameof(EvaluateSumByGroupAsync));
+    }
+
+    public async Task<Dictionary<TKey, double>> EvaluateSumByGroupAsync<TKey>(
+        IBasicSpecification<T> specification,
+        Expression<Func<T, TKey>> keySelector,
+        Expression<Func<T, double>> selector,
+        CancellationToken cancellationToken = default
+    ) where TKey : notnull
+    {
+        IQueryable<T> query = BuildBasicQuery(specification);
+        return await ExecuteWithExceptionHandlingAsync(
+            () => query
+                .GroupBy(keySelector)
+                .Select(g => new { g.Key, Sum = g.Sum(selector.Compile()) })
+                .ToDictionaryAsync(x => x.Key, x => x.Sum, cancellationToken),
+            nameof(EvaluateSumByGroupAsync));
+    }
+
+    public async Task<Dictionary<TKey, decimal>> EvaluateSumByGroupAsync<TKey>(
+        IBasicSpecification<T> specification,
+        Expression<Func<T, TKey>> keySelector,
+        Expression<Func<T, decimal>> selector,
+        CancellationToken cancellationToken = default
+    ) where TKey : notnull
+    {
+        IQueryable<T> query = BuildBasicQuery(specification);
+        return await ExecuteWithExceptionHandlingAsync(
+            () => query
+                .GroupBy(keySelector)
+                .Select(g => new { g.Key, Sum = g.Sum(selector.Compile()) })
+                .ToDictionaryAsync(x => x.Key, x => x.Sum, cancellationToken),
+            nameof(EvaluateSumByGroupAsync));
+    }
+
+    public async Task<Dictionary<TKey, int>> EvaluateMinByGroupAsync<TKey>(
+        IBasicSpecification<T> specification,
+        Expression<Func<T, TKey>> keySelector,
+        Expression<Func<T, int>> selector,
         CancellationToken cancellationToken = default
     ) where TKey : notnull
     {
         IQueryable<T> query = BuildBasicQuery(specification);
 
         return await ExecuteWithExceptionHandlingAsync(
-            async () =>
-            {
-                IEnumerable<T> data = await query.ToListAsync(cancellationToken);
-                IEnumerable<IGrouping<TKey, T>> groups = data.GroupBy(keySelector);
-
-                return groups.ToDictionary(g => g.Key, g => g.Count());
-            }, nameof(EvaluateCountByGroupAsync));
+            () => query
+                .GroupBy(keySelector)
+                .Select(g => new { g.Key, Min = g.Min(selector.Compile()) })
+                .ToDictionaryAsync(x => x.Key, x => x.Min, cancellationToken),
+            nameof(EvaluateMinByGroupAsync));
     }
 
-    public async Task<Dictionary<TKey, TResult>> EvaluateSumByGroupAsync<TKey, TResult>(
+    public async Task<Dictionary<TKey, long>> EvaluateMinByGroupAsync<TKey>(
         IBasicSpecification<T> specification,
-        Func<T, TKey> keySelector,
-        Func<T, TResult> selector,
+        Expression<Func<T, TKey>> keySelector,
+        Expression<Func<T, long>> selector,
         CancellationToken cancellationToken = default
-    ) where TKey : notnull where TResult : INumber<TResult>
+    ) where TKey : notnull
     {
         IQueryable<T> query = BuildBasicQuery(specification);
 
         return await ExecuteWithExceptionHandlingAsync(
-            async () =>
-            {
-                List<T> data = await query.ToListAsync(cancellationToken);
-                IEnumerable<IGrouping<TKey, T>> groups = data.GroupBy(keySelector);
-
-                return groups.ToDictionary(
-                    g => g.Key,
-                    g => g.Select(selector).Aggregate(TResult.Zero, (acc, x) => acc + x)
-                );
-            }, nameof(EvaluateSumByGroupAsync));
+            () => query
+                .GroupBy(keySelector)
+                .Select(g => new { g.Key, Min = g.Min(selector.Compile()) })
+                .ToDictionaryAsync(x => x.Key, x => x.Min, cancellationToken),
+            nameof(EvaluateMinByGroupAsync));
     }
 
-    public async Task<Dictionary<TKey, TResult>> EvaluateMinByGroupAsync<TKey, TResult>(
+    public async Task<Dictionary<TKey, float>> EvaluateMinByGroupAsync<TKey>(
         IBasicSpecification<T> specification,
-        Func<T, TKey> keySelector,
-        Func<T, TResult> selector,
+        Expression<Func<T, TKey>> keySelector,
+        Expression<Func<T, float>> selector,
         CancellationToken cancellationToken = default
-    ) where TKey : notnull where TResult : INumber<TResult>
+    ) where TKey : notnull
     {
         IQueryable<T> query = BuildBasicQuery(specification);
 
         return await ExecuteWithExceptionHandlingAsync(
-            async () =>
-            {
-                List<T> data = await query.ToListAsync(cancellationToken);
-                IEnumerable<IGrouping<TKey, T>> groups = data.GroupBy(keySelector);
-
-                return groups.ToDictionary(
-                    g => g.Key,
-                    g => g.Select(selector).Min() ?? TResult.Zero
-                );
-            }, nameof(EvaluateMinByGroupAsync));
+            () => query
+                .GroupBy(keySelector)
+                .Select(g => new { g.Key, Min = g.Min(selector.Compile()) })
+                .ToDictionaryAsync(x => x.Key, x => x.Min, cancellationToken),
+            nameof(EvaluateMinByGroupAsync));
     }
 
-    public async Task<Dictionary<TKey, TResult>> EvaluateMaxByGroupAsync<TKey, TResult>(
+    public async Task<Dictionary<TKey, double>> EvaluateMinByGroupAsync<TKey>(
         IBasicSpecification<T> specification,
-        Func<T, TKey> keySelector,
-        Func<T, TResult> selector,
+        Expression<Func<T, TKey>> keySelector,
+        Expression<Func<T, double>> selector,
         CancellationToken cancellationToken = default
-    ) where TKey : notnull where TResult : INumber<TResult>
+    ) where TKey : notnull
     {
         IQueryable<T> query = BuildBasicQuery(specification);
 
         return await ExecuteWithExceptionHandlingAsync(
-            async () =>
-            {
-                List<T> data = await query.ToListAsync(cancellationToken);
-                IEnumerable<IGrouping<TKey, T>> groups = data.GroupBy(keySelector);
+            () => query
+                .GroupBy(keySelector)
+                .Select(g => new { g.Key, Min = g.Min(selector.Compile()) })
+                .ToDictionaryAsync(x => x.Key, x => x.Min, cancellationToken),
+            nameof(EvaluateMinByGroupAsync));
+    }
 
-                return groups.ToDictionary(
-                    g => g.Key,
-                    g => g.Select(selector).Max() ?? TResult.Zero
-                );
-            }, nameof(EvaluateMaxByGroupAsync));
+    public async Task<Dictionary<TKey, decimal>> EvaluateMinByGroupAsync<TKey>(
+        IBasicSpecification<T> specification,
+        Expression<Func<T, TKey>> keySelector,
+        Expression<Func<T, decimal>> selector,
+        CancellationToken cancellationToken = default
+    ) where TKey : notnull
+    {
+        IQueryable<T> query = BuildBasicQuery(specification);
+
+        return await ExecuteWithExceptionHandlingAsync(
+            () => query
+                .GroupBy(keySelector)
+                .Select(g => new { g.Key, Min = g.Min(selector.Compile()) })
+                .ToDictionaryAsync(x => x.Key, x => x.Min, cancellationToken),
+            nameof(EvaluateMinByGroupAsync));
+    }
+
+    public async Task<Dictionary<TKey, int>> EvaluateMaxByGroupAsync<TKey>(
+        IBasicSpecification<T> specification,
+        Expression<Func<T, TKey>> keySelector,
+        Expression<Func<T, int>> selector,
+        CancellationToken cancellationToken = default
+    ) where TKey : notnull
+    {
+        IQueryable<T> query = BuildBasicQuery(specification);
+
+        return await ExecuteWithExceptionHandlingAsync(
+            () => query
+                .GroupBy(keySelector)
+                .Select(g => new { g.Key, Max = g.Max(selector.Compile()) })
+                .ToDictionaryAsync(x => x.Key, x => x.Max, cancellationToken),
+            nameof(EvaluateMaxByGroupAsync));
+    }
+
+    public async Task<Dictionary<TKey, long>> EvaluateMaxByGroupAsync<TKey>(
+        IBasicSpecification<T> specification,
+        Expression<Func<T, TKey>> keySelector,
+        Expression<Func<T, long>> selector,
+        CancellationToken cancellationToken = default
+    ) where TKey : notnull
+    {
+        IQueryable<T> query = BuildBasicQuery(specification);
+
+        return await ExecuteWithExceptionHandlingAsync(
+            () => query
+                .GroupBy(keySelector)
+                .Select(g => new { g.Key, Max = g.Max(selector.Compile()) })
+                .ToDictionaryAsync(x => x.Key, x => x.Max, cancellationToken),
+            nameof(EvaluateMaxByGroupAsync));
+    }
+
+    public async Task<Dictionary<TKey, float>> EvaluateMaxByGroupAsync<TKey>(
+        IBasicSpecification<T> specification,
+        Expression<Func<T, TKey>> keySelector,
+        Expression<Func<T, float>> selector,
+        CancellationToken cancellationToken = default
+    ) where TKey : notnull
+    {
+        IQueryable<T> query = BuildBasicQuery(specification);
+
+        return await ExecuteWithExceptionHandlingAsync(
+            () => query
+                .GroupBy(keySelector)
+                .Select(g => new { g.Key, Max = g.Max(selector.Compile()) })
+                .ToDictionaryAsync(x => x.Key, x => x.Max, cancellationToken),
+            nameof(EvaluateMaxByGroupAsync));
+    }
+
+    public async Task<Dictionary<TKey, double>> EvaluateMaxByGroupAsync<TKey>(
+        IBasicSpecification<T> specification,
+        Expression<Func<T, TKey>> keySelector,
+        Expression<Func<T, double>> selector,
+        CancellationToken cancellationToken = default
+    ) where TKey : notnull
+    {
+        IQueryable<T> query = BuildBasicQuery(specification);
+
+        return await ExecuteWithExceptionHandlingAsync(
+            () => query
+                .GroupBy(keySelector)
+                .Select(g => new { g.Key, Max = g.Max(selector.Compile()) })
+                .ToDictionaryAsync(x => x.Key, x => x.Max, cancellationToken),
+            nameof(EvaluateMaxByGroupAsync));
+    }
+
+    public async Task<Dictionary<TKey, decimal>> EvaluateMaxByGroupAsync<TKey>(
+        IBasicSpecification<T> specification,
+        Expression<Func<T, TKey>> keySelector,
+        Expression<Func<T, decimal>> selector,
+        CancellationToken cancellationToken = default
+    ) where TKey : notnull
+    {
+        IQueryable<T> query = BuildBasicQuery(specification);
+
+        return await ExecuteWithExceptionHandlingAsync(
+            () => query
+                .GroupBy(keySelector)
+                .Select(g => new { g.Key, Max = g.Max(selector.Compile()) })
+                .ToDictionaryAsync(x => x.Key, x => x.Max, cancellationToken),
+            nameof(EvaluateMaxByGroupAsync));
     }
 
     public async Task<Dictionary<TKey, decimal>> EvaluateAverageByGroupAsync<TKey, TResult>(
         IBasicSpecification<T> specification,
-        Func<T, TKey> keySelector,
-        Func<T, TResult> selector,
+        Expression<Func<T, TKey>> keySelector,
+        Expression<Func<T, TResult>> selector,
         CancellationToken cancellationToken = default
     ) where TKey : notnull where TResult : INumber<TResult>
     {
         IQueryable<T> query = BuildBasicQuery(specification);
 
         return await ExecuteWithExceptionHandlingAsync(
-            async () =>
-            {
-                List<T> data = await query.ToListAsync(cancellationToken);
-                IEnumerable<IGrouping<TKey, T>> groups = data.GroupBy(keySelector);
-
-                return groups.ToDictionary(
-                    g => g.Key,
-                    g => g.Select(selector).Average(x => Convert.ToDecimal(x))
-                );
-            }, nameof(EvaluateAverageByGroupAsync));
+            () => query
+                .GroupBy(keySelector)
+                .Select(g => new { g.Key, Avg = g.Average(x => Convert.ToDecimal(selector.Compile()(x))) })
+                .ToDictionaryAsync(x => x.Key, x => x.Avg, cancellationToken),
+            nameof(EvaluateAverageByGroupAsync));
     }
 
     public async Task<Dictionary<TKey, List<T>>> EvaluateDuplicatesByGroupAsync<TKey>(
         IBasicSpecification<T> specification,
-        Func<T, TKey> keySelector,
+        Expression<Func<T, TKey>> keySelector,
         CancellationToken cancellationToken = default
     ) where TKey : notnull
     {
         var query = BuildBasicQuery(specification);
 
-        IEnumerable<T> data = await query.ToListAsync(cancellationToken);
-        Dictionary<TKey, List<T>> result = data.GroupBy(keySelector)
-            .Where(g => g.Count() > ConstantHelper.One)
-            .ToDictionary(g => g.Key, g => g.ToList());
-
-        return await ExecuteWithExceptionHandlingAsync(() => Task.FromResult(result),
+        return await ExecuteWithExceptionHandlingAsync(
+            () => query
+                .GroupBy(keySelector)
+                .Where(g => g.Count() > 1)
+                .ToDictionaryAsync(g => g.Key, g => g.ToList(), cancellationToken),
             nameof(EvaluateDuplicatesByGroupAsync));
     }
 
     public async Task<Dictionary<TKey, T>> EvaluateUniquesByGroupAsync<TKey>(
         IBasicSpecification<T> specification,
-        Func<T, TKey> keySelector,
+        Expression<Func<T, TKey>> keySelector,
         CancellationToken cancellationToken = default
     ) where TKey : notnull
     {
         IQueryable<T> query = BuildBasicQuery(specification);
 
-        IEnumerable<T> data = await query.ToListAsync(cancellationToken);
-        Dictionary<TKey, T> result = data.GroupBy(keySelector)
-            .Where(g => g.Count() == ConstantHelper.One)
-            .ToDictionary(g => g.Key, g => g.First());
-
-        return await ExecuteWithExceptionHandlingAsync(() => Task.FromResult(result),
+        return await ExecuteWithExceptionHandlingAsync(
+            () => query
+                .GroupBy(keySelector)
+                .Where(g => g.Count() == 1)
+                .Select(g => new { g.Key, First = g.First() })
+                .ToDictionaryAsync(x => x.Key, x => x.First, cancellationToken),
             nameof(EvaluateUniquesByGroupAsync));
     }
 
     public async Task<Dictionary<TKey, List<T>>> EvaluateTopByGroupAsync<TKey>(
         IQuerySpecification<T> specification,
-        Func<T, TKey> keySelector,
+        Expression<Func<T, TKey>> keySelector,
         CancellationToken cancellationToken = default
     ) where TKey : notnull
     {
@@ -392,23 +567,31 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
 
         IQueryable<T> query = BuildAndOrderQuery(specification);
         query = ApplyOrdering(query, specification);
-        List<T> data = await query.Take(specification.Top ?? ConstantHelper.Fifty).ToListAsync(cancellationToken);
-        return await Task.FromResult(data.GroupBy(keySelector).ToDictionary(g => g.Key, g => g.ToList()));
+        query = query.Take(specification.Top ?? 50);
+        return await ExecuteWithExceptionHandlingAsync(
+            () => query
+                .GroupBy(keySelector)
+                .ToDictionaryAsync(g => g.Key, g => g.ToList(), cancellationToken),
+            nameof(EvaluateTopByGroupAsync));
     }
 
     #endregion
 
     #region Methods Write
 
-    public async Task<T> AddAsync(T entity, CancellationToken cancellationToken = default)
+    public async Task<T> AddAsync(T entity, CancellationToken cancellationToken = default, bool saveChanges = true)
     {
         ValidationHelper.ValidateEntityNotNull(entity);
-        return await ExecuteWithExceptionHandlingAsync(
-            async () => (await _dbContext.Set<T>().AddAsync(entity, cancellationToken)).Entity, nameof(AddAsync));
+        var addedEntity = await ExecuteWithExceptionHandlingAsync(
+            async () => (await _dbContext.Set<T>().AddAsync(entity, cancellationToken)).Entity,
+            nameof(AddAsync));
+
+        await SaveChangesIfRequestedAsync(saveChanges, cancellationToken, nameof(AddAsync));
+        return addedEntity;
     }
 
     public async Task<IEnumerable<T>> AddRangeAsync(IEnumerable<T> entities,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default, bool saveChanges = true)
     {
         if (entities == null)
             throw new ArgumentNullException(nameof(entities), "The collection of entities cannot be null.");
@@ -418,23 +601,27 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
         if (!entityList.Any())
             throw new ArgumentException("The collection of entities cannot be empty.", nameof(entities));
 
-        return await ExecuteWithExceptionHandlingAsync(
+        await ExecuteWithExceptionHandlingAsync(
             async () =>
             {
                 await _dbContext.Set<T>().AddRangeAsync(entityList, cancellationToken);
                 return entityList;
             }, nameof(AddRangeAsync));
+
+        await SaveChangesIfRequestedAsync(saveChanges, cancellationToken, nameof(AddRangeAsync));
+        return entityList;
     }
 
-    public async Task<T> UpdateAsync(T entity)
+    public async Task<T> UpdateAsync(T entity, bool saveChanges = true)
     {
         ValidationHelper.ValidateEntityNotNull(entity);
         _dbContext.Set<T>().Update(entity);
-        await Task.CompletedTask;
+
+        await SaveChangesIfRequestedAsync(saveChanges, default, nameof(UpdateAsync));
         return entity;
     }
 
-    public async Task<IEnumerable<T>> UpdateRangeAsync(IEnumerable<T> entities)
+    public async Task<IEnumerable<T>> UpdateRangeAsync(IEnumerable<T> entities, bool saveChanges = true)
     {
         if (entities == null)
             throw new ArgumentNullException(nameof(entities), "The collection of entities cannot be null.");
@@ -445,18 +632,20 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
             throw new ArgumentException("The collection of entities cannot be empty.", nameof(entities));
 
         _dbContext.Set<T>().UpdateRange(entityList);
-        await Task.CompletedTask;
+
+        await SaveChangesIfRequestedAsync(saveChanges, default, nameof(UpdateRangeAsync));
         return entityList;
     }
 
-    public async Task DeleteAsync(T entity)
+    public async Task DeleteAsync(T entity, bool saveChanges = true)
     {
         ValidationHelper.ValidateEntityNotNull(entity);
         _dbContext.Set<T>().Remove(entity);
-        await Task.CompletedTask;
+
+        await SaveChangesIfRequestedAsync(saveChanges, default, nameof(DeleteAsync));
     }
 
-    public async Task DeleteRangeAsync(IEnumerable<T> entities)
+    public async Task DeleteRangeAsync(IEnumerable<T> entities, bool saveChanges = true)
     {
         if (entities == null)
             throw new ArgumentNullException(nameof(entities), "The collection of entities cannot be null.");
@@ -467,7 +656,8 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
             throw new ArgumentException("The collection of entities cannot be empty.", nameof(entities));
 
         _dbContext.Set<T>().RemoveRange(entityList);
-        await Task.CompletedTask;
+
+        await SaveChangesIfRequestedAsync(saveChanges, default, nameof(DeleteRangeAsync));
     }
 
 
@@ -480,7 +670,8 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
     public async Task<T> UpsertAsync(
         T entity,
         Expression<Func<T, bool>> matchCondition,
-        CancellationToken cancellationToken = default
+        CancellationToken cancellationToken = default,
+        bool saveChanges = true
     )
     {
         ValidationHelper.ValidateEntityNotNull(entity);
@@ -495,13 +686,15 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
             _dbContext.Entry(existingEntity).CurrentValues.SetValues(entity);
         }
 
+        await SaveChangesIfRequestedAsync(saveChanges, cancellationToken, nameof(UpsertAsync));
         return entity;
     }
 
     public async Task<IEnumerable<T>> UpsertRangeAsync<TProperty>(
         IEnumerable<T> entities,
         Func<T, TProperty> keySelector,
-        CancellationToken cancellationToken = default
+        CancellationToken cancellationToken = default,
+        bool saveChanges = true
     ) where TProperty : notnull
     {
         if (entities == null)
@@ -532,18 +725,24 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
             }
         }
 
+        await SaveChangesIfRequestedAsync(saveChanges, cancellationToken, nameof(UpsertRangeAsync));
         return entityList;
     }
 
 
     public async Task DeleteByConditionAsync(Expression<Func<T, bool>> condition,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        bool saveChanges = true)
     {
         IEnumerable<T> entitiesToDelete = await _dbContext.Set<T>()
             .Where(condition)
             .ToListAsync(cancellationToken);
-        
-        if (entitiesToDelete.Any()) _dbContext.Set<T>().RemoveRange(entitiesToDelete);
+
+        if (entitiesToDelete.Any())
+        {
+            _dbContext.Set<T>().RemoveRange(entitiesToDelete);
+            await SaveChangesIfRequestedAsync(saveChanges, cancellationToken, nameof(DeleteByConditionAsync));
+        }
     }
 
 
@@ -575,7 +774,8 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
                     ex);
             }
 
-            throw new InvalidOperationException($"Error executing transaction in {nameof(ExecuteTransactionAsync)}.",
+            throw new InvalidOperationException(
+                $"Error executing transaction in {nameof(ExecuteTransactionAsync)}.",
                 ex);
         }
     }
@@ -702,7 +902,7 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
 
         var includeList = specification.Includes;
 
-        if (includeList != null)
+        if (specification.Includes != null)
         {
             query = ApplyIncludes(query, includeList);
 
@@ -785,6 +985,25 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
     {
         IQueryable<T> query = BuildQuery(specification, negateFilter);
         return ApplyOrdering(query, specification);
+    }
+
+    /// <summary>
+    /// Saves changes to the database if requested, with exception handling.
+    /// </summary>
+    /// <param name="saveChanges">If true, persists changes to the database; otherwise, no action is taken.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <param name="operationName">The name of the calling operation for error reporting.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    /// <exception cref="InvalidOperationException">Thrown if the save operation fails.</exception>
+    private async Task SaveChangesIfRequestedAsync(bool saveChanges, CancellationToken cancellationToken,
+        string operationName)
+    {
+        if (saveChanges)
+        {
+            await ExecuteWithExceptionHandlingAsync(
+                () => _dbContext.SaveChangesAsync(cancellationToken),
+                operationName);
+        }
     }
 
     #endregion

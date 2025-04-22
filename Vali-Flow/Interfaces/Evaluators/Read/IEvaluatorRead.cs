@@ -281,65 +281,284 @@ public interface IEvaluatorRead<T> where T : class
     /// </summary>
     /// <typeparam name="TKey">The type of the key, which must be non-nullable.</typeparam>
     /// <param name="specification">The specification defining the filtering and inclusion criteria.</param>
-    /// <param name="keySelector">The function to select the key for grouping.</param>
+    /// <param name="keySelector">The expression function to select the key for grouping.</param>
     /// <param name="cancellationToken">A token to cancel the asynchronous operation.</param>
     /// <returns>A task that represents the asynchronous operation, returning a dictionary with keys and their respective counts.</returns>
     Task<Dictionary<TKey, int>> EvaluateCountByGroupAsync<TKey>(
         IBasicSpecification<T> specification,
-        Func<T, TKey> keySelector,
+        Expression<Func<T, TKey>> keySelector,
         CancellationToken cancellationToken = default
     ) where TKey : notnull;
 
     /// <summary>
-    /// Asynchronously evaluates and returns a dictionary with the sum of a selected property grouped by a key selector.
+    /// Groups entities by a specified key and computes the sum of integer values for each group asynchronously.
     /// </summary>
-    /// <typeparam name="TKey">The type of the key, which must be non-nullable.</typeparam>
-    /// <typeparam name="TResult">The type of the result, which must implement INumber.</typeparam>
-    /// <param name="specification">The specification defining the filtering and inclusion criteria.</param>
-    /// <param name="keySelector">The function to select the key for grouping.</param>
-    /// <param name="selector">The function to select the property to sum.</param>
-    /// <param name="cancellationToken">A token to cancel the asynchronous operation.</param>
-    /// <returns>A task that represents the asynchronous operation, returning a dictionary with keys and their sums.</returns>
-    Task<Dictionary<TKey, TResult>> EvaluateSumByGroupAsync<TKey, TResult>(
+    /// <typeparam name="TKey">The type of the key to group by. Must not be null.</typeparam>
+    /// <param name="specification">The specification defining the filter criteria for the entities.</param>
+    /// <param name="keySelector">An expression that selects the key to group by.</param>
+    /// <param name="selector">An expression that selects the integer value to sum for each entity.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>A dictionary mapping each group key to the sum of integer values for that group.</returns>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="specification"/> or <paramref name="keySelector"/> or <paramref name="selector"/> is null.</exception>
+    /// <exception cref="InvalidOperationException">Thrown if the query execution fails.</exception>
+    public Task<Dictionary<TKey, int>> EvaluateSumByGroupAsync<TKey>(
         IBasicSpecification<T> specification,
-        Func<T, TKey> keySelector,
-        Func<T, TResult> selector,
+        Expression<Func<T, TKey>> keySelector,
+        Expression<Func<T, int>> selector,
         CancellationToken cancellationToken = default
-    ) where TResult : INumber<TResult> where TKey : notnull;
+    ) where TKey : notnull;
 
     /// <summary>
-    /// Asynchronously evaluates and returns a dictionary with the minimum value of a selected property grouped by a key selector.
+    /// Groups entities by a specified key and computes the sum of long integer values for each group asynchronously.
     /// </summary>
-    /// <typeparam name="TKey">The type of the key, which must be non-nullable.</typeparam>
-    /// <typeparam name="TResult">The type of the result, which must implement INumber.</typeparam>
-    /// <param name="specification">The specification defining the filtering and inclusion criteria.</param>
-    /// <param name="keySelector">The function to select the key for grouping.</param>
-    /// <param name="selector">The function to select the property to evaluate.</param>
-    /// <param name="cancellationToken">A token to cancel the asynchronous operation.</param>
-    /// <returns>A task that represents the asynchronous operation, returning a dictionary with keys and their minimum values.</returns>
-    Task<Dictionary<TKey, TResult>> EvaluateMinByGroupAsync<TKey, TResult>(
+    /// <typeparam name="TKey">The type of the key to group by. Must not be null.</typeparam>
+    /// <param name="specification">The specification defining the filter criteria for the entities.</param>
+    /// <param name="keySelector">An expression that selects the key to group by.</param>
+    /// <param name="selector">An expression that selects the long integer value to sum for each entity.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>A dictionary mapping each group key to the sum of long integer values for that group.</returns>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="specification"/> or <paramref name="keySelector"/> or <paramref name="selector"/> is null.</exception>
+    /// <exception cref="InvalidOperationException">Thrown if the query execution fails.</exception>
+    public Task<Dictionary<TKey, long>> EvaluateSumByGroupAsync<TKey>(
         IBasicSpecification<T> specification,
-        Func<T, TKey> keySelector,
-        Func<T, TResult> selector,
+        Expression<Func<T, TKey>> keySelector,
+        Expression<Func<T, long>> selector,
         CancellationToken cancellationToken = default
-    ) where TResult : INumber<TResult> where TKey : notnull;
+    ) where TKey : notnull;
 
     /// <summary>
-    /// Asynchronously evaluates and returns a dictionary with the maximum value of a selected property grouped by a key selector.
+    /// Groups entities by a specified key and computes the sum of float values for each group asynchronously.
     /// </summary>
-    /// <typeparam name="TKey">The type of the key, which must be non-nullable.</typeparam>
-    /// <typeparam name="TResult">The type of the result, which must implement INumber.</typeparam>
-    /// <param name="specification">The specification defining the filtering and inclusion criteria.</param>
-    /// <param name="keySelector">The function to select the key for grouping.</param>
-    /// <param name="selector">The function to select the property to evaluate.</param>
-    /// <param name="cancellationToken">A token to cancel the asynchronous operation.</param>
-    /// <returns>A task that represents the asynchronous operation, returning a dictionary with keys and their maximum values.</returns>
-    Task<Dictionary<TKey, TResult>> EvaluateMaxByGroupAsync<TKey, TResult>(
+    /// <typeparam name="TKey">The type of the key to group by. Must not be null.</typeparam>
+    /// <param name="specification">The specification defining the filter criteria for the entities.</param>
+    /// <param name="keySelector">An expression that selects the key to group by.</param>
+    /// <param name="selector">An expression that selects the float value to sum for each entity.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>A dictionary mapping each group key to the sum of float values for that group.</returns>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="specification"/> or <paramref name="keySelector"/> or <paramref name="selector"/> is null.</exception>
+    /// <exception cref="InvalidOperationException">Thrown if the query execution fails.</exception>
+    public Task<Dictionary<TKey, float>> EvaluateSumByGroupAsync<TKey>(
         IBasicSpecification<T> specification,
-        Func<T, TKey> keySelector,
-        Func<T, TResult> selector,
+        Expression<Func<T, TKey>> keySelector,
+        Expression<Func<T, float>> selector,
         CancellationToken cancellationToken = default
-    ) where TResult : INumber<TResult> where TKey : notnull;
+    ) where TKey : notnull;
+
+    /// <summary>
+    /// Groups entities by a specified key and computes the sum of double values for each group asynchronously.
+    /// </summary>
+    /// <typeparam name="TKey">The type of the key to group by. Must not be null.</typeparam>
+    /// <param name="specification">The specification defining the filter criteria for the entities.</param>
+    /// <param name="keySelector">An expression that selects the key to group by.</param>
+    /// <param name="selector">An expression that selects the double value to sum for each entity.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>A dictionary mapping each group key to the sum of double values for that group.</returns>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="specification"/> or <paramref name="keySelector"/> or <paramref name="selector"/> is null.</exception>
+    /// <exception cref="InvalidOperationException">Thrown if the query execution fails.</exception>
+    public Task<Dictionary<TKey, double>> EvaluateSumByGroupAsync<TKey>(
+        IBasicSpecification<T> specification,
+        Expression<Func<T, TKey>> keySelector,
+        Expression<Func<T, double>> selector,
+        CancellationToken cancellationToken = default
+    ) where TKey : notnull;
+
+    /// <summary>
+    /// Groups entities by a specified key and computes the sum of decimal values for each group asynchronously.
+    /// </summary>
+    /// <typeparam name="TKey">The type of the key to group by. Must not be null.</typeparam>
+    /// <param name="specification">The specification defining the filter criteria for the entities.</param>
+    /// <param name="keySelector">An expression that selects the key to group by.</param>
+    /// <param name="selector">An expression that selects the decimal value to sum for each entity.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>A dictionary mapping each group key to the sum of decimal values for that group.</returns>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="specification"/> or <paramref name="keySelector"/> or <paramref name="selector"/> is null.</exception>
+    /// <exception cref="InvalidOperationException">Thrown if the query execution fails.</exception>
+    public Task<Dictionary<TKey, decimal>> EvaluateSumByGroupAsync<TKey>(
+        IBasicSpecification<T> specification,
+        Expression<Func<T, TKey>> keySelector,
+        Expression<Func<T, decimal>> selector,
+        CancellationToken cancellationToken = default
+    ) where TKey : notnull;
+
+    /// <summary>
+    /// Groups entities by a specified key and computes the minimum integer value for each group asynchronously.
+    /// </summary>
+    /// <typeparam name="TKey">The type of the key to group by. Must not be null.</typeparam>
+    /// <param name="specification">The specification defining the filter criteria for the entities.</param>
+    /// <param name="keySelector">An expression that selects the key to group by.</param>
+    /// <param name="selector">An expression that selects the integer value to find the minimum for each entity.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>A dictionary mapping each group key to the minimum integer value for that group. Returns default(int) for empty groups.</returns>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="specification"/>, <paramref name="keySelector"/>, or <paramref name="selector"/> is null.</exception>
+    /// <exception cref="InvalidOperationException">Thrown if the query execution fails.</exception>
+    public Task<Dictionary<TKey, int>> EvaluateMinByGroupAsync<TKey>(
+        IBasicSpecification<T> specification,
+        Expression<Func<T, TKey>> keySelector,
+        Expression<Func<T, int>> selector,
+        CancellationToken cancellationToken = default
+    ) where TKey : notnull;
+    
+    /// <summary>
+    /// Groups entities by a specified key and computes the minimum long integer value for each group asynchronously.
+    /// </summary>
+    /// <typeparam name="TKey">The type of the key to group by. Must not be null.</typeparam>
+    /// <param name="specification">The specification defining the filter criteria for the entities.</param>
+    /// <param name="keySelector">An expression that selects the key to group by.</param>
+    /// <param name="selector">An expression that selects the long integer value to find the minimum for each entity.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>A dictionary mapping each group key to the minimum long integer value for that group. Returns default(long) for empty groups.</returns>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="specification"/>, <paramref name="keySelector"/>, or <paramref name="selector"/> is null.</exception>
+    /// <exception cref="InvalidOperationException">Thrown if the query execution fails.</exception>
+    public Task<Dictionary<TKey, long>> EvaluateMinByGroupAsync<TKey>(
+        IBasicSpecification<T> specification,
+        Expression<Func<T, TKey>> keySelector,
+        Expression<Func<T, long>> selector,
+        CancellationToken cancellationToken = default
+    ) where TKey : notnull;
+
+    /// <summary>
+    /// Groups entities by a specified key and computes the minimum float value for each group asynchronously.
+    /// </summary>
+    /// <typeparam name="TKey">The type of the key to group by. Must not be null.</typeparam>
+    /// <param name="specification">The specification defining the filter criteria for the entities.</param>
+    /// <param name="keySelector">An expression that selects the key to group by.</param>
+    /// <param name="selector">An expression that selects the float value to find the minimum for each entity.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>A dictionary mapping each group key to the minimum float value for that group. Returns default(float) for empty groups.</returns>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="specification"/>, <paramref name="keySelector"/>, or <paramref name="selector"/> is null.</exception>
+    /// <exception cref="InvalidOperationException">Thrown if the query execution fails.</exception>
+    public Task<Dictionary<TKey, float>> EvaluateMinByGroupAsync<TKey>(
+        IBasicSpecification<T> specification,
+        Expression<Func<T, TKey>> keySelector,
+        Expression<Func<T, float>> selector,
+        CancellationToken cancellationToken = default
+    ) where TKey : notnull;
+
+    /// <summary>
+    /// Groups entities by a specified key and computes the minimum double value for each group asynchronously.
+    /// </summary>
+    /// <typeparam name="TKey">The type of the key to group by. Must not be null.</typeparam>
+    /// <param name="specification">The specification defining the filter criteria for the entities.</param>
+    /// <param name="keySelector">An expression that selects the key to group by.</param>
+    /// <param name="selector">An expression that selects the double value to find the minimum for each entity.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>A dictionary mapping each group key to the minimum double value for that group. Returns default(double) for empty groups.</returns>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="specification"/>, <paramref name="keySelector"/>, or <paramref name="selector"/> is null.</exception>
+    /// <exception cref="InvalidOperationException">Thrown if the query execution fails.</exception>
+    public Task<Dictionary<TKey, double>> EvaluateMinByGroupAsync<TKey>(
+        IBasicSpecification<T> specification,
+        Expression<Func<T, TKey>> keySelector,
+        Expression<Func<T, double>> selector,
+        CancellationToken cancellationToken = default
+    ) where TKey : notnull;
+
+    /// <summary>
+    /// Groups entities by a specified key and computes the minimum decimal value for each group asynchronously.
+    /// </summary>
+    /// <typeparam name="TKey">The type of the key to group by. Must not be null.</typeparam>
+    /// <param name="specification">The specification defining the filter criteria for the entities.</param>
+    /// <param name="keySelector">An expression that selects the key to group by.</param>
+    /// <param name="selector">An expression that selects the decimal value to find the minimum for each entity.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>A dictionary mapping each group key to the minimum decimal value for that group. Returns default(decimal) for empty groups.</returns>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="specification"/>, <paramref name="keySelector"/>, or <paramref name="selector"/> is null.</exception>
+    /// <exception cref="InvalidOperationException">Thrown if the query execution fails.</exception>
+    public  Task<Dictionary<TKey, decimal>> EvaluateMinByGroupAsync<TKey>(
+        IBasicSpecification<T> specification,
+        Expression<Func<T, TKey>> keySelector,
+        Expression<Func<T, decimal>> selector,
+        CancellationToken cancellationToken = default
+    ) where TKey : notnull;
+
+    /// <summary>
+    /// Groups entities by a specified key and computes the maximum integer value for each group asynchronously.
+    /// </summary>
+    /// <typeparam name="TKey">The type of the key to group by. Must not be null.</typeparam>
+    /// <param name="specification">The specification defining the filter criteria for the entities.</param>
+    /// <param name="keySelector">An expression that selects the key to group by.</param>
+    /// <param name="selector">An expression that selects the integer value to find the maximum for each entity.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>A dictionary mapping each group key to the maximum integer value for that group. Returns default(int) for empty groups.</returns>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="specification"/>, <paramref name="keySelector"/>, or <paramref name="selector"/> is null.</exception>
+    /// <exception cref="InvalidOperationException">Thrown if the query execution fails.</exception>
+    public Task<Dictionary<TKey, int>> EvaluateMaxByGroupAsync<TKey>(
+        IBasicSpecification<T> specification,
+        Expression<Func<T, TKey>> keySelector,
+        Expression<Func<T, int>> selector,
+        CancellationToken cancellationToken = default
+    ) where TKey : notnull;
+    
+    /// <summary>
+    /// Groups entities by a specified key and computes the maximum long integer value for each group asynchronously.
+    /// </summary>
+    /// <typeparam name="TKey">The type of the key to group by. Must not be null.</typeparam>
+    /// <param name="specification">The specification defining the filter criteria for the entities.</param>
+    /// <param name="keySelector">An expression that selects the key to group by.</param>
+    /// <param name="selector">An expression that selects the long integer value to find the maximum for each entity.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>A dictionary mapping each group key to the maximum long integer value for that group. Returns default(long) for empty groups.</returns>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="specification"/>, <paramref name="keySelector"/>, or <paramref name="selector"/> is null.</exception>
+    /// <exception cref="InvalidOperationException">Thrown if the query execution fails.</exception>
+    public Task<Dictionary<TKey, long>> EvaluateMaxByGroupAsync<TKey>(
+        IBasicSpecification<T> specification,
+        Expression<Func<T, TKey>> keySelector,
+        Expression<Func<T, long>> selector,
+        CancellationToken cancellationToken = default
+    ) where TKey : notnull; 
+    
+    /// <summary>
+    /// Groups entities by a specified key and computes the maximum float value for each group asynchronously.
+    /// </summary>
+    /// <typeparam name="TKey">The type of the key to group by. Must not be null.</typeparam>
+    /// <param name="specification">The specification defining the filter criteria for the entities.</param>
+    /// <param name="keySelector">An expression that selects the key to group by.</param>
+    /// <param name="selector">An expression that selects the float value to find the maximum for each entity.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>A dictionary mapping each group key to the maximum float value for that group. Returns default(float) for empty groups.</returns>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="specification"/>, <paramref name="keySelector"/>, or <paramref name="selector"/> is null.</exception>
+    /// <exception cref="InvalidOperationException">Thrown if the query execution fails.</exception>
+    public Task<Dictionary<TKey, float>> EvaluateMaxByGroupAsync<TKey>(
+        IBasicSpecification<T> specification,
+        Expression<Func<T, TKey>> keySelector,
+        Expression<Func<T, float>> selector,
+        CancellationToken cancellationToken = default
+    ) where TKey : notnull; 
+    
+    /// <summary>
+    /// Groups entities by a specified key and computes the maximum double value for each group asynchronously.
+    /// </summary>
+    /// <typeparam name="TKey">The type of the key to group by. Must not be null.</typeparam>
+    /// <param name="specification">The specification defining the filter criteria for the entities.</param>
+    /// <param name="keySelector">An expression that selects the key to group by.</param>
+    /// <param name="selector">An expression that selects the double value to find the maximum for each entity.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>A dictionary mapping each group key to the maximum double value for that group. Returns default(double) for empty groups.</returns>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="specification"/>, <paramref name="keySelector"/>, or <paramref name="selector"/> is null.</exception>
+    /// <exception cref="InvalidOperationException">Thrown if the query execution fails.</exception>
+    public Task<Dictionary<TKey, double>> EvaluateMaxByGroupAsync<TKey>(
+        IBasicSpecification<T> specification,
+        Expression<Func<T, TKey>> keySelector,
+        Expression<Func<T, double>> selector,
+        CancellationToken cancellationToken = default
+    ) where TKey : notnull;   
+    
+    /// <summary>
+    /// Groups entities by a specified key and computes the maximum decimal value for each group asynchronously.
+    /// </summary>
+    /// <typeparam name="TKey">The type of the key to group by. Must not be null.</typeparam>
+    /// <param name="specification">The specification defining the filter criteria for the entities.</param>
+    /// <param name="keySelector">An expression that selects the key to group by.</param>
+    /// <param name="selector">An expression that selects the decimal value to find the maximum for each entity.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>A dictionary mapping each group key to the maximum decimal value for that group. Returns default(decimal) for empty groups.</returns>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="specification"/>, <paramref name="keySelector"/>, or <paramref name="selector"/> is null.</exception>
+    /// <exception cref="InvalidOperationException">Thrown if the query execution fails.</exception>
+    public Task<Dictionary<TKey, decimal>> EvaluateMaxByGroupAsync<TKey>(
+        IBasicSpecification<T> specification,
+        Expression<Func<T, TKey>> keySelector,
+        Expression<Func<T, decimal>> selector,
+        CancellationToken cancellationToken = default
+    ) where TKey : notnull;
 
     /// <summary>
     /// Asynchronously evaluates and returns a dictionary with the average value of a selected property grouped by a key selector.
@@ -347,14 +566,14 @@ public interface IEvaluatorRead<T> where T : class
     /// <typeparam name="TKey">The type of the key, which must be non-nullable.</typeparam>
     /// <typeparam name="TResult">The type of the result, which must implement INumber.</typeparam>
     /// <param name="specification">The specification defining the filtering and inclusion criteria.</param>
-    /// <param name="keySelector">The function to select the key for grouping.</param>
-    /// <param name="selector">The function to select the property to evaluate.</param>
+    /// <param name="keySelector">The expression function to select the key for grouping.</param>
+    /// <param name="selector">The expression function to select the property to evaluate.</param>
     /// <param name="cancellationToken">A token to cancel the asynchronous operation.</param>
     /// <returns>A task that represents the asynchronous operation, returning a dictionary with keys and their average values as decimals.</returns>
     Task<Dictionary<TKey, decimal>> EvaluateAverageByGroupAsync<TKey, TResult>(
         IBasicSpecification<T> specification,
-        Func<T, TKey> keySelector,
-        Func<T, TResult> selector,
+        Expression<Func<T, TKey>> keySelector,
+        Expression<Func<T, TResult>> selector,
         CancellationToken cancellationToken = default
     ) where TResult : INumber<TResult> where TKey : notnull;
 
@@ -363,12 +582,12 @@ public interface IEvaluatorRead<T> where T : class
     /// </summary>
     /// <typeparam name="TKey">The type of the key, which must be non-nullable.</typeparam>
     /// <param name="specification">The specification defining the filtering and inclusion criteria.</param>
-    /// <param name="keySelector">The function to select the key for grouping.</param>
+    /// <param name="keySelector">The expression function to select the key for grouping.</param>
     /// <param name="cancellationToken">A token to cancel the asynchronous operation.</param>
     /// <returns>A task that represents the asynchronous operation, returning a dictionary with keys and lists of duplicate entities.</returns>
     Task<Dictionary<TKey, List<T>>> EvaluateDuplicatesByGroupAsync<TKey>(
         IBasicSpecification<T> specification,
-        Func<T, TKey> keySelector,
+        Expression<Func<T, TKey>> keySelector,
         CancellationToken cancellationToken = default
     ) where TKey : notnull;
 
@@ -377,12 +596,12 @@ public interface IEvaluatorRead<T> where T : class
     /// </summary>
     /// <typeparam name="TKey">The type of the key, which must be non-nullable.</typeparam>
     /// <param name="specification">The specification defining the filtering and inclusion criteria.</param>
-    /// <param name="keySelector">The function to select the key for grouping.</param>
+    /// <param name="keySelector">The expression function to select the key for grouping.</param>
     /// <param name="cancellationToken">A token to cancel the asynchronous operation.</param>
     /// <returns>A task that represents the asynchronous operation, returning a dictionary with keys and their unique entities.</returns>
     Task<Dictionary<TKey, T>> EvaluateUniquesByGroupAsync<TKey>(
         IBasicSpecification<T> specification,
-        Func<T, TKey> keySelector,
+        Expression<Func<T, TKey>> keySelector,
         CancellationToken cancellationToken = default
     ) where TKey : notnull;
 
@@ -395,7 +614,7 @@ public interface IEvaluatorRead<T> where T : class
     /// The query specification defining the filtering, ordering, and top limit criteria for the query. Must not be null.
     /// The <see cref="IQuerySpecification{T}.Top"/> property must be specified to define the maximum number of entities to retrieve.
     /// </param>
-    /// <param name="keySelector">A function that defines the key to group entities by. Must not be null.</param>
+    /// <param name="keySelector">A expression function that defines the key to group entities by. Must not be null.</param>
     /// <param name="cancellationToken">A token to cancel the asynchronous operation. Default is <see cref="CancellationToken.None"/>.</param>
     /// <returns>
     /// A task that resolves to a dictionary where the keys are of type <typeparamref name="TKey"/> and the values are lists of entities of type <typeparamref name="T"/>.
@@ -417,7 +636,7 @@ public interface IEvaluatorRead<T> where T : class
     /// </remarks>
     Task<Dictionary<TKey, List<T>>> EvaluateTopByGroupAsync<TKey>(
         IQuerySpecification<T> specification,
-        Func<T, TKey> keySelector,
+        Expression<Func<T, TKey>> keySelector,
         CancellationToken cancellationToken = default
     ) where TKey : notnull;
     

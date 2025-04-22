@@ -102,9 +102,9 @@ static async Task TestExpression(AppDbContext context, ListarModuloQuery request
         
         // Ejecutar la consulta
         var modulos = await dbcontext.EvaluateQueryAsync(especification);
-        var data = modulos.ToList();
+        var data = await modulos.ToListAsync();
 
-        Console.WriteLine($"Módulos encontrados: {data.Count()}");
+        Console.WriteLine($"Módulos encontrados: {data.Count}");
         foreach (var modulo in data)
         {
             Console.WriteLine($" - {modulo.Nombre} (Id: {modulo.Id})");
