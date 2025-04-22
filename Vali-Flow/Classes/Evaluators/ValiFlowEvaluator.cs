@@ -680,41 +680,6 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
         return query;
     }
 
-    /*
-         /// <summary>
-    /// Applies paginated block logic to the query based on the specification's Page, PageSize, and BlockSize properties.
-    /// </summary>
-    /// <param name="query">The IQueryable instance to modify.</param>
-    /// <param name="specification">The specification containing the pagination and block criteria.</param>
-    /// <returns>The modified query with paginated block logic applied.</returns>
-    /// <exception cref="InvalidOperationException">Thrown if Page, PageSize, or BlockSize are invalid.</exception>
-    private IQueryable<T> ApplyPaginatedBlockQuery(IQueryable<T> query, IQuerySpecification<T> specification)
-    {
-        if (!specification.Page.HasValue || !specification.PageSize.HasValue)
-        {
-            return query;
-        }
-
-        int page = specification.Page.Value;
-        int pageSize = specification.PageSize.Value;
-
-        if (page < ConstantHelper.One || pageSize < ConstantHelper.One)
-        {
-            throw new InvalidOperationException("Page and PageSize must be greater than or equal to 1.");
-        }
-        
-
-        int pagesPerBlock = blockSize / pageSize;
-        int currentBlock = (page - ConstantHelper.One) / pagesPerBlock;
-        int blockOffset = currentBlock * blockSize;
-        int pageOffset = ((page - ConstantHelper.One) % pagesPerBlock) * pageSize;
-        int finalOffset = blockOffset + pageOffset;
-
-        return query.Skip(finalOffset).Take(pageSize);
-    }   
-
-     */
-
     private IQueryable<T> ApplyAsSplitQuery(IQueryable<T> query, bool asSplitQuery = false)
     {
         return asSplitQuery ? query.AsSplitQuery() : query;
