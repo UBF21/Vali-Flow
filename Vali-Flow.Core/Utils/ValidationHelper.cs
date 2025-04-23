@@ -7,7 +7,7 @@ namespace Vali_Flow.Core.Utils;
 /// </summary>
 public static class ValidationHelper
 {
-     /// <summary>
+    /// <summary>
     /// Checks whether a given string is a valid JSON.
     /// </summary>
     /// <param name="val">The string to validate.</param>
@@ -40,7 +40,7 @@ public static class ValidationHelper
             throw new ArgumentNullException(nameof(entity));
         }
     }
-    
+
     /// <summary>
     /// Validates if the page number is greater than zero.
     /// </summary>
@@ -51,7 +51,7 @@ public static class ValidationHelper
         if (page <= ConstantHelper.ZeroInt)
             throw new ArgumentOutOfRangeException(nameof(page), "Page must be greater than zero.");
     }
-    
+
     /// <summary>
     /// Validates if the page size is greater than zero.
     /// </summary>
@@ -62,7 +62,7 @@ public static class ValidationHelper
         if (pageSize <= ConstantHelper.ZeroInt)
             throw new ArgumentOutOfRangeException(nameof(pageSize), "PageSize must be greater than zero.");
     }
-    
+
     /// <summary>
     /// Validates if the count is greater than zero.
     /// </summary>
@@ -73,7 +73,7 @@ public static class ValidationHelper
         if (count <= ConstantHelper.ZeroInt)
             throw new ArgumentOutOfRangeException(nameof(count), "Count must be greater than zero.");
     }
-    
+
     /// <summary>
     /// Validates that the query is not null.
     /// </summary>
@@ -94,9 +94,10 @@ public static class ValidationHelper
     public static void ValidatePagination(int? page, int? pageSize)
     {
         if (page is <= 0) throw new ArgumentOutOfRangeException(nameof(page), "Page must be greater than zero.");
-        if (pageSize is <= 0) throw new ArgumentOutOfRangeException(nameof(pageSize), "Page size must be greater than zero.");
-    }    
-    
+        if (pageSize is <= 0)
+            throw new ArgumentOutOfRangeException(nameof(pageSize), "Page size must be greater than zero.");
+    }
+
     /// <summary>
     /// Validates pagination parameters.  Checks if page and pageSize are greater than zero, if provided.
     /// </summary>
@@ -106,21 +107,24 @@ public static class ValidationHelper
     public static void ValidatePagination(int page, int pageSize)
     {
         if (page <= 0) throw new ArgumentOutOfRangeException(nameof(page), "Page must be greater than zero.");
-        if (pageSize <= 0) throw new ArgumentOutOfRangeException(nameof(pageSize), "Page size must be greater than zero.");
+        if (pageSize <= 0)
+            throw new ArgumentOutOfRangeException(nameof(pageSize), "Page size must be greater than zero.");
     }
 
     public static void ValidatePaginationBlock(int page, int pageSize, int blockSize)
     {
         ValidatePagination(page, pageSize);
-        if (blockSize <= 0) throw new ArgumentOutOfRangeException(nameof(pageSize), "Block size must be greater than zero.");
+        if (blockSize <= 0)
+            throw new ArgumentOutOfRangeException(nameof(pageSize), "Block size must be greater than zero.");
     }
-    
+
     public static void ValidatePaginationBlock(int? page, int? pageSize, int? blockSize)
     {
         ValidatePagination(page, pageSize);
-        if ( blockSize is <= 0) throw new ArgumentOutOfRangeException(nameof(pageSize), "Block size must be greater than zero.");
+        if (blockSize is <= 0)
+            throw new ArgumentOutOfRangeException(nameof(pageSize), "Block size must be greater than zero.");
     }
-    
+
     /// <summary>
     /// Validates that the entities sequence is not null.
     /// </summary>
@@ -131,10 +135,24 @@ public static class ValidationHelper
     {
         if (entities == null)
         {
-            throw new ArgumentNullException(nameof(entities));
+            throw new ArgumentNullException(nameof(entities), "The collection of entities cannot be null.");
         }
     }
-    
+
+    /// <summary>
+    /// Validates that the entities sequence is not empty.
+    /// </summary>
+    /// <typeparam name="T">The type of the entities.</typeparam>
+    /// <param name="entities">The entities sequence to validate.</param>
+    /// <exception cref="ArgumentException">  Thrown if the entities sequence is empty.</exception>
+    public static void ValidateEntitiesEmpty<T>(IEnumerable<T> entities)
+    {
+        if (!entities.Any())
+        {
+            throw new ArgumentException("The collection of entities cannot be empty.", nameof(entities));
+        }
+    }
+
     /// <summary>
     /// Validates that the selector function is not null.
     /// </summary>

@@ -1,5 +1,7 @@
 using System.Linq.Expressions;
 using System.Numerics;
+using System.Reflection.Metadata;
+using EFCore.BulkExtensions;
 using Microsoft.EntityFrameworkCore;
 using Vali_Flow.Core.Builder;
 using Vali_Flow.Core.Utils;
@@ -28,32 +30,40 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
         return await Task.FromResult(condition(entity));
     }
 
-    public async Task<bool> EvaluateAnyAsync(IBasicSpecification<T> specification,
-        CancellationToken cancellationToken = default)
+    public async Task<bool> EvaluateAnyAsync(
+        IBasicSpecification<T> specification,
+        CancellationToken cancellationToken = default
+    )
     {
         IQueryable<T> query = BuildBasicQuery(specification);
         return await ExecuteWithExceptionHandlingAsync(() => query.AnyAsync(cancellationToken),
             nameof(EvaluateAnyAsync));
     }
 
-    public async Task<int> EvaluateCountAsync(IBasicSpecification<T> specification,
-        CancellationToken cancellationToken = default)
+    public async Task<int> EvaluateCountAsync(
+        IBasicSpecification<T> specification,
+        CancellationToken cancellationToken = default
+    )
     {
         IQueryable<T> query = BuildBasicQuery(specification);
         return await ExecuteWithExceptionHandlingAsync(() => query.CountAsync(cancellationToken),
             nameof(EvaluateCountAsync));
     }
 
-    public async Task<T?> EvaluateGetFirstFailedAsync(IBasicSpecification<T> specification,
-        CancellationToken cancellationToken = default)
+    public async Task<T?> EvaluateGetFirstFailedAsync(
+        IBasicSpecification<T> specification,
+        CancellationToken cancellationToken = default
+    )
     {
         var query = BuildBasicQuery(specification, true);
         return await ExecuteWithExceptionHandlingAsync(() => query.FirstOrDefaultAsync(cancellationToken),
             nameof(EvaluateGetFirstFailedAsync));
     }
 
-    public async Task<T?> EvaluateGetFirstAsync(IBasicSpecification<T> specification,
-        CancellationToken cancellationToken = default)
+    public async Task<T?> EvaluateGetFirstAsync(
+        IBasicSpecification<T> specification,
+        CancellationToken cancellationToken = default
+    )
     {
         var query = BuildBasicQuery(specification);
         return await ExecuteWithExceptionHandlingAsync(() => query.FirstOrDefaultAsync(cancellationToken),
@@ -62,23 +72,13 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
 
     public async Task<IQueryable<T>> EvaluateQueryFailedAsync(IQuerySpecification<T> specification)
     {
-        ValidateSpecificationForQuery(specification);
-
-        IQueryable<T> query = BuildAndOrderQuery(specification, negateFilter: true);
-        //query = ApplyPaginatedBlockQuery(query, specification);
-        query = ApplyPagination(query, specification);
-
+        IQueryable<T> query = BuildQuery(specification, negateFilter: true);
         return await Task.FromResult(query);
     }
 
     public async Task<IQueryable<T>> EvaluateQueryAsync(IQuerySpecification<T> specification)
     {
-        ValidateSpecificationForQuery(specification);
-
-        IQueryable<T> query = BuildAndOrderQuery(specification);
-        //query = ApplyPaginatedBlockQuery(query, specification);
-        query = ApplyPagination(query, specification);
-
+        IQueryable<T> query = BuildQuery(specification);
         return await Task.FromResult(query);
     }
 
@@ -87,12 +87,9 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
         Expression<Func<T, TKey>> selector
     ) where TKey : notnull
     {
-        ValidateSpecificationForQuery(specification);
-
-        IQueryable<T> query = BuildAndOrderQuery(specification);
-        query = query.GroupBy(selector).Select(g => g.First());
-        query = ApplyOrdering(query, specification);
-
+        IQueryable<T> query = BuildQuery(specification)
+            .GroupBy(selector)
+            .Select(g => g.First());
         return await Task.FromResult(ApplyPagination(query, specification));
     }
 
@@ -101,25 +98,28 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
         Expression<Func<T, TKey>> selector
     ) where TKey : notnull
     {
-        ValidateSpecificationForQuery(specification);
+        IQueryable<T> query = BuildQuery(specification)
+            .GroupBy(selector)
+            .Where(g => g.Count() > ConstantHelper.One)
+            .SelectMany(g => g);
 
-        IQueryable<T> query = BuildAndOrderQuery(specification);
-        query = query.GroupBy(selector).Where(g => g.Count() > ConstantHelper.One).SelectMany(g => g);
-        query = ApplyOrdering(query, specification);
-
-        return await Task.FromResult(ApplyPagination(query, specification));
+        return await Task.FromResult(query);
     }
 
-    public async Task<T?> EvaluateGetLastFailedAsync(IBasicSpecification<T> specification,
-        CancellationToken cancellationToken = default)
+    public async Task<T?> EvaluateGetLastFailedAsync(
+        IBasicSpecification<T> specification,
+        CancellationToken cancellationToken = default
+    )
     {
         IQueryable<T> query = BuildBasicQuery(specification, true);
         return await ExecuteWithExceptionHandlingAsync(() => query.LastOrDefaultAsync(cancellationToken),
             nameof(EvaluateGetLastFailedAsync));
     }
 
-    public async Task<T?> EvaluateGetLastAsync(IBasicSpecification<T> specification,
-        CancellationToken cancellationToken = default)
+    public async Task<T?> EvaluateGetLastAsync(
+        IBasicSpecification<T> specification,
+        CancellationToken cancellationToken = default
+    )
     {
         var query = BuildBasicQuery(specification);
         return await ExecuteWithExceptionHandlingAsync(() => query.LastOrDefaultAsync(cancellationToken),
@@ -565,9 +565,8 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
     {
         ValidateSpecificationForQuery(specification);
 
-        IQueryable<T> query = BuildAndOrderQuery(specification);
-        query = ApplyOrdering(query, specification);
-        query = query.Take(specification.Top ?? 50);
+        IQueryable<T> query = BuildQuery(specification);
+        query = query.Take(specification.Top ?? ConstantHelper.Fifty);
         return await ExecuteWithExceptionHandlingAsync(
             () => query
                 .GroupBy(keySelector)
@@ -579,9 +578,14 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
 
     #region Methods Write
 
-    public async Task<T> AddAsync(T entity, CancellationToken cancellationToken = default, bool saveChanges = true)
+    public async Task<T> AddAsync(
+        T entity,
+        bool saveChanges = true,
+        CancellationToken cancellationToken = default
+    )
     {
         ValidationHelper.ValidateEntityNotNull(entity);
+
         var addedEntity = await ExecuteWithExceptionHandlingAsync(
             async () => (await _dbContext.Set<T>().AddAsync(entity, cancellationToken)).Entity,
             nameof(AddAsync));
@@ -590,16 +594,16 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
         return addedEntity;
     }
 
-    public async Task<IEnumerable<T>> AddRangeAsync(IEnumerable<T> entities,
-        CancellationToken cancellationToken = default, bool saveChanges = true)
+    public async Task<IEnumerable<T>> AddRangeAsync(
+        IEnumerable<T> entities,
+        bool saveChanges = true,
+        CancellationToken cancellationToken = default
+    )
     {
-        if (entities == null)
-            throw new ArgumentNullException(nameof(entities), "The collection of entities cannot be null.");
-
         IEnumerable<T> entityList = entities.ToList();
 
-        if (!entityList.Any())
-            throw new ArgumentException("The collection of entities cannot be empty.", nameof(entities));
+        ValidationHelper.ValidateEntitiesNotNull(entityList);
+        // ValidationHelper.ValidateEntitiesEmpty(entityList);
 
         await ExecuteWithExceptionHandlingAsync(
             async () =>
@@ -612,52 +616,62 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
         return entityList;
     }
 
-    public async Task<T> UpdateAsync(T entity, bool saveChanges = true)
+    public async Task<T> UpdateAsync(
+        T entity,
+        bool saveChanges = true,
+        CancellationToken cancellationToken = default
+    )
     {
         ValidationHelper.ValidateEntityNotNull(entity);
         _dbContext.Set<T>().Update(entity);
 
-        await SaveChangesIfRequestedAsync(saveChanges, default, nameof(UpdateAsync));
+        await SaveChangesIfRequestedAsync(saveChanges, cancellationToken, nameof(UpdateAsync));
         return entity;
     }
 
-    public async Task<IEnumerable<T>> UpdateRangeAsync(IEnumerable<T> entities, bool saveChanges = true)
+    public async Task<IEnumerable<T>> UpdateRangeAsync(
+        IEnumerable<T> entities,
+        bool saveChanges = true,
+        CancellationToken cancellationToken = default
+    )
     {
-        if (entities == null)
-            throw new ArgumentNullException(nameof(entities), "The collection of entities cannot be null.");
-
         IEnumerable<T> entityList = entities.ToList();
 
-        if (!entityList.Any())
-            throw new ArgumentException("The collection of entities cannot be empty.", nameof(entities));
+        ValidationHelper.ValidateEntitiesNotNull(entityList);
+        // ValidationHelper.ValidateEntitiesEmpty(entityList);
 
         _dbContext.Set<T>().UpdateRange(entityList);
 
-        await SaveChangesIfRequestedAsync(saveChanges, default, nameof(UpdateRangeAsync));
+        await SaveChangesIfRequestedAsync(saveChanges, cancellationToken, nameof(UpdateRangeAsync));
         return entityList;
     }
 
-    public async Task DeleteAsync(T entity, bool saveChanges = true)
+    public async Task DeleteAsync(
+        T entity,
+        bool saveChanges = true,
+        CancellationToken cancellationToken = default
+    )
     {
         ValidationHelper.ValidateEntityNotNull(entity);
         _dbContext.Set<T>().Remove(entity);
 
-        await SaveChangesIfRequestedAsync(saveChanges, default, nameof(DeleteAsync));
+        await SaveChangesIfRequestedAsync(saveChanges, cancellationToken, nameof(DeleteAsync));
     }
 
-    public async Task DeleteRangeAsync(IEnumerable<T> entities, bool saveChanges = true)
+    public async Task DeleteRangeAsync(
+        IEnumerable<T> entities,
+        bool saveChanges = true,
+        CancellationToken cancellationToken = default
+    )
     {
-        if (entities == null)
-            throw new ArgumentNullException(nameof(entities), "The collection of entities cannot be null.");
-
         IEnumerable<T> entityList = entities.ToList();
 
-        if (!entityList.Any())
-            throw new ArgumentException("The collection of entities cannot be empty.", nameof(entities));
+        ValidationHelper.ValidateEntitiesNotNull(entityList);
+        // ValidationHelper.ValidateEntitiesEmpty(entityList);
 
         _dbContext.Set<T>().RemoveRange(entityList);
 
-        await SaveChangesIfRequestedAsync(saveChanges, default, nameof(DeleteRangeAsync));
+        await SaveChangesIfRequestedAsync(saveChanges, cancellationToken, nameof(DeleteRangeAsync));
     }
 
 
@@ -670,8 +684,8 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
     public async Task<T> UpsertAsync(
         T entity,
         Expression<Func<T, bool>> matchCondition,
-        CancellationToken cancellationToken = default,
-        bool saveChanges = true
+        bool saveChanges = true,
+        CancellationToken cancellationToken = default
     )
     {
         ValidationHelper.ValidateEntityNotNull(entity);
@@ -693,19 +707,16 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
     public async Task<IEnumerable<T>> UpsertRangeAsync<TProperty>(
         IEnumerable<T> entities,
         Func<T, TProperty> keySelector,
-        CancellationToken cancellationToken = default,
-        bool saveChanges = true
+        bool saveChanges = true,
+        CancellationToken cancellationToken = default
     ) where TProperty : notnull
     {
-        if (entities == null)
-            throw new ArgumentNullException(nameof(entities), "The collection of entities cannot be null.");
-
         IEnumerable<T> entityList = entities.ToList();
 
-        if (!entityList.Any())
-            throw new ArgumentException("The collection of entities cannot be empty.", nameof(entities));
+        ValidationHelper.ValidateEntitiesNotNull(entityList);
+        // ValidationHelper.ValidateEntitiesEmpty(entityList);
 
-        IEnumerable<TProperty> keys = entityList.Select(keySelector).ToList();
+        IEnumerable<TProperty> keys = entityList.Select(keySelector);
         IEnumerable<T> existingEntities = await _dbContext.Set<T>()
             .Where(e => keys.Contains(keySelector(e)))
             .ToListAsync(cancellationToken);
@@ -730,9 +741,11 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
     }
 
 
-    public async Task DeleteByConditionAsync(Expression<Func<T, bool>> condition,
-        CancellationToken cancellationToken = default,
-        bool saveChanges = true)
+    public async Task DeleteByConditionAsync(
+        Expression<Func<T, bool>> condition,
+        bool saveChanges = true,
+        CancellationToken cancellationToken = default
+    )
     {
         IEnumerable<T> entitiesToDelete = await _dbContext.Set<T>()
             .Where(condition)
@@ -778,6 +791,86 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
                 $"Error executing transaction in {nameof(ExecuteTransactionAsync)}.",
                 ex);
         }
+    }
+
+    public async Task BulkInsertAsync(
+        IEnumerable<T> entities,
+        BulkConfig? bulkConfig = null,
+        CancellationToken cancellationToken = default
+    )
+    {
+        var entityList = entities.ToList();
+
+        ValidationHelper.ValidateEntitiesNotNull(entityList);
+        // ValidationHelper.ValidateEntitiesEmpty(entityList);
+
+        await ExecuteWithExceptionHandlingAsync(
+            async () =>
+            {
+                await _dbContext.BulkInsertAsync(entityList, bulkConfig, cancellationToken: cancellationToken);
+                return Task.CompletedTask;
+            },
+            nameof(BulkInsertAsync));
+    }
+
+    public async Task BulkUpdateAsync(
+        IEnumerable<T> entities,
+        BulkConfig? bulkConfig = null,
+        CancellationToken cancellationToken = default
+    )
+    {
+        var entityList = entities.ToList();
+
+        ValidationHelper.ValidateEntitiesNotNull(entityList);
+        // ValidationHelper.ValidateEntitiesEmpty(entityList);
+
+        await ExecuteWithExceptionHandlingAsync(
+            async () =>
+            {
+                await _dbContext.BulkUpdateAsync(entityList, bulkConfig, cancellationToken: cancellationToken);
+                return Task.CompletedTask;
+            },
+            nameof(BulkInsertAsync));
+    }
+
+    public async Task BulkDeleteAsync(
+        IEnumerable<T> entities,
+        BulkConfig? bulkConfig = null,
+        CancellationToken cancellationToken = default
+    )
+    {
+        var entityList = entities.ToList();
+
+        ValidationHelper.ValidateEntitiesNotNull(entityList);
+        // ValidationHelper.ValidateEntitiesEmpty(entityList);
+
+        await ExecuteWithExceptionHandlingAsync(
+            async () =>
+            {
+                await _dbContext.BulkDeleteAsync(entityList, bulkConfig, cancellationToken: cancellationToken);
+                return Task.CompletedTask;
+            },
+            nameof(BulkDeleteAsync));
+    }
+
+    public async Task BulkInsertOrUpdateAsync(
+        IEnumerable<T> entities,
+        BulkConfig? bulkConfig = null,
+        CancellationToken cancellationToken = default
+    )
+    {
+        var entityList = entities.ToList();
+
+        ValidationHelper.ValidateEntitiesNotNull(entityList);
+        // ValidationHelper.ValidateEntitiesEmpty(entityList);
+
+        await ExecuteWithExceptionHandlingAsync(
+            async () =>
+            {
+                await _dbContext.BulkInsertOrUpdateAsync(entityList, bulkConfig, cancellationToken: cancellationToken);
+                return Task.CompletedTask;
+            },
+            nameof(BulkInsertOrUpdateAsync));
     }
 
     #endregion
@@ -880,11 +973,31 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
         return query;
     }
 
+    /// <summary>
+    /// Applies the split query option to the provided query if specified.
+    /// </summary>
+    /// <param name="query">The query to which the split query option will be applied. Cannot be null.</param>
+    /// <param name="asSplitQuery">A value indicating whether the query should be executed as a split query. Defaults to <see langword="false"/>.</param>
+    /// <returns>The query with the split query option applied if <paramref name="asSplitQuery"/> is <see langword="true"/>; otherwise, the original query.</returns>
+    /// <remarks>
+    /// This method configures the query to use Entity Framework Core's split query feature, which splits a query with multiple includes into separate SQL queries 
+    /// to improve performance by reducing the complexity of the resulting SQL and avoiding large Cartesian products. 
+    /// When <paramref name="asSplitQuery"/> is <see langword="true"/>, the query is modified with <c>AsSplitQuery()</c>, causing related data 
+    /// (e.g., navigation properties included via <see cref="ISpecification{T}.Includes"/>) to be retrieved in separate queries rather than a single joined query.
+    /// Use this option when dealing with complex queries involving multiple includes to optimize database performance, but note that it may increase the number of 
+    /// database round-trips. This method is typically used internally to apply the <see cref="ISpecification{T}.AsSplitQuery"/> setting from a specification.
+    /// </remarks>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="query"/> is null.</exception>
     private IQueryable<T> ApplyAsSplitQuery(IQueryable<T> query, bool asSplitQuery = false)
     {
         return asSplitQuery ? query.AsSplitQuery() : query;
     }
 
+    private IQueryable<T> ApplyTop(IQueryable<T> query, int? top = null)
+    {
+        return  top != null ?  query.Take((int)top) : query;
+    }
+    
     /// <summary>
     /// Builds a minimal query from the specification, applying only the filter, AsNoTracking, Includes, and AsSplitQuery options.
     /// Does not apply ordering or pagination.
@@ -894,52 +1007,23 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
     /// <returns>The constructed IQueryable.</returns>
     private IQueryable<T> BuildBasicQuery(ISpecification<T> specification, bool negateCondition = false)
     {
-        IQueryable<T> query = _dbContext.Set<T>().AsQueryable();
+        IQueryable<T> query = _dbContext.Set<T>();
 
         ValidationHelper.ValidateQueryNotNull(query);
 
+        query = ApplyWhere(query, specification.Filter, negateCondition);
+        query = ApplyIgnoreQueryFilters(query, specification.IgnoreQueryFilters);
         query = ApplyAsNoTracking(query, specification.AsNoTracking);
-
-        var includeList = specification.Includes;
-
-        if (specification.Includes != null)
-        {
-            query = ApplyIncludes(query, includeList);
-
-            if (specification.AsSplitQuery)
-            {
-                query = ApplyAsSplitQuery(query);
-            }
-        }
-
-        Expression<Func<T, bool>> condition =
-            negateCondition ? specification.Filter.BuildNegated() : specification.Filter.Build();
-        query = query.Where(condition);
+        query = ApplyIncludes(query, specification.Includes);
+        query = ApplyAsSplitQuery(query);
 
         return query;
     }
 
-    private IQueryable<T> BuildQuery(ISpecification<T> specification, bool negateCondition = false)
+    private IQueryable<T> ApplyWhere(IQueryable<T> query, ValiFlow<T> filter, bool negateCondition = false)
     {
-        IQueryable<T> query = _dbContext.Set<T>().AsQueryable();
-
-        ValidationHelper.ValidateQueryNotNull(query);
-
-        query = ApplyAsNoTracking(query, specification.AsNoTracking);
-
-        if (specification.Includes != null)
-        {
-            foreach (var include in specification.Includes)
-            {
-                query = include.ApplyInclude(query);
-            }
-        }
-
-        Expression<Func<T, bool>> condition =
-            negateCondition ? specification.Filter.BuildNegated() : specification.Filter.Build();
-        query = query.Where(condition);
-
-        return query;
+        Expression<Func<T, bool>> condition = negateCondition ? filter.BuildNegated() : filter.Build();
+        return query.Where(condition);
     }
 
     /// <summary>
@@ -981,10 +1065,14 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
     /// <param name="specification">The specification containing the filtering and ordering criteria.</param>
     /// <param name="negateFilter">If true, negates the filter condition; otherwise, applies it as-is.</param>
     /// <returns>The constructed and ordered IQueryable.</returns>
-    private IQueryable<T> BuildAndOrderQuery(IQuerySpecification<T> specification, bool negateFilter = false)
+    private IQueryable<T> BuildQuery(IQuerySpecification<T> specification, bool negateFilter = false)
     {
-        IQueryable<T> query = BuildQuery(specification, negateFilter);
-        return ApplyOrdering(query, specification);
+        ValidateSpecificationForQuery(specification);
+
+        IQueryable<T> query = BuildBasicQuery(specification, negateFilter);
+        query = ApplyOrdering(query, specification);
+        query = ApplyPagination(query, specification);
+        return query;
     }
 
     /// <summary>
@@ -1004,6 +1092,11 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
                 () => _dbContext.SaveChangesAsync(cancellationToken),
                 operationName);
         }
+    }
+
+    private IQueryable<T> ApplyIgnoreQueryFilters(IQueryable<T> query, bool ignoreQueryFilters = false)
+    {
+        return ignoreQueryFilters ? query.IgnoreQueryFilters() : query;
     }
 
     #endregion

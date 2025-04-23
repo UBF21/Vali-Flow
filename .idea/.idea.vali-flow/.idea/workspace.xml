@@ -9,10 +9,9 @@
   <component name="ChangeListManager">
     <list default="true" id="aa4fc315-c37b-4ab3-b9cc-02a55a2255c8" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/.idea.vali-flow/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.vali-flow/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Vali-Flow.Core/Utils/ValidationHelper.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Vali-Flow.Core/Utils/ValidationHelper.cs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Vali-Flow/Classes/Evaluators/ValiFlowEvaluator.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Vali-Flow/Classes/Evaluators/ValiFlowEvaluator.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Vali-Flow/Interfaces/Evaluators/Read/IEvaluatorRead.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Vali-Flow/Interfaces/Evaluators/Read/IEvaluatorRead.cs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Vali-Flow/Interfaces/Evaluators/Write/IEvaluatorWrite.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Vali-Flow/Interfaces/Evaluators/Write/IEvaluatorWrite.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/vali-flow-test/Program.cs" beforeDir="false" afterPath="$PROJECT_DIR$/vali-flow-test/Program.cs" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -43,7 +42,16 @@
     <setting file="file://$APPLICATION_CONFIG_DIR$/resharper-host/SourcesCache/67818da183a0c61cb12efd51eff113abd0238f8e25f75580148096acdd4a6be3/Aggregate.cs" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/Vali-Flow/Classes/Evaluators/ValiFlowEvaluator.cs" root0="FORCE_HIGHLIGHTING" />
     <setting file="mock:///Users/isw21/RiderProjects/vali-flow/Vali-Flow/Classes/Evaluators/ValiFlowEvaluator.cs" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///Users/isw21/RiderProjects/vali-flow/Vali-Flow/Classes/Evaluators/ValiFlowEvaluator.cs" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///Users/isw21/RiderProjects/vali-flow/Vali-Flow/Classes/Specification/BasicSpecification.cs" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///Users/isw21/RiderProjects/vali-flow/Vali-Flow/Classes/Specification/BasicSpecification.cs" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///Users/isw21/RiderProjects/vali-flow/Vali-Flow/Classes/Specification/BasicSpecification.cs" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///Users/isw21/RiderProjects/vali-flow/Vali-Flow/Interfaces/Evaluators/Read/IEvaluatorRead.cs" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///Users/isw21/RiderProjects/vali-flow/Vali-Flow/Interfaces/Evaluators/Read/IEvaluatorRead.cs" root0="SKIP_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/Vali-Flow/Interfaces/Evaluators/Read/IEvaluatorRead.cs" root0="FORCE_HIGHLIGHTING" />
+    <setting file="mock:///Users/isw21/RiderProjects/vali-flow/Vali-Flow/Interfaces/Evaluators/Write/IEvaluatorWrite.cs" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///Users/isw21/RiderProjects/vali-flow/Vali-Flow/Interfaces/Specification/ISpecification.cs" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///Users/isw21/RiderProjects/vali-flow/vali-flow-test/Program.cs" root0="SKIP_HIGHLIGHTING" />
     <setting file="file:///usr/local/share/dotnet/sdk/7.0.410/Sdks/Microsoft.NET.Sdk/Sdk/Sdk.props" root0="FORCE_HIGHLIGHTING" />
     <setting file="file:///usr/local/share/dotnet/sdk/7.0.410/Sdks/Microsoft.NET.Sdk/Sdk/Sdk.targets" root0="FORCE_HIGHLIGHTING" />
   </component>
@@ -146,6 +154,8 @@
       <workItem from="1744149956366" duration="491000" />
       <workItem from="1745280942260" duration="14332000" />
       <workItem from="1745350200900" duration="3969000" />
+      <workItem from="1745361351956" duration="2309000" />
+      <workItem from="1745413861006" duration="14461000" />
     </task>
     <task id="LOCAL-00001" summary="-Creación de nueva estructura para el builder de expresiones para linq o fuentes de datos en general (ValiFlow).">
       <option name="closed" value="true" />
@@ -291,7 +301,15 @@
       <option name="project" value="LOCAL" />
       <updated>1745281010322</updated>
     </task>
-    <option name="localTasksCounter" value="19" />
+    <task id="LOCAL-00019" summary="-Agregando el IgnoreQueryFilters para omitir filtros globales por entidad.&#10;&#10;-Mejora de documentación.&#10;&#10;-Creando métodos group by en base al tipo de dato numérico. &#10;&#10;-Agregando parámetro bool saveChanges = true para hacer el save de los cambios en cada método de modificación de datos.&#10;&#10;-Migrando los métodos ToDiccionary a ToDiccionaryAsync para evitar materilizar data antes de tiempo.">
+      <option name="closed" value="true" />
+      <created>1745363600311</created>
+      <option name="number" value="00019" />
+      <option name="presentableId" value="LOCAL-00019" />
+      <option name="project" value="LOCAL" />
+      <updated>1745363600312</updated>
+    </task>
+    <option name="localTasksCounter" value="20" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -353,7 +371,8 @@
     <MESSAGE value="Agregando un patrón specification a vali-flow para darle limpieza a los métodos." />
     <MESSAGE value="-Creación de nuevos parámetros para especificaciones como orderBy ,orderThenBy,top page y size.&#10;&#10;- restructuración de métodos evaluadores." />
     <MESSAGE value="Quitando método para paginación en lotes (no es util)." />
-    <option name="LAST_COMMIT_MESSAGE" value="Quitando método para paginación en lotes (no es util)." />
+    <MESSAGE value="-Agregando el IgnoreQueryFilters para omitir filtros globales por entidad.&#10;&#10;-Mejora de documentación.&#10;&#10;-Creando métodos group by en base al tipo de dato numérico. &#10;&#10;-Agregando parámetro bool saveChanges = true para hacer el save de los cambios en cada método de modificación de datos.&#10;&#10;-Migrando los métodos ToDiccionary a ToDiccionaryAsync para evitar materilizar data antes de tiempo." />
+    <option name="LAST_COMMIT_MESSAGE" value="-Agregando el IgnoreQueryFilters para omitir filtros globales por entidad.&#10;&#10;-Mejora de documentación.&#10;&#10;-Creando métodos group by en base al tipo de dato numérico. &#10;&#10;-Agregando parámetro bool saveChanges = true para hacer el save de los cambios en cada método de modificación de datos.&#10;&#10;-Migrando los métodos ToDiccionary a ToDiccionaryAsync para evitar materilizar data antes de tiempo." />
   </component>
   <component name="XSLT-Support.FileAssociations.UIState">
     <expand />
