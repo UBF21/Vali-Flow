@@ -8,8 +8,9 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="aa4fc315-c37b-4ab3-b9cc-02a55a2255c8" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/Vali-Flow/Utils/Constants.cs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Vali-Flow/Utils/ValidationHelper.cs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/.idea.vali-flow/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.vali-flow/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Vali-Flow.Core/Utils/ValidationHelper.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Vali-Flow.Core/Utils/ValidationHelper.cs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Vali-Flow/Classes/Evaluators/ValiFlowEvaluator.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Vali-Flow/Classes/Evaluators/ValiFlowEvaluator.cs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Vali-Flow/Interfaces/Evaluators/Write/IEvaluatorWrite.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Vali-Flow/Interfaces/Evaluators/Write/IEvaluatorWrite.cs" afterDir="false" />
     </list>
@@ -37,21 +38,16 @@
   }
 }</component>
   <component name="HighlightingSettingsPerFile">
+    <setting file="file://$APPLICATION_CONFIG_DIR$/resharper-host/DecompilerCache/ILViewer/8f134e7635b74b86aa90d7b5b78f4ecbfc00/a6/9443296a/02000008.il" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$APPLICATION_CONFIG_DIR$/resharper-host/DecompilerCache/decompiler/3442bdbe7a07406dbd4e05fe7357d408c40e00/4d/c91dd509/IEnumerable`1.cs" root0="SKIP_HIGHLIGHTING" />
+    <setting file="file://$APPLICATION_CONFIG_DIR$/resharper-host/DecompilerCache/decompiler/8f134e7635b74b86aa90d7b5b78f4ecbfc00/cf/c4ec0cb2/ValidationHelper.cs" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$APPLICATION_CONFIG_DIR$/resharper-host/DecompilerCache/decompiler/a11fb02b10e04f8883113b5389cc1b4fb85f8/11/84988e72/EntityFrameworkQueryableExtensions.cs" root0="SKIP_HIGHLIGHTING" />
     <setting file="file://$APPLICATION_CONFIG_DIR$/resharper-host/SourcesCache/67818da183a0c61cb12efd51eff113abd0238f8e25f75580148096acdd4a6be3/Aggregate.cs" root0="FORCE_HIGHLIGHTING" />
+    <setting file="mock:///Users/isw21/RiderProjects/vali-flow/Vali-Flow.Core/Utils/ValidationHelper.cs" root0="SKIP_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/Vali-Flow/Classes/Evaluators/ValiFlowEvaluator.cs" root0="FORCE_HIGHLIGHTING" />
     <setting file="mock:///Users/isw21/RiderProjects/vali-flow/Vali-Flow/Classes/Evaluators/ValiFlowEvaluator.cs" root0="SKIP_HIGHLIGHTING" />
-    <setting file="mock:///Users/isw21/RiderProjects/vali-flow/Vali-Flow/Classes/Evaluators/ValiFlowEvaluator.cs" root0="SKIP_HIGHLIGHTING" />
-    <setting file="mock:///Users/isw21/RiderProjects/vali-flow/Vali-Flow/Classes/Specification/BasicSpecification.cs" root0="SKIP_HIGHLIGHTING" />
-    <setting file="mock:///Users/isw21/RiderProjects/vali-flow/Vali-Flow/Classes/Specification/BasicSpecification.cs" root0="SKIP_HIGHLIGHTING" />
-    <setting file="mock:///Users/isw21/RiderProjects/vali-flow/Vali-Flow/Classes/Specification/BasicSpecification.cs" root0="SKIP_HIGHLIGHTING" />
-    <setting file="mock:///Users/isw21/RiderProjects/vali-flow/Vali-Flow/Interfaces/Evaluators/Read/IEvaluatorRead.cs" root0="SKIP_HIGHLIGHTING" />
-    <setting file="mock:///Users/isw21/RiderProjects/vali-flow/Vali-Flow/Interfaces/Evaluators/Read/IEvaluatorRead.cs" root0="SKIP_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/Vali-Flow/Interfaces/Evaluators/Read/IEvaluatorRead.cs" root0="FORCE_HIGHLIGHTING" />
     <setting file="mock:///Users/isw21/RiderProjects/vali-flow/Vali-Flow/Interfaces/Evaluators/Write/IEvaluatorWrite.cs" root0="SKIP_HIGHLIGHTING" />
-    <setting file="mock:///Users/isw21/RiderProjects/vali-flow/Vali-Flow/Interfaces/Specification/ISpecification.cs" root0="SKIP_HIGHLIGHTING" />
-    <setting file="mock:///Users/isw21/RiderProjects/vali-flow/vali-flow-test/Program.cs" root0="SKIP_HIGHLIGHTING" />
     <setting file="file:///usr/local/share/dotnet/sdk/7.0.410/Sdks/Microsoft.NET.Sdk/Sdk/Sdk.props" root0="FORCE_HIGHLIGHTING" />
     <setting file="file:///usr/local/share/dotnet/sdk/7.0.410/Sdks/Microsoft.NET.Sdk/Sdk/Sdk.targets" root0="FORCE_HIGHLIGHTING" />
   </component>
@@ -155,7 +151,8 @@
       <workItem from="1745280942260" duration="14332000" />
       <workItem from="1745350200900" duration="3969000" />
       <workItem from="1745361351956" duration="2309000" />
-      <workItem from="1745413861006" duration="14461000" />
+      <workItem from="1745413861006" duration="27122000" />
+      <workItem from="1745527651544" duration="435000" />
     </task>
     <task id="LOCAL-00001" summary="-Creación de nueva estructura para el builder de expresiones para linq o fuentes de datos en general (ValiFlow).">
       <option name="closed" value="true" />
@@ -309,7 +306,23 @@
       <option name="project" value="LOCAL" />
       <updated>1745363600312</updated>
     </task>
-    <option name="localTasksCounter" value="20" />
+    <task id="LOCAL-00020" summary="-Agregando métodos para la inserción masiva.&#10;&#10;-Refactorizando código y implementando los nuevos métodos para inserción masiva.&#10;&#10;-Agregando la importación de vali-flow.core desplegado en nuget.">
+      <option name="closed" value="true" />
+      <created>1745452654006</created>
+      <option name="number" value="00020" />
+      <option name="presentableId" value="LOCAL-00020" />
+      <option name="project" value="LOCAL" />
+      <updated>1745452654006</updated>
+    </task>
+    <task id="LOCAL-00021" summary="- agregando el nuget de vali-flow.core deplegada en nuget.">
+      <option name="closed" value="true" />
+      <created>1745452672463</created>
+      <option name="number" value="00021" />
+      <option name="presentableId" value="LOCAL-00021" />
+      <option name="project" value="LOCAL" />
+      <updated>1745452672463</updated>
+    </task>
+    <option name="localTasksCounter" value="22" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -372,7 +385,9 @@
     <MESSAGE value="-Creación de nuevos parámetros para especificaciones como orderBy ,orderThenBy,top page y size.&#10;&#10;- restructuración de métodos evaluadores." />
     <MESSAGE value="Quitando método para paginación en lotes (no es util)." />
     <MESSAGE value="-Agregando el IgnoreQueryFilters para omitir filtros globales por entidad.&#10;&#10;-Mejora de documentación.&#10;&#10;-Creando métodos group by en base al tipo de dato numérico. &#10;&#10;-Agregando parámetro bool saveChanges = true para hacer el save de los cambios en cada método de modificación de datos.&#10;&#10;-Migrando los métodos ToDiccionary a ToDiccionaryAsync para evitar materilizar data antes de tiempo." />
-    <option name="LAST_COMMIT_MESSAGE" value="-Agregando el IgnoreQueryFilters para omitir filtros globales por entidad.&#10;&#10;-Mejora de documentación.&#10;&#10;-Creando métodos group by en base al tipo de dato numérico. &#10;&#10;-Agregando parámetro bool saveChanges = true para hacer el save de los cambios en cada método de modificación de datos.&#10;&#10;-Migrando los métodos ToDiccionary a ToDiccionaryAsync para evitar materilizar data antes de tiempo." />
+    <MESSAGE value="-Agregando métodos para la inserción masiva.&#10;&#10;-Refactorizando código y implementando los nuevos métodos para inserción masiva.&#10;&#10;-Agregando la importación de vali-flow.core desplegado en nuget." />
+    <MESSAGE value="- agregando el nuget de vali-flow.core deplegada en nuget." />
+    <option name="LAST_COMMIT_MESSAGE" value="- agregando el nuget de vali-flow.core deplegada en nuget." />
   </component>
   <component name="XSLT-Support.FileAssociations.UIState">
     <expand />

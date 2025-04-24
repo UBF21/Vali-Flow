@@ -4,7 +4,7 @@
         <TargetFrameworks>net7.0;net8.0;net9.0</TargetFrameworks>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
-        <RootNamespace>Vali-Flow.InMemory</RootNamespace>
+        <RootNamespace>Vali_Flow.InMemory</RootNamespace>
         <PackageProjectUrl>#</PackageProjectUrl>
         <RepositoryType>git</RepositoryType>
         <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
@@ -28,7 +28,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\Vali-Flow.Core\Vali-Flow.Core.csproj" />
+      <PackageReference Include="Vali-Flow.Core" Version="1.0.4" />
     </ItemGroup>
 
 </Project>

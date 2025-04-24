@@ -1,14 +1,13 @@
 using System.Linq.Expressions;
 using System.Numerics;
-using System.Reflection.Metadata;
 using EFCore.BulkExtensions;
 using Microsoft.EntityFrameworkCore;
 using Vali_Flow.Core.Builder;
-using Vali_Flow.Core.Utils;
 using Vali_Flow.Interfaces.Evaluators.Read;
 using Vali_Flow.Interfaces.Evaluators.Write;
 using Vali_Flow.Interfaces.Options;
 using Vali_Flow.Interfaces.Specification;
+using Vali_Flow.Utils;
 
 namespace Vali_Flow.Classes.Evaluators;
 
@@ -100,7 +99,7 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
     {
         IQueryable<T> query = BuildQuery(specification)
             .GroupBy(selector)
-            .Where(g => g.Count() > ConstantHelper.One)
+            .Where(g => g.Count() > Constants.One)
             .SelectMany(g => g);
 
         return await Task.FromResult(query);
@@ -563,10 +562,8 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
         CancellationToken cancellationToken = default
     ) where TKey : notnull
     {
-        ValidateSpecificationForQuery(specification);
-
         IQueryable<T> query = BuildQuery(specification);
-        query = query.Take(specification.Top ?? ConstantHelper.Fifty);
+        query = query.Take(specification.Top ?? Constants.Fifty);
         return await ExecuteWithExceptionHandlingAsync(
             () => query
                 .GroupBy(keySelector)
@@ -603,7 +600,7 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
         IEnumerable<T> entityList = entities.ToList();
 
         ValidationHelper.ValidateEntitiesNotNull(entityList);
-        // ValidationHelper.ValidateEntitiesEmpty(entityList);
+        ValidationHelper.ValidateEntitiesEmpty(entityList);
 
         await ExecuteWithExceptionHandlingAsync(
             async () =>
@@ -638,7 +635,7 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
         IEnumerable<T> entityList = entities.ToList();
 
         ValidationHelper.ValidateEntitiesNotNull(entityList);
-        // ValidationHelper.ValidateEntitiesEmpty(entityList);
+        ValidationHelper.ValidateEntitiesEmpty(entityList);
 
         _dbContext.Set<T>().UpdateRange(entityList);
 
@@ -667,7 +664,7 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
         IEnumerable<T> entityList = entities.ToList();
 
         ValidationHelper.ValidateEntitiesNotNull(entityList);
-        // ValidationHelper.ValidateEntitiesEmpty(entityList);
+        ValidationHelper.ValidateEntitiesEmpty(entityList);
 
         _dbContext.Set<T>().RemoveRange(entityList);
 
@@ -714,7 +711,7 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
         IEnumerable<T> entityList = entities.ToList();
 
         ValidationHelper.ValidateEntitiesNotNull(entityList);
-        // ValidationHelper.ValidateEntitiesEmpty(entityList);
+        ValidationHelper.ValidateEntitiesEmpty(entityList);
 
         IEnumerable<TProperty> keys = entityList.Select(keySelector);
         IEnumerable<T> existingEntities = await _dbContext.Set<T>()
@@ -802,7 +799,7 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
         var entityList = entities.ToList();
 
         ValidationHelper.ValidateEntitiesNotNull(entityList);
-        // ValidationHelper.ValidateEntitiesEmpty(entityList);
+        ValidationHelper.ValidateEntitiesEmpty(entityList);
 
         await ExecuteWithExceptionHandlingAsync(
             async () =>
@@ -822,7 +819,7 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
         var entityList = entities.ToList();
 
         ValidationHelper.ValidateEntitiesNotNull(entityList);
-        // ValidationHelper.ValidateEntitiesEmpty(entityList);
+        ValidationHelper.ValidateEntitiesEmpty(entityList);
 
         await ExecuteWithExceptionHandlingAsync(
             async () =>
@@ -842,7 +839,7 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
         var entityList = entities.ToList();
 
         ValidationHelper.ValidateEntitiesNotNull(entityList);
-        // ValidationHelper.ValidateEntitiesEmpty(entityList);
+        ValidationHelper.ValidateEntitiesEmpty(entityList);
 
         await ExecuteWithExceptionHandlingAsync(
             async () =>
@@ -862,7 +859,7 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
         var entityList = entities.ToList();
 
         ValidationHelper.ValidateEntitiesNotNull(entityList);
-        // ValidationHelper.ValidateEntitiesEmpty(entityList);
+        ValidationHelper.ValidateEntitiesEmpty(entityList);
 
         await ExecuteWithExceptionHandlingAsync(
             async () =>
@@ -889,11 +886,7 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
     /// <returns>
     /// The modified query with AsNoTracking applied if requested; otherwise, the original query.
     /// </returns>
-    private IQueryable<T> ApplyAsNoTracking(IQueryable<T> query, bool asNoTracking = true)
-    {
-        return asNoTracking ? query.AsNoTracking() : query;
-    }
-
+    private IQueryable<T> ApplyAsNoTracking(IQueryable<T> query, bool asNoTracking = true) => asNoTracking ? query.AsNoTracking() : query;
 
     /// <summary>
     /// Applies the specified include expressions to an <see cref="IQueryable{T}"/> query.
@@ -919,7 +912,21 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
         return query;
     }
 
-
+    /// <summary>
+    /// Applies ordering criteria to the provided query based on the specified query specification.
+    /// </summary>
+    /// <param name="query">The query to which the ordering criteria will be applied. Cannot be null.</param>
+    /// <param name="specification">The query specification containing the ordering criteria. Cannot be null.</param>
+    /// <returns>The query with the ordering criteria applied, or the original query if no ordering is specified.</returns>
+    /// <remarks>
+    /// This method applies the ordering criteria defined in the <paramref name="specification"/> to the query using Entity Framework Core's ordering methods. 
+    /// If the <see cref="IQuerySpecification{T}.OrderBy"/> property is specified, it is applied using the <c>ApplyOrderBy</c> method to establish the primary ordering. 
+    /// If the <see cref="IQuerySpecification{T}.ThenBys"/> collection is non-empty, each secondary ordering is applied using the <c>ApplyThenBy</c> method to further refine the order. 
+    /// If no ordering criteria are specified, the original query is returned unchanged. 
+    /// This method is used internally to incorporate the ordering logic defined by the specification into the query pipeline, 
+    /// enabling consistent and reusable sorting of query results based on business requirements.
+    /// </remarks>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="query"/> or <paramref name="specification"/> is null.</exception>
     private IQueryable<T> ApplyOrdering(IQueryable<T> query, IQuerySpecification<T> specification)
     {
         if (specification.OrderBy == null) return query;
@@ -961,7 +968,7 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
     {
         if (specification is { Page: not null, PageSize: not null })
         {
-            int skip = (specification.Page.Value - ConstantHelper.One) * specification.PageSize.Value;
+            int skip = (specification.Page.Value - Constants.One) * specification.PageSize.Value;
             int take = specification.PageSize.Value;
             query = query.Skip(skip).Take(take);
         }
@@ -988,16 +995,9 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
     /// database round-trips. This method is typically used internally to apply the <see cref="ISpecification{T}.AsSplitQuery"/> setting from a specification.
     /// </remarks>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="query"/> is null.</exception>
-    private IQueryable<T> ApplyAsSplitQuery(IQueryable<T> query, bool asSplitQuery = false)
-    {
-        return asSplitQuery ? query.AsSplitQuery() : query;
-    }
-
-    private IQueryable<T> ApplyTop(IQueryable<T> query, int? top = null)
-    {
-        return  top != null ?  query.Take((int)top) : query;
-    }
+    private IQueryable<T> ApplyAsSplitQuery(IQueryable<T> query, bool asSplitQuery = false) => asSplitQuery ? query.AsSplitQuery() : query;
     
+
     /// <summary>
     /// Builds a minimal query from the specification, applying only the filter, AsNoTracking, Includes, and AsSplitQuery options.
     /// Does not apply ordering or pagination.
@@ -1011,8 +1011,8 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
 
         ValidationHelper.ValidateQueryNotNull(query);
 
-        query = ApplyWhere(query, specification.Filter, negateCondition);
         query = ApplyIgnoreQueryFilters(query, specification.IgnoreQueryFilters);
+        query = ApplyWhere(query, specification.Filter, negateCondition);
         query = ApplyAsNoTracking(query, specification.AsNoTracking);
         query = ApplyIncludes(query, specification.Includes);
         query = ApplyAsSplitQuery(query);
@@ -1020,43 +1020,29 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
         return query;
     }
 
+    /// <summary>
+    /// Applies a filter condition to the provided query using the specified validation flow.
+    /// </summary>
+    /// <param name="query">The query to which the filter condition will be applied. Cannot be null.</param>
+    /// <param name="filter">The validation flow defining the filter criteria. Cannot be null.</param>
+    /// <param name="negateCondition">A value indicating whether the filter condition should be negated. Defaults to <see langword="false"/>.</param>
+    /// <returns>The query with the filter condition applied using the <see cref="ValiFlow{T}"/> criteria.</returns>
+    /// <remarks>
+    /// This method applies the filter criteria defined by the <paramref name="filter"/> to the query using Entity Framework Core's <c>Where</c> method. 
+    /// If <paramref name="negateCondition"/> is <see langword="true"/>, the filter condition is negated (e.g., <c>NOT</c> is applied to the criteria), 
+    /// allowing for exclusion-based filtering. The <paramref name="filter"/> is typically sourced from a specification's filter property.
+    /// This method is used internally to incorporate the filtering logic defined by <see cref="ValiFlow{T}"/> into the query pipeline, 
+    /// enabling complex and reusable filter conditions. Use this method to ensure that filter criteria are consistently applied to queries, 
+    /// supporting scenarios such as filtering entities based on business rules or excluding specific records when negating conditions.
+    /// </remarks>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="query"/> or <paramref name="filter"/> is null.</exception>
     private IQueryable<T> ApplyWhere(IQueryable<T> query, ValiFlow<T> filter, bool negateCondition = false)
     {
+        ValidationHelper.ValidateQueryNotNull(query);
+        ValidationHelper.ValidateFilterNotNull(filter);
+
         Expression<Func<T, bool>> condition = negateCondition ? filter.BuildNegated() : filter.Build();
         return query.Where(condition);
-    }
-
-    /// <summary>
-    /// Validates the specification properties to ensure they are valid for query construction.
-    /// </summary>
-    /// <param name="specification">The specification to validate.</param>
-    /// <exception cref="InvalidOperationException">Thrown if specification properties are invalid.</exception>
-    private void ValidateSpecificationForQuery(IQuerySpecification<T> specification)
-    {
-        if (specification.Filter == null)
-        {
-            throw new InvalidOperationException("Filter must be specified in the specification.");
-        }
-
-        if (specification is { Page: not null, PageSize: null })
-        {
-            throw new InvalidOperationException("PageSize must be specified when Page is specified.");
-        }
-
-        if (specification.Page is < ConstantHelper.One)
-        {
-            throw new InvalidOperationException("Page must be greater than or equal to 1.");
-        }
-
-        if (specification.PageSize is < ConstantHelper.One)
-        {
-            throw new InvalidOperationException("PageSize must be greater than or equal to 1.");
-        }
-
-        if (specification.Top is < ConstantHelper.One)
-        {
-            throw new InvalidOperationException("Top must be greater than or equal to 1.");
-        }
     }
 
     /// <summary>
@@ -1067,8 +1053,6 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
     /// <returns>The constructed and ordered IQueryable.</returns>
     private IQueryable<T> BuildQuery(IQuerySpecification<T> specification, bool negateFilter = false)
     {
-        ValidateSpecificationForQuery(specification);
-
         IQueryable<T> query = BuildBasicQuery(specification, negateFilter);
         query = ApplyOrdering(query, specification);
         query = ApplyPagination(query, specification);
@@ -1094,10 +1078,8 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
         }
     }
 
-    private IQueryable<T> ApplyIgnoreQueryFilters(IQueryable<T> query, bool ignoreQueryFilters = false)
-    {
-        return ignoreQueryFilters ? query.IgnoreQueryFilters() : query;
-    }
+    private IQueryable<T> ApplyIgnoreQueryFilters(IQueryable<T> query, bool ignoreQueryFilters = false) =>
+        ignoreQueryFilters ? query.IgnoreQueryFilters() : query;
 
     #endregion
 }

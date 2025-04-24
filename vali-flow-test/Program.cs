@@ -1,5 +1,4 @@
-﻿using System.Linq.Expressions;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using vali_flow_test.DbConext;
 using vali_flow_test.Models;
@@ -81,9 +80,11 @@ static async Task TestExpression(AppDbContext context, ListarModuloQuery request
             //     group.Add(x => string.IsNullOrEmpty(request.Search))
             //         .Or()
             //         .Add(x => x.Nombre.ToLower().Contains(request.Search.ToLower())));
-        .NullOrEmpty(x => request.Search)
-        .Or()
-        .Contains(x => x.Nombre,request.Search);
+            .NullOrEmpty(x => request.Search)
+            .Or()
+            .Contains(x => x.Nombre, request.Search)
+            .And()
+            .StartsWith(x => x.Nombre, "Test");
         // .And()
         // .Add(x => x.CustomerId.Equals(Guid.NewGuid()))
         // .And()
@@ -94,12 +95,12 @@ static async Task TestExpression(AppDbContext context, ListarModuloQuery request
         // .Add(x => request.ClasificacionId.Equals(Guid.Empty))
         // .Or()
         // .Add(x => x.ClasificacionId.Equals(request.ClasificacionId));
-        
+
         var dbcontext = new ValiFlowEvaluator<Modulo>(context);
 
 
         var especification = new QuerySpecification<Modulo>(builder);
-        
+
         // Ejecutar la consulta
         var modulos = await dbcontext.EvaluateQueryAsync(especification);
         var data = await modulos.ToListAsync();

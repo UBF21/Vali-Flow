@@ -4,8 +4,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vali-Flow", "Vali-Flow\Vali
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "vali-flow-test", "vali-flow-test\vali-flow-test.csproj", "{D7FB71BE-1C8E-433A-964D-A0E7E070F00F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vali-Flow.Core", "Vali-Flow.Core\Vali-Flow.Core.csproj", "{8F563D0F-37F4-4505-A8A8-578596B8E74D}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vali-Flow.InMemory", "Vali-Flow.InMemory\Vali-Flow.InMemory.csproj", "{02504EA2-D813-42AD-9C62-C7D95E2CA88D}"
 EndProject
 Global
@@ -22,10 +20,6 @@ Global
 		{D7FB71BE-1C8E-433A-964D-A0E7E070F00F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D7FB71BE-1C8E-433A-964D-A0E7E070F00F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D7FB71BE-1C8E-433A-964D-A0E7E070F00F}.Release|Any CPU.Build.0 = Release|Any CPU
-		{8F563D0F-37F4-4505-A8A8-578596B8E74D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{8F563D0F-37F4-4505-A8A8-578596B8E74D}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{8F563D0F-37F4-4505-A8A8-578596B8E74D}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{8F563D0F-37F4-4505-A8A8-578596B8E74D}.Release|Any CPU.Build.0 = Release|Any CPU
 		{02504EA2-D813-42AD-9C62-C7D95E2CA88D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{02504EA2-D813-42AD-9C62-C7D95E2CA88D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{02504EA2-D813-42AD-9C62-C7D95E2CA88D}.Release|Any CPU.ActiveCfg = Release|Any CPU

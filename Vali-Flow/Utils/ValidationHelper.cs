@@ -1,6 +1,7 @@
 using System.Text.Json;
+using Vali_Flow.Core.Builder;
 
-namespace Vali_Flow.Core.Utils;
+namespace Vali_Flow.Utils;
 
 /// <summary>
 /// Provides helper methods for validations.
@@ -48,7 +49,7 @@ public static class ValidationHelper
     /// <exception cref="ArgumentOutOfRangeException">Thrown if the page number is less than or equal to zero.</exception>
     public static void ValidatePageZero(int page)
     {
-        if (page <= ConstantHelper.ZeroInt)
+        if (page <= Constants.ZeroInt)
             throw new ArgumentOutOfRangeException(nameof(page), "Page must be greater than zero.");
     }
 
@@ -59,7 +60,7 @@ public static class ValidationHelper
     /// <exception cref="ArgumentOutOfRangeException">Thrown if the page size is less than or equal to zero.</exception>
     public static void ValidatePageSizeZero(int pageSize)
     {
-        if (pageSize <= ConstantHelper.ZeroInt)
+        if (pageSize <= Constants.ZeroInt)
             throw new ArgumentOutOfRangeException(nameof(pageSize), "PageSize must be greater than zero.");
     }
 
@@ -70,7 +71,7 @@ public static class ValidationHelper
     /// <exception cref="ArgumentOutOfRangeException">Thrown if the count is less than or equal to zero.</exception>
     public static void ValidateCountZero(int count)
     {
-        if (count <= ConstantHelper.ZeroInt)
+        if (count <= Constants.ZeroInt)
             throw new ArgumentOutOfRangeException(nameof(count), "Count must be greater than zero.");
     }
 
@@ -165,6 +166,14 @@ public static class ValidationHelper
         if (selector == null)
         {
             throw new ArgumentNullException(nameof(selector));
+        }
+    }
+    
+    public static void ValidateFilterNotNull<T>(ValiFlow<T> filter)
+    {
+        if (filter == null)
+        {
+            throw new ArgumentNullException(nameof(filter));
         }
     }
 }

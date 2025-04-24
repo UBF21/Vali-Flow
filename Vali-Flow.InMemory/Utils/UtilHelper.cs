@@ -1,8 +1,8 @@
 using System.Reflection;
 
-namespace Vali_Flow.Core.Utils;
+namespace Vali_Flow.InMemory.Utils;
 
-public static class UtilHelper
+public class UtilHelper
 {
     public static string? GetCurrentMethodName()
     {

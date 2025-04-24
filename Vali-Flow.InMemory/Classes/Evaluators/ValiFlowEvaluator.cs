@@ -1,10 +1,10 @@
 using System.Linq.Expressions;
 using System.Numerics;
 using Vali_Flow.Core.Builder;
-using Vali_Flow.Core.Utils;
 using Vali_Flow.InMemory.Classes.Options;
 using Vali_Flow.InMemory.Interfaces.Evaluators.Read;
 using Vali_Flow.InMemory.Interfaces.Evaluators.Write;
+using Vali_Flow.InMemory.Utils;
 
 namespace Vali_Flow.InMemory.Classes.Evaluators;
 

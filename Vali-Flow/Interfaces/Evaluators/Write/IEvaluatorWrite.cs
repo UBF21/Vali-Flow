@@ -30,8 +30,10 @@ public interface IEvaluatorWrite<T>
     /// <exception cref="ArgumentNullException">Thrown if <paramref name="entities"/> is null.</exception>
     /// <exception cref="ArgumentException">Thrown if <paramref name="entities"/> is empty.</exception>
     /// <exception cref="InvalidOperationException">Thrown if the operation fails.</exception>
-    Task<IEnumerable<T>> AddRangeAsync(IEnumerable<T> entities,
-        bool saveChanges = true,CancellationToken cancellationToken = default);
+    Task<IEnumerable<T>> AddRangeAsync(
+        IEnumerable<T> entities,
+        bool saveChanges = true,
+        CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Updates a single entity in the database asynchronously.

@@ -1,8 +1,8 @@
-namespace Vali_Flow.Core.Utils;
+namespace Vali_Flow.InMemory.Utils;
 
-public static class ConstantHelper
+public class ConstantHelper
 {
-    #region Numbers
+     #region Numbers
 
     public const int One = 1;
     public const int ZeroInt = 0;
