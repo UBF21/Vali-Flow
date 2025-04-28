@@ -9,7 +9,7 @@ namespace Vali_Flow.Classes.Options;
 /// </summary>
 /// <typeparam name="T">The type of entity to which the inclusion applies.</typeparam>
 /// <typeparam name="TProperty">The type of the related property to include.</typeparam>
-public class EfInclude<T, TProperty> : IEfInclude<T> where T : class
+public sealed class EfInclude<T, TProperty> : IEfInclude<T> where T : class
 {
     /// <summary>
     /// Gets the expression that defines the related property to include.

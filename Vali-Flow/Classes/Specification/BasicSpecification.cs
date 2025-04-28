@@ -51,6 +51,11 @@ public class BasicSpecification<T>: IBasicSpecification<T> where T : class
     /// </remarks>
     public bool IgnoreQueryFilters => _ignoreQueryFilters;
     
+    public BasicSpecification()
+    {
+        _filter = new ValiFlow<T>();
+    }
+    
     /// <summary>
     /// Initializes a new instance of the <see cref="BasicSpecification{T}"/> class with a validation filter.
     /// </summary>

@@ -8,7 +8,7 @@ namespace Vali_Flow.Classes.Options;
 /// </summary>
 /// <typeparam name="T">The type of the entity being ordered.</typeparam>
 /// <typeparam name="TProperty">The type of the key used for ordering, which must be non-nullable.</typeparam>
-public class EfOrderThenBy<T,TProperty> : IEfOrderThenBy<T> where TProperty : notnull
+public sealed class EfOrderThenBy<T,TProperty> : IEfOrderThenBy<T> where TProperty : notnull
 {
     private readonly Expression<Func<T, TProperty>> _expression;
     private readonly bool _ascending;
