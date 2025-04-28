@@ -24,7 +24,7 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
 
     public async Task<bool> EvaluateAsync(ValiFlow<T> valiFlow, T entity)
     {
-        ValidationHelper.ValidateEntityNotNull(entity);
+        Validation.ValidateEntityNotNull(entity);
         var condition = valiFlow.Build().Compile();
         return await Task.FromResult(condition(entity));
     }
@@ -581,7 +581,7 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
         CancellationToken cancellationToken = default
     )
     {
-        ValidationHelper.ValidateEntityNotNull(entity);
+        Validation.ValidateEntityNotNull(entity);
 
         var addedEntity = await ExecuteWithExceptionHandlingAsync(
             async () => (await _dbContext.Set<T>().AddAsync(entity, cancellationToken)).Entity,
@@ -599,8 +599,8 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
     {
         IEnumerable<T> entityList = entities.ToList();
 
-        ValidationHelper.ValidateEntitiesNotNull(entityList);
-        ValidationHelper.ValidateEntitiesEmpty(entityList);
+        Validation.ValidateEntitiesNotNull(entityList);
+        Validation.ValidateEntitiesEmpty(entityList);
 
         await ExecuteWithExceptionHandlingAsync(
             async () =>
@@ -619,7 +619,7 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
         CancellationToken cancellationToken = default
     )
     {
-        ValidationHelper.ValidateEntityNotNull(entity);
+        Validation.ValidateEntityNotNull(entity);
         _dbContext.Set<T>().Update(entity);
 
         await SaveChangesIfRequestedAsync(saveChanges, cancellationToken, nameof(UpdateAsync));
@@ -634,8 +634,8 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
     {
         IEnumerable<T> entityList = entities.ToList();
 
-        ValidationHelper.ValidateEntitiesNotNull(entityList);
-        ValidationHelper.ValidateEntitiesEmpty(entityList);
+        Validation.ValidateEntitiesNotNull(entityList);
+        Validation.ValidateEntitiesEmpty(entityList);
 
         _dbContext.Set<T>().UpdateRange(entityList);
 
@@ -649,7 +649,7 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
         CancellationToken cancellationToken = default
     )
     {
-        ValidationHelper.ValidateEntityNotNull(entity);
+        Validation.ValidateEntityNotNull(entity);
         _dbContext.Set<T>().Remove(entity);
 
         await SaveChangesIfRequestedAsync(saveChanges, cancellationToken, nameof(DeleteAsync));
@@ -663,8 +663,8 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
     {
         IEnumerable<T> entityList = entities.ToList();
 
-        ValidationHelper.ValidateEntitiesNotNull(entityList);
-        ValidationHelper.ValidateEntitiesEmpty(entityList);
+        Validation.ValidateEntitiesNotNull(entityList);
+        Validation.ValidateEntitiesEmpty(entityList);
 
         _dbContext.Set<T>().RemoveRange(entityList);
 
@@ -685,7 +685,7 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
         CancellationToken cancellationToken = default
     )
     {
-        ValidationHelper.ValidateEntityNotNull(entity);
+        Validation.ValidateEntityNotNull(entity);
         T? existingEntity = await _dbContext.Set<T>().FirstOrDefaultAsync(matchCondition, cancellationToken);
 
         if (existingEntity == null)
@@ -710,8 +710,8 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
     {
         IEnumerable<T> entityList = entities.ToList();
 
-        ValidationHelper.ValidateEntitiesNotNull(entityList);
-        ValidationHelper.ValidateEntitiesEmpty(entityList);
+        Validation.ValidateEntitiesNotNull(entityList);
+        Validation.ValidateEntitiesEmpty(entityList);
 
         IEnumerable<TProperty> keys = entityList.Select(keySelector);
         IEnumerable<T> existingEntities = await _dbContext.Set<T>()
@@ -798,8 +798,8 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
     {
         var entityList = entities.ToList();
 
-        ValidationHelper.ValidateEntitiesNotNull(entityList);
-        ValidationHelper.ValidateEntitiesEmpty(entityList);
+        Validation.ValidateEntitiesNotNull(entityList);
+        Validation.ValidateEntitiesEmpty(entityList);
 
         await ExecuteWithExceptionHandlingAsync(
             async () =>
@@ -818,8 +818,8 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
     {
         var entityList = entities.ToList();
 
-        ValidationHelper.ValidateEntitiesNotNull(entityList);
-        ValidationHelper.ValidateEntitiesEmpty(entityList);
+        Validation.ValidateEntitiesNotNull(entityList);
+        Validation.ValidateEntitiesEmpty(entityList);
 
         await ExecuteWithExceptionHandlingAsync(
             async () =>
@@ -838,8 +838,8 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
     {
         var entityList = entities.ToList();
 
-        ValidationHelper.ValidateEntitiesNotNull(entityList);
-        ValidationHelper.ValidateEntitiesEmpty(entityList);
+        Validation.ValidateEntitiesNotNull(entityList);
+        Validation.ValidateEntitiesEmpty(entityList);
 
         await ExecuteWithExceptionHandlingAsync(
             async () =>
@@ -858,8 +858,8 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
     {
         var entityList = entities.ToList();
 
-        ValidationHelper.ValidateEntitiesNotNull(entityList);
-        ValidationHelper.ValidateEntitiesEmpty(entityList);
+        Validation.ValidateEntitiesNotNull(entityList);
+        Validation.ValidateEntitiesEmpty(entityList);
 
         await ExecuteWithExceptionHandlingAsync(
             async () =>
@@ -1009,7 +1009,7 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
     {
         IQueryable<T> query = _dbContext.Set<T>();
 
-        ValidationHelper.ValidateQueryNotNull(query);
+        Validation.ValidateQueryNotNull(query);
 
         query = ApplyIgnoreQueryFilters(query, specification.IgnoreQueryFilters);
         query = ApplyWhere(query, specification.Filter, negateCondition);
@@ -1038,8 +1038,8 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="query"/> or <paramref name="filter"/> is null.</exception>
     private IQueryable<T> ApplyWhere(IQueryable<T> query, ValiFlow<T> filter, bool negateCondition = false)
     {
-        ValidationHelper.ValidateQueryNotNull(query);
-        ValidationHelper.ValidateFilterNotNull(filter);
+        Validation.ValidateQueryNotNull(query);
+        Validation.ValidateFilterNotNull(filter);
 
         Expression<Func<T, bool>> condition = negateCondition ? filter.BuildNegated() : filter.Build();
         return query.Where(condition);

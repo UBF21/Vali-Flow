@@ -6,7 +6,7 @@ namespace Vali_Flow.Utils;
 /// <summary>
 /// Provides helper methods for validations.
 /// </summary>
-public static class ValidationHelper
+public static class Validation
 {
     /// <summary>
     /// Checks whether a given string is a valid JSON.
