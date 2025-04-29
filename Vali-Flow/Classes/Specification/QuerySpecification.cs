@@ -4,6 +4,7 @@
     using Vali_Flow.Core.Utils;
     using Vali_Flow.Interfaces.Options;
     using Vali_Flow.Interfaces.Specification;
+    using Vali_Flow.Utils;
 
     namespace Vali_Flow.Classes.Specification;
 
@@ -36,7 +37,7 @@
         /// <summary>
         /// Gets a collection of secondary ordering expressions (ThenBy), if any.
         /// </summary>
-        public IEnumerable<IEfOrderThenBy<T>>? ThenBys => _thenBys.Count > ConstantHelper.ZeroInt ? _thenBys : null;
+        public IEnumerable<IEfOrderThenBy<T>>? ThenBys => _thenBys.Count > Constants.ZeroInt ? _thenBys : null;
 
         /// <summary>
         /// Gets the number of items to skip for pagination, if specified.

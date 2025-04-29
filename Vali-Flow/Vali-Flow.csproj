@@ -7,20 +7,20 @@
         <Nullable>enable</Nullable>
         <Title>Vali-Flow</Title>
         <Authors>Felipe Rafael Montenegro Morriberon</Authors>
-        <Description>Vali-Flow is a library for managing validations in .NET in a fluent and expressive way. It allows developers to define data validations using chained expressions, making code writing and maintenance easier. Compatible with multiple data types, it provides intuitive methods for validating strings, dates, collections, and general comparisons.</Description>
+        <Description>Vali-Flow library a .NET library designed to simplify data access and validation in Entity Framework Core (EF Core) applications. The library offers a fluent API for building specifications (ValiFlow), a robust evaluator (ValiFlowEvaluator) for querying and modifying data, specification classes (QuerySpecification, BasicSpecification) for defining query criteria, and a generic repository (DbRepositoryAsync) for clean data access patterns. </Description>
         <PackageProjectUrl>#</PackageProjectUrl>
         <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
         <RepositoryUrl>https://github.com/UBF21/vali-flow</RepositoryUrl>
         <RepositoryType>git</RepositoryType>
         <PackageReleaseNotes>
-            -New integration of the specification pattern into the methods.
-            -Stability of compatibility with Vali-Flow.Core.
-            -New methods for reading (Batch read data) and writing methods with EF.
+            -Enhanced Expression Building: Improved Vali_Flow.Core to support more complex and reusable expression composition, enabling developers to create dynamic and scalable query filters with ease.
+            -Optimized Specification Evaluation: Enhanced ValiFlowEvaluator to improve performance for complex specifications, including better handling of includes, pagination, and grouping operations.
+            -Bulk Operation Improvements: Optimized bulk operations (e.g., BulkInsertAsync, BulkUpdateAsync) in Vali_Flow for faster data manipulation, with improved integration with EF Core and Vali_Flow.Core specifications.
         </PackageReleaseNotes>
         <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
         <Copyright>Copyright © 2025 - FM. Todos los derechos reservados.</Copyright>
-        <Version>1.0.2</Version>
-        <PackageIcon>logo.png</PackageIcon>
+        <Version>1.1.0</Version>
+        <PackageIcon>logo_vali_flow_.png</PackageIcon>
         <PackageId>Vali-Flow</PackageId>
         <Product>Vali-Flow</Product>
     </PropertyGroup>
@@ -31,13 +31,13 @@
         <PackageReference Include="Microsoft.EntityFrameworkCore" Version="7.0.20"  />
         <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="7.0.20"/>
         <PackageReference Include="EFCore.BulkExtensions" Version="7.8.1" />
-        <PackageReference Include="Vali-Flow.Core" Version="1.0.3" />
+        <PackageReference Include="Vali-Flow.Core" Version="1.0.4" />
 
 
     </ItemGroup>
     
     <ItemGroup>
-        <None Include="logo.png">
+        <None Include="logo_vali_flow_.png">
             <Pack>True</Pack>
             <PackagePath></PackagePath>
         </None>
