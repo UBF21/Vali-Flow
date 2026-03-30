@@ -8,12 +8,12 @@ namespace Vali_Flow.Interfaces.Specification;
 /// Defines a specification that can filter and configure a query for entities of type T.
 /// </summary>
 /// <typeparam name="T">The type of entity to which the specification applies.</typeparam>
-public interface ISpecification<T>
+public interface ISpecification<T> where T : class
 {
     /// <summary>
     /// Gets the validation flow used to filter the entities.
     /// </summary>
-    ValiFlow<T> Filter { get; }
+    ValiFlowQuery<T> Filter { get; }
     
     /// <summary>
     /// Gets a collection of inclusion expressions for related properties, if any.

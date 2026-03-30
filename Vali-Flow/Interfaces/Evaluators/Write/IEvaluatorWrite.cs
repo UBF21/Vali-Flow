@@ -125,23 +125,22 @@ public interface IEvaluatorWrite<T>
     /// <exception cref="InvalidOperationException">Thrown if the operation fails.</exception>
     Task<IEnumerable<T>> UpsertRangeAsync<TProperty>(
         IEnumerable<T> entities,
-        Func<T, TProperty> keySelector,
+        Expression<Func<T, TProperty>> keySelector,
         bool saveChanges = true,
         CancellationToken cancellationToken = default
     ) where TProperty : notnull;
 
     /// <summary>
     /// Deletes entities that match a specified condition from the database asynchronously.
+    /// Uses <c>ExecuteDeleteAsync</c> which issues a direct DELETE without loading entities into memory.
     /// </summary>
     /// <param name="condition">An expression to identify entities to delete.</param>
-    /// <param name="saveChanges">If true, persists changes to the database; otherwise, defers saving.</param>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown if <paramref name="condition"/> is null.</exception>
     /// <exception cref="InvalidOperationException">Thrown if the operation fails.</exception>
     Task DeleteByConditionAsync(
         Expression<Func<T, bool>> condition,
-        bool saveChanges = true,
         CancellationToken cancellationToken = default);
 
     /// <summary>

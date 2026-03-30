@@ -1,5 +1,7 @@
 using System.Linq.Expressions;
-using System.Numerics;
+using System.Numerics
+    ;
+using System.Reflection;
 using EFCore.BulkExtensions;
 using Microsoft.EntityFrameworkCore;
 using Vali_Flow.Core.Builder;
@@ -7,11 +9,12 @@ using Vali_Flow.Interfaces.Evaluators.Read;
 using Vali_Flow.Interfaces.Evaluators.Write;
 using Vali_Flow.Interfaces.Options;
 using Vali_Flow.Interfaces.Specification;
+using Vali_Flow.Models;
 using Vali_Flow.Utils;
 
 namespace Vali_Flow.Classes.Evaluators;
 
-public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where T : class
+public sealed class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where T : class
 {
     private readonly DbContext _dbContext;
 
@@ -22,11 +25,12 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
 
     #region Methods Read
 
-    public async Task<bool> EvaluateAsync(ValiFlow<T> valiFlow, T entity)
+    public Task<bool> EvaluateAsync(ValiFlow<T> valiFlow, T entity)
     {
+        if (valiFlow == null) throw new ArgumentNullException(nameof(valiFlow));
         Validation.ValidateEntityNotNull(entity);
-        var condition = valiFlow.Build().Compile();
-        return await Task.FromResult(condition(entity));
+        var condition = valiFlow.BuildCached();
+        return Task.FromResult(condition(entity));
     }
 
     public async Task<bool> EvaluateAnyAsync(
@@ -34,6 +38,7 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
         CancellationToken cancellationToken = default
     )
     {
+        if (specification == null) throw new ArgumentNullException(nameof(specification));
         IQueryable<T> query = BuildBasicQuery(specification);
         return await ExecuteWithExceptionHandlingAsync(() => query.AnyAsync(cancellationToken),
             nameof(EvaluateAnyAsync));
@@ -44,6 +49,7 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
         CancellationToken cancellationToken = default
     )
     {
+        if (specification == null) throw new ArgumentNullException(nameof(specification));
         IQueryable<T> query = BuildBasicQuery(specification);
         return await ExecuteWithExceptionHandlingAsync(() => query.CountAsync(cancellationToken),
             nameof(EvaluateCountAsync));
@@ -54,6 +60,7 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
         CancellationToken cancellationToken = default
     )
     {
+        if (specification == null) throw new ArgumentNullException(nameof(specification));
         var query = BuildBasicQuery(specification, true);
         return await ExecuteWithExceptionHandlingAsync(() => query.FirstOrDefaultAsync(cancellationToken),
             nameof(EvaluateGetFirstFailedAsync));
@@ -64,63 +71,78 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
         CancellationToken cancellationToken = default
     )
     {
+        if (specification == null) throw new ArgumentNullException(nameof(specification));
         var query = BuildBasicQuery(specification);
         return await ExecuteWithExceptionHandlingAsync(() => query.FirstOrDefaultAsync(cancellationToken),
             nameof(EvaluateGetFirstAsync));
     }
 
-    public async Task<IQueryable<T>> EvaluateQueryFailedAsync(IQuerySpecification<T> specification)
+    public Task<IQueryable<T>> EvaluateQueryFailedAsync(IQuerySpecification<T> specification)
     {
+        if (specification == null) throw new ArgumentNullException(nameof(specification));
         IQueryable<T> query = BuildQuery(specification, negateFilter: true);
-        return await Task.FromResult(query);
+        return Task.FromResult(query);
     }
 
-    public async Task<IQueryable<T>> EvaluateQueryAsync(IQuerySpecification<T> specification)
+    public Task<IQueryable<T>> EvaluateQueryAsync(IQuerySpecification<T> specification)
     {
+        if (specification == null) throw new ArgumentNullException(nameof(specification));
         IQueryable<T> query = BuildQuery(specification);
-        return await Task.FromResult(query);
+        return Task.FromResult(query);
     }
 
-    public async Task<IQueryable<T>> EvaluateDistinctAsync<TKey>(
+    public Task<IQueryable<T>> EvaluateDistinctAsync<TKey>(
         IQuerySpecification<T> specification,
         Expression<Func<T, TKey>> selector
     ) where TKey : notnull
     {
-        IQueryable<T> query = BuildQuery(specification)
-            .GroupBy(selector)
-            .Select(g => g.First());
-        return await Task.FromResult(ApplyPagination(query, specification));
+        if (specification == null) throw new ArgumentNullException(nameof(specification));
+        if (selector == null) throw new ArgumentNullException(nameof(selector));
+        IQueryable<T> query = BuildBasicQuery(specification);
+        query = ApplyOrdering(query, specification);
+        query = query.GroupBy(selector).Select(g => g.First());
+        return Task.FromResult(ApplyPagination(query, specification));
     }
 
-    public async Task<IQueryable<T>> EvaluateDuplicatesAsync<TKey>(
+    public Task<IQueryable<T>> EvaluateDuplicatesAsync<TKey>(
         IQuerySpecification<T> specification,
         Expression<Func<T, TKey>> selector
     ) where TKey : notnull
     {
-        IQueryable<T> query = BuildQuery(specification)
-            .GroupBy(selector)
-            .Where(g => g.Count() > Constants.One)
-            .SelectMany(g => g);
-
-        return await Task.FromResult(query);
+        if (specification == null) throw new ArgumentNullException(nameof(specification));
+        if (selector == null) throw new ArgumentNullException(nameof(selector));
+        IQueryable<T> query = BuildBasicQuery(specification);
+        query = ApplyOrdering(query, specification);
+        query = query.GroupBy(selector).Where(g => g.Count() > Constants.One).SelectMany(g => g);
+        return Task.FromResult(ApplyPagination(query, specification));
     }
 
     public async Task<T?> EvaluateGetLastFailedAsync(
-        IBasicSpecification<T> specification,
+        IQuerySpecification<T> specification,
         CancellationToken cancellationToken = default
     )
     {
-        IQueryable<T> query = BuildBasicQuery(specification, true);
+        if (specification == null) throw new ArgumentNullException(nameof(specification));
+        if (specification.OrderBy == null && specification.ValiSort == null)
+            throw new InvalidOperationException(
+                $"{nameof(EvaluateGetLastFailedAsync)} requires an ordering (OrderBy or ValiSort). EF Core cannot translate LastOrDefault without ORDER BY.");
+
+        IQueryable<T> query = BuildQuery(specification, negateFilter: true);
         return await ExecuteWithExceptionHandlingAsync(() => query.LastOrDefaultAsync(cancellationToken),
             nameof(EvaluateGetLastFailedAsync));
     }
 
     public async Task<T?> EvaluateGetLastAsync(
-        IBasicSpecification<T> specification,
+        IQuerySpecification<T> specification,
         CancellationToken cancellationToken = default
     )
     {
-        var query = BuildBasicQuery(specification);
+        if (specification == null) throw new ArgumentNullException(nameof(specification));
+        if (specification.OrderBy == null && specification.ValiSort == null)
+            throw new InvalidOperationException(
+                $"{nameof(EvaluateGetLastAsync)} requires an ordering (OrderBy or ValiSort). EF Core cannot translate LastOrDefault without ORDER BY.");
+
+        IQueryable<T> query = BuildQuery(specification);
         return await ExecuteWithExceptionHandlingAsync(() => query.LastOrDefaultAsync(cancellationToken),
             nameof(EvaluateGetLastAsync));
     }
@@ -131,6 +153,8 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
         CancellationToken cancellationToken = default
     ) where TResult : INumber<TResult>
     {
+        if (specification == null) throw new ArgumentNullException(nameof(specification));
+        if (selector == null) throw new ArgumentNullException(nameof(selector));
         IQueryable<T> query = BuildBasicQuery(specification);
         return await ExecuteWithExceptionHandlingAsync(() => query.Select(selector).MinAsync(cancellationToken),
             nameof(EvaluateMinAsync));
@@ -142,6 +166,8 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
         CancellationToken cancellationToken = default
     ) where TResult : INumber<TResult>
     {
+        if (specification == null) throw new ArgumentNullException(nameof(specification));
+        if (selector == null) throw new ArgumentNullException(nameof(selector));
         IQueryable<T> query = BuildBasicQuery(specification);
         return await ExecuteWithExceptionHandlingAsync(() => query.Select(selector).MaxAsync(cancellationToken),
             nameof(EvaluateMaxAsync));
@@ -153,6 +179,8 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
         CancellationToken cancellationToken = default
     ) where TResult : INumber<TResult>
     {
+        if (specification == null) throw new ArgumentNullException(nameof(specification));
+        if (selector == null) throw new ArgumentNullException(nameof(selector));
         var query = BuildBasicQuery(specification);
         return await ExecuteWithExceptionHandlingAsync(
             () => query.Select(selector).AverageAsync(x => Convert.ToDecimal(x), cancellationToken),
@@ -165,6 +193,8 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
         CancellationToken cancellationToken = default
     )
     {
+        if (specification == null) throw new ArgumentNullException(nameof(specification));
+        if (selector == null) throw new ArgumentNullException(nameof(selector));
         var query = BuildBasicQuery(specification);
         return await ExecuteWithExceptionHandlingAsync(() => query.Select(selector).SumAsync(cancellationToken),
             nameof(EvaluateSumAsync));
@@ -176,6 +206,8 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
         CancellationToken cancellationToken = default
     )
     {
+        if (specification == null) throw new ArgumentNullException(nameof(specification));
+        if (selector == null) throw new ArgumentNullException(nameof(selector));
         var query = BuildBasicQuery(specification);
         return await ExecuteWithExceptionHandlingAsync(() => query.Select(selector).SumAsync(cancellationToken),
             nameof(EvaluateSumAsync));
@@ -187,6 +219,8 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
         CancellationToken cancellationToken = default
     )
     {
+        if (specification == null) throw new ArgumentNullException(nameof(specification));
+        if (selector == null) throw new ArgumentNullException(nameof(selector));
         var query = BuildBasicQuery(specification);
         return await ExecuteWithExceptionHandlingAsync(() => query.Select(selector).SumAsync(cancellationToken),
             nameof(EvaluateSumAsync));
@@ -198,6 +232,8 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
         CancellationToken cancellationToken = default
     )
     {
+        if (specification == null) throw new ArgumentNullException(nameof(specification));
+        if (selector == null) throw new ArgumentNullException(nameof(selector));
         var query = BuildBasicQuery(specification);
         return await ExecuteWithExceptionHandlingAsync(() => query.Select(selector).SumAsync(cancellationToken),
             nameof(EvaluateSumAsync));
@@ -209,6 +245,8 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
         CancellationToken cancellationToken = default
     )
     {
+        if (specification == null) throw new ArgumentNullException(nameof(specification));
+        if (selector == null) throw new ArgumentNullException(nameof(selector));
         var query = BuildBasicQuery(specification);
         return await ExecuteWithExceptionHandlingAsync(() => query.Select(selector).SumAsync(cancellationToken),
             nameof(EvaluateSumAsync));
@@ -221,6 +259,9 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
         CancellationToken cancellationToken = default
     ) where TResult : INumber<TResult>
     {
+        if (specification == null) throw new ArgumentNullException(nameof(specification));
+        if (selector == null) throw new ArgumentNullException(nameof(selector));
+        if (aggregator == null) throw new ArgumentNullException(nameof(aggregator));
         IQueryable<T> query = BuildBasicQuery(specification);
         IEnumerable<TResult> values = await query.Select(selector).ToListAsync(cancellationToken);
         return !values.Any() ? TResult.Zero : values.Aggregate(TResult.Zero, aggregator);
@@ -232,6 +273,8 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
         CancellationToken cancellationToken = default
     ) where TKey : notnull
     {
+        if (specification == null) throw new ArgumentNullException(nameof(specification));
+        if (keySelector == null) throw new ArgumentNullException(nameof(keySelector));
         IQueryable<T> query = BuildBasicQuery(specification);
         return await ExecuteWithExceptionHandlingAsync(() =>
         {
@@ -247,6 +290,8 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
         CancellationToken cancellationToken = default
     ) where TKey : notnull
     {
+        if (specification == null) throw new ArgumentNullException(nameof(specification));
+        if (keySelector == null) throw new ArgumentNullException(nameof(keySelector));
         IQueryable<T> query = BuildBasicQuery(specification);
         return await ExecuteWithExceptionHandlingAsync(
             () => query
@@ -263,13 +308,11 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
         CancellationToken cancellationToken = default
     ) where TKey : notnull
     {
-        IQueryable<T> query = BuildBasicQuery(specification);
-        return await ExecuteWithExceptionHandlingAsync(
-            () => query
-                .GroupBy(keySelector)
-                .Select(g => new { g.Key, Sum = g.Sum(selector.Compile()) })
-                .ToDictionaryAsync(x => x.Key, x => x.Sum, cancellationToken),
-            nameof(EvaluateSumByGroupAsync));
+        if (specification == null) throw new ArgumentNullException(nameof(specification));
+        if (keySelector == null) throw new ArgumentNullException(nameof(keySelector));
+        if (selector == null) throw new ArgumentNullException(nameof(selector));
+        return await ExecuteGroupAggregateAsync(BuildBasicQuery(specification), keySelector, selector,
+            values => values.Sum(), nameof(EvaluateSumByGroupAsync), cancellationToken);
     }
 
     public async Task<Dictionary<TKey, long>> EvaluateSumByGroupAsync<TKey>(
@@ -279,13 +322,11 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
         CancellationToken cancellationToken = default
     ) where TKey : notnull
     {
-        IQueryable<T> query = BuildBasicQuery(specification);
-        return await ExecuteWithExceptionHandlingAsync(
-            () => query
-                .GroupBy(keySelector)
-                .Select(g => new { g.Key, Sum = g.Sum(selector.Compile()) })
-                .ToDictionaryAsync(x => x.Key, x => x.Sum, cancellationToken),
-            nameof(EvaluateSumByGroupAsync));
+        if (specification == null) throw new ArgumentNullException(nameof(specification));
+        if (keySelector == null) throw new ArgumentNullException(nameof(keySelector));
+        if (selector == null) throw new ArgumentNullException(nameof(selector));
+        return await ExecuteGroupAggregateAsync(BuildBasicQuery(specification), keySelector, selector,
+            values => values.Sum(), nameof(EvaluateSumByGroupAsync), cancellationToken);
     }
 
     public async Task<Dictionary<TKey, float>> EvaluateSumByGroupAsync<TKey>(
@@ -295,13 +336,11 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
         CancellationToken cancellationToken = default
     ) where TKey : notnull
     {
-        IQueryable<T> query = BuildBasicQuery(specification);
-        return await ExecuteWithExceptionHandlingAsync(
-            () => query
-                .GroupBy(keySelector)
-                .Select(g => new { g.Key, Sum = g.Sum(selector.Compile()) })
-                .ToDictionaryAsync(x => x.Key, x => x.Sum, cancellationToken),
-            nameof(EvaluateSumByGroupAsync));
+        if (specification == null) throw new ArgumentNullException(nameof(specification));
+        if (keySelector == null) throw new ArgumentNullException(nameof(keySelector));
+        if (selector == null) throw new ArgumentNullException(nameof(selector));
+        return await ExecuteGroupAggregateAsync(BuildBasicQuery(specification), keySelector, selector,
+            values => (float)values.Sum(v => (double)v), nameof(EvaluateSumByGroupAsync), cancellationToken);
     }
 
     public async Task<Dictionary<TKey, double>> EvaluateSumByGroupAsync<TKey>(
@@ -311,13 +350,11 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
         CancellationToken cancellationToken = default
     ) where TKey : notnull
     {
-        IQueryable<T> query = BuildBasicQuery(specification);
-        return await ExecuteWithExceptionHandlingAsync(
-            () => query
-                .GroupBy(keySelector)
-                .Select(g => new { g.Key, Sum = g.Sum(selector.Compile()) })
-                .ToDictionaryAsync(x => x.Key, x => x.Sum, cancellationToken),
-            nameof(EvaluateSumByGroupAsync));
+        if (specification == null) throw new ArgumentNullException(nameof(specification));
+        if (keySelector == null) throw new ArgumentNullException(nameof(keySelector));
+        if (selector == null) throw new ArgumentNullException(nameof(selector));
+        return await ExecuteGroupAggregateAsync(BuildBasicQuery(specification), keySelector, selector,
+            values => values.Sum(), nameof(EvaluateSumByGroupAsync), cancellationToken);
     }
 
     public async Task<Dictionary<TKey, decimal>> EvaluateSumByGroupAsync<TKey>(
@@ -327,13 +364,11 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
         CancellationToken cancellationToken = default
     ) where TKey : notnull
     {
-        IQueryable<T> query = BuildBasicQuery(specification);
-        return await ExecuteWithExceptionHandlingAsync(
-            () => query
-                .GroupBy(keySelector)
-                .Select(g => new { g.Key, Sum = g.Sum(selector.Compile()) })
-                .ToDictionaryAsync(x => x.Key, x => x.Sum, cancellationToken),
-            nameof(EvaluateSumByGroupAsync));
+        if (specification == null) throw new ArgumentNullException(nameof(specification));
+        if (keySelector == null) throw new ArgumentNullException(nameof(keySelector));
+        if (selector == null) throw new ArgumentNullException(nameof(selector));
+        return await ExecuteGroupAggregateAsync(BuildBasicQuery(specification), keySelector, selector,
+            values => values.Sum(), nameof(EvaluateSumByGroupAsync), cancellationToken);
     }
 
     public async Task<Dictionary<TKey, int>> EvaluateMinByGroupAsync<TKey>(
@@ -343,14 +378,11 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
         CancellationToken cancellationToken = default
     ) where TKey : notnull
     {
-        IQueryable<T> query = BuildBasicQuery(specification);
-
-        return await ExecuteWithExceptionHandlingAsync(
-            () => query
-                .GroupBy(keySelector)
-                .Select(g => new { g.Key, Min = g.Min(selector.Compile()) })
-                .ToDictionaryAsync(x => x.Key, x => x.Min, cancellationToken),
-            nameof(EvaluateMinByGroupAsync));
+        if (specification == null) throw new ArgumentNullException(nameof(specification));
+        if (keySelector == null) throw new ArgumentNullException(nameof(keySelector));
+        if (selector == null) throw new ArgumentNullException(nameof(selector));
+        return await ExecuteGroupAggregateAsync(BuildBasicQuery(specification), keySelector, selector,
+            values => values.Min(), nameof(EvaluateMinByGroupAsync), cancellationToken);
     }
 
     public async Task<Dictionary<TKey, long>> EvaluateMinByGroupAsync<TKey>(
@@ -360,14 +392,11 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
         CancellationToken cancellationToken = default
     ) where TKey : notnull
     {
-        IQueryable<T> query = BuildBasicQuery(specification);
-
-        return await ExecuteWithExceptionHandlingAsync(
-            () => query
-                .GroupBy(keySelector)
-                .Select(g => new { g.Key, Min = g.Min(selector.Compile()) })
-                .ToDictionaryAsync(x => x.Key, x => x.Min, cancellationToken),
-            nameof(EvaluateMinByGroupAsync));
+        if (specification == null) throw new ArgumentNullException(nameof(specification));
+        if (keySelector == null) throw new ArgumentNullException(nameof(keySelector));
+        if (selector == null) throw new ArgumentNullException(nameof(selector));
+        return await ExecuteGroupAggregateAsync(BuildBasicQuery(specification), keySelector, selector,
+            values => values.Min(), nameof(EvaluateMinByGroupAsync), cancellationToken);
     }
 
     public async Task<Dictionary<TKey, float>> EvaluateMinByGroupAsync<TKey>(
@@ -377,14 +406,11 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
         CancellationToken cancellationToken = default
     ) where TKey : notnull
     {
-        IQueryable<T> query = BuildBasicQuery(specification);
-
-        return await ExecuteWithExceptionHandlingAsync(
-            () => query
-                .GroupBy(keySelector)
-                .Select(g => new { g.Key, Min = g.Min(selector.Compile()) })
-                .ToDictionaryAsync(x => x.Key, x => x.Min, cancellationToken),
-            nameof(EvaluateMinByGroupAsync));
+        if (specification == null) throw new ArgumentNullException(nameof(specification));
+        if (keySelector == null) throw new ArgumentNullException(nameof(keySelector));
+        if (selector == null) throw new ArgumentNullException(nameof(selector));
+        return await ExecuteGroupAggregateAsync(BuildBasicQuery(specification), keySelector, selector,
+            values => values.Min(), nameof(EvaluateMinByGroupAsync), cancellationToken);
     }
 
     public async Task<Dictionary<TKey, double>> EvaluateMinByGroupAsync<TKey>(
@@ -394,14 +420,11 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
         CancellationToken cancellationToken = default
     ) where TKey : notnull
     {
-        IQueryable<T> query = BuildBasicQuery(specification);
-
-        return await ExecuteWithExceptionHandlingAsync(
-            () => query
-                .GroupBy(keySelector)
-                .Select(g => new { g.Key, Min = g.Min(selector.Compile()) })
-                .ToDictionaryAsync(x => x.Key, x => x.Min, cancellationToken),
-            nameof(EvaluateMinByGroupAsync));
+        if (specification == null) throw new ArgumentNullException(nameof(specification));
+        if (keySelector == null) throw new ArgumentNullException(nameof(keySelector));
+        if (selector == null) throw new ArgumentNullException(nameof(selector));
+        return await ExecuteGroupAggregateAsync(BuildBasicQuery(specification), keySelector, selector,
+            values => values.Min(), nameof(EvaluateMinByGroupAsync), cancellationToken);
     }
 
     public async Task<Dictionary<TKey, decimal>> EvaluateMinByGroupAsync<TKey>(
@@ -411,14 +434,11 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
         CancellationToken cancellationToken = default
     ) where TKey : notnull
     {
-        IQueryable<T> query = BuildBasicQuery(specification);
-
-        return await ExecuteWithExceptionHandlingAsync(
-            () => query
-                .GroupBy(keySelector)
-                .Select(g => new { g.Key, Min = g.Min(selector.Compile()) })
-                .ToDictionaryAsync(x => x.Key, x => x.Min, cancellationToken),
-            nameof(EvaluateMinByGroupAsync));
+        if (specification == null) throw new ArgumentNullException(nameof(specification));
+        if (keySelector == null) throw new ArgumentNullException(nameof(keySelector));
+        if (selector == null) throw new ArgumentNullException(nameof(selector));
+        return await ExecuteGroupAggregateAsync(BuildBasicQuery(specification), keySelector, selector,
+            values => values.Min(), nameof(EvaluateMinByGroupAsync), cancellationToken);
     }
 
     public async Task<Dictionary<TKey, int>> EvaluateMaxByGroupAsync<TKey>(
@@ -428,14 +448,11 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
         CancellationToken cancellationToken = default
     ) where TKey : notnull
     {
-        IQueryable<T> query = BuildBasicQuery(specification);
-
-        return await ExecuteWithExceptionHandlingAsync(
-            () => query
-                .GroupBy(keySelector)
-                .Select(g => new { g.Key, Max = g.Max(selector.Compile()) })
-                .ToDictionaryAsync(x => x.Key, x => x.Max, cancellationToken),
-            nameof(EvaluateMaxByGroupAsync));
+        if (specification == null) throw new ArgumentNullException(nameof(specification));
+        if (keySelector == null) throw new ArgumentNullException(nameof(keySelector));
+        if (selector == null) throw new ArgumentNullException(nameof(selector));
+        return await ExecuteGroupAggregateAsync(BuildBasicQuery(specification), keySelector, selector,
+            values => values.Max(), nameof(EvaluateMaxByGroupAsync), cancellationToken);
     }
 
     public async Task<Dictionary<TKey, long>> EvaluateMaxByGroupAsync<TKey>(
@@ -445,14 +462,11 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
         CancellationToken cancellationToken = default
     ) where TKey : notnull
     {
-        IQueryable<T> query = BuildBasicQuery(specification);
-
-        return await ExecuteWithExceptionHandlingAsync(
-            () => query
-                .GroupBy(keySelector)
-                .Select(g => new { g.Key, Max = g.Max(selector.Compile()) })
-                .ToDictionaryAsync(x => x.Key, x => x.Max, cancellationToken),
-            nameof(EvaluateMaxByGroupAsync));
+        if (specification == null) throw new ArgumentNullException(nameof(specification));
+        if (keySelector == null) throw new ArgumentNullException(nameof(keySelector));
+        if (selector == null) throw new ArgumentNullException(nameof(selector));
+        return await ExecuteGroupAggregateAsync(BuildBasicQuery(specification), keySelector, selector,
+            values => values.Max(), nameof(EvaluateMaxByGroupAsync), cancellationToken);
     }
 
     public async Task<Dictionary<TKey, float>> EvaluateMaxByGroupAsync<TKey>(
@@ -462,14 +476,11 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
         CancellationToken cancellationToken = default
     ) where TKey : notnull
     {
-        IQueryable<T> query = BuildBasicQuery(specification);
-
-        return await ExecuteWithExceptionHandlingAsync(
-            () => query
-                .GroupBy(keySelector)
-                .Select(g => new { g.Key, Max = g.Max(selector.Compile()) })
-                .ToDictionaryAsync(x => x.Key, x => x.Max, cancellationToken),
-            nameof(EvaluateMaxByGroupAsync));
+        if (specification == null) throw new ArgumentNullException(nameof(specification));
+        if (keySelector == null) throw new ArgumentNullException(nameof(keySelector));
+        if (selector == null) throw new ArgumentNullException(nameof(selector));
+        return await ExecuteGroupAggregateAsync(BuildBasicQuery(specification), keySelector, selector,
+            values => values.Max(), nameof(EvaluateMaxByGroupAsync), cancellationToken);
     }
 
     public async Task<Dictionary<TKey, double>> EvaluateMaxByGroupAsync<TKey>(
@@ -479,14 +490,11 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
         CancellationToken cancellationToken = default
     ) where TKey : notnull
     {
-        IQueryable<T> query = BuildBasicQuery(specification);
-
-        return await ExecuteWithExceptionHandlingAsync(
-            () => query
-                .GroupBy(keySelector)
-                .Select(g => new { g.Key, Max = g.Max(selector.Compile()) })
-                .ToDictionaryAsync(x => x.Key, x => x.Max, cancellationToken),
-            nameof(EvaluateMaxByGroupAsync));
+        if (specification == null) throw new ArgumentNullException(nameof(specification));
+        if (keySelector == null) throw new ArgumentNullException(nameof(keySelector));
+        if (selector == null) throw new ArgumentNullException(nameof(selector));
+        return await ExecuteGroupAggregateAsync(BuildBasicQuery(specification), keySelector, selector,
+            values => values.Max(), nameof(EvaluateMaxByGroupAsync), cancellationToken);
     }
 
     public async Task<Dictionary<TKey, decimal>> EvaluateMaxByGroupAsync<TKey>(
@@ -496,14 +504,11 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
         CancellationToken cancellationToken = default
     ) where TKey : notnull
     {
-        IQueryable<T> query = BuildBasicQuery(specification);
-
-        return await ExecuteWithExceptionHandlingAsync(
-            () => query
-                .GroupBy(keySelector)
-                .Select(g => new { g.Key, Max = g.Max(selector.Compile()) })
-                .ToDictionaryAsync(x => x.Key, x => x.Max, cancellationToken),
-            nameof(EvaluateMaxByGroupAsync));
+        if (specification == null) throw new ArgumentNullException(nameof(specification));
+        if (keySelector == null) throw new ArgumentNullException(nameof(keySelector));
+        if (selector == null) throw new ArgumentNullException(nameof(selector));
+        return await ExecuteGroupAggregateAsync(BuildBasicQuery(specification), keySelector, selector,
+            values => values.Max(), nameof(EvaluateMaxByGroupAsync), cancellationToken);
     }
 
     public async Task<Dictionary<TKey, decimal>> EvaluateAverageByGroupAsync<TKey, TResult>(
@@ -513,14 +518,11 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
         CancellationToken cancellationToken = default
     ) where TKey : notnull where TResult : INumber<TResult>
     {
-        IQueryable<T> query = BuildBasicQuery(specification);
-
-        return await ExecuteWithExceptionHandlingAsync(
-            () => query
-                .GroupBy(keySelector)
-                .Select(g => new { g.Key, Avg = g.Average(x => Convert.ToDecimal(selector.Compile()(x))) })
-                .ToDictionaryAsync(x => x.Key, x => x.Avg, cancellationToken),
-            nameof(EvaluateAverageByGroupAsync));
+        if (specification == null) throw new ArgumentNullException(nameof(specification));
+        if (keySelector == null) throw new ArgumentNullException(nameof(keySelector));
+        if (selector == null) throw new ArgumentNullException(nameof(selector));
+        return await ExecuteGroupAverageAsync(BuildBasicQuery(specification), keySelector, selector,
+            nameof(EvaluateAverageByGroupAsync), cancellationToken);
     }
 
     public async Task<Dictionary<TKey, List<T>>> EvaluateDuplicatesByGroupAsync<TKey>(
@@ -529,8 +531,9 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
         CancellationToken cancellationToken = default
     ) where TKey : notnull
     {
-        var query = BuildBasicQuery(specification);
-
+        if (specification == null) throw new ArgumentNullException(nameof(specification));
+        if (keySelector == null) throw new ArgumentNullException(nameof(keySelector));
+        IQueryable<T> query = BuildBasicQuery(specification);
         return await ExecuteWithExceptionHandlingAsync(
             () => query
                 .GroupBy(keySelector)
@@ -545,8 +548,9 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
         CancellationToken cancellationToken = default
     ) where TKey : notnull
     {
+        if (specification == null) throw new ArgumentNullException(nameof(specification));
+        if (keySelector == null) throw new ArgumentNullException(nameof(keySelector));
         IQueryable<T> query = BuildBasicQuery(specification);
-
         return await ExecuteWithExceptionHandlingAsync(
             () => query
                 .GroupBy(keySelector)
@@ -562,13 +566,60 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
         CancellationToken cancellationToken = default
     ) where TKey : notnull
     {
-        IQueryable<T> query = BuildQuery(specification);
-        query = query.Take(specification.Top ?? Constants.Fifty);
-        return await ExecuteWithExceptionHandlingAsync(
-            () => query
-                .GroupBy(keySelector)
-                .ToDictionaryAsync(g => g.Key, g => g.ToList(), cancellationToken),
+        if (specification == null) throw new ArgumentNullException(nameof(specification));
+        if (keySelector == null) throw new ArgumentNullException(nameof(keySelector));
+        int top = specification.Top ?? Constants.Fifty;
+        IQueryable<T> query = BuildBasicQuery(specification);
+        query = ApplyOrdering(query, specification);
+
+        List<T> items = await ExecuteWithExceptionHandlingAsync(
+            () => query.ToListAsync(cancellationToken),
             nameof(EvaluateTopByGroupAsync));
+
+        Func<T, TKey> keySelectorFn = keySelector.Compile();
+        return items
+            .GroupBy(keySelectorFn)
+            .ToDictionary(g => g.Key, g => g.Take(top).ToList());
+    }
+
+    public async Task<PagedResult<T>> EvaluatePagedAsync(
+        IQuerySpecification<T> specification,
+        CancellationToken cancellationToken = default
+    )
+    {
+        if (specification == null) throw new ArgumentNullException(nameof(specification));
+        // Fix #6: require explicit Page and PageSize — silent defaults caused surprising results
+        if (!specification.Page.HasValue)
+            throw new ArgumentException(
+                $"{nameof(EvaluatePagedAsync)} requires Page to be explicitly set on the specification.",
+                nameof(specification));
+        if (!specification.PageSize.HasValue)
+            throw new ArgumentException(
+                $"{nameof(EvaluatePagedAsync)} requires PageSize to be explicitly set on the specification.",
+                nameof(specification));
+
+        // Fix #2: pagination without ordering is non-deterministic
+        bool hasOrdering = specification.OrderBy != null || specification.ValiSort != null;
+        if (!hasOrdering)
+            throw new InvalidOperationException(
+                $"{nameof(EvaluatePagedAsync)} requires an ordering (OrderBy or ValiSort) for deterministic pagination results.");
+
+        int page = specification.Page.Value;
+        int pageSize = specification.PageSize.Value;
+
+        IQueryable<T> baseQuery = BuildBasicQuery(specification);
+
+        int totalCount = await ExecuteWithExceptionHandlingAsync(
+            () => baseQuery.CountAsync(cancellationToken),
+            nameof(EvaluatePagedAsync));
+
+        IQueryable<T> orderedQuery = ApplyOrdering(baseQuery, specification);
+        int skip = (page - Constants.One) * pageSize;
+        IList<T> items = await ExecuteWithExceptionHandlingAsync(
+            () => orderedQuery.Skip(skip).Take(pageSize).ToListAsync(cancellationToken),
+            nameof(EvaluatePagedAsync));
+
+        return new PagedResult<T>(items.AsReadOnly(), totalCount, page, pageSize);
     }
 
     #endregion
@@ -597,6 +648,7 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
         CancellationToken cancellationToken = default
     )
     {
+        if (entities == null) throw new ArgumentNullException(nameof(entities));
         IEnumerable<T> entityList = entities.ToList();
 
         Validation.ValidateEntitiesNotNull(entityList);
@@ -632,6 +684,7 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
         CancellationToken cancellationToken = default
     )
     {
+        if (entities == null) throw new ArgumentNullException(nameof(entities));
         IEnumerable<T> entityList = entities.ToList();
 
         Validation.ValidateEntitiesNotNull(entityList);
@@ -661,6 +714,7 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
         CancellationToken cancellationToken = default
     )
     {
+        if (entities == null) throw new ArgumentNullException(nameof(entities));
         IEnumerable<T> entityList = entities.ToList();
 
         Validation.ValidateEntitiesNotNull(entityList);
@@ -686,6 +740,7 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
     )
     {
         Validation.ValidateEntityNotNull(entity);
+        if (matchCondition == null) throw new ArgumentNullException(nameof(matchCondition));
         T? existingEntity = await _dbContext.Set<T>().FirstOrDefaultAsync(matchCondition, cancellationToken);
 
         if (existingEntity == null)
@@ -703,26 +758,44 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
 
     public async Task<IEnumerable<T>> UpsertRangeAsync<TProperty>(
         IEnumerable<T> entities,
-        Func<T, TProperty> keySelector,
+        Expression<Func<T, TProperty>> keySelector,
         bool saveChanges = true,
         CancellationToken cancellationToken = default
     ) where TProperty : notnull
     {
+        if (entities == null) throw new ArgumentNullException(nameof(entities));
+        if (keySelector == null) throw new ArgumentNullException(nameof(keySelector));
         IEnumerable<T> entityList = entities.ToList();
 
         Validation.ValidateEntitiesNotNull(entityList);
         Validation.ValidateEntitiesEmpty(entityList);
 
-        IEnumerable<TProperty> keys = entityList.Select(keySelector);
+        // Compile keySelector once for in-memory use
+        var keySelectorFn = keySelector.Compile();
+
+        // Materialize keys as a concrete List<TProperty> — EF can translate .Contains() on a local collection
+        List<TProperty> keys = entityList.Select(keySelectorFn).ToList();
+
+        // Build a predicate that EF can translate: e => keys.Contains(e.Prop)
+        var param = keySelector.Parameters[0];
+        var body = Expression.Call(
+            typeof(Enumerable),
+            nameof(Enumerable.Contains),
+            [typeof(TProperty)],
+            Expression.Constant(keys),
+            keySelector.Body
+        );
+        var predicate = Expression.Lambda<Func<T, bool>>(body, param);
+
         IEnumerable<T> existingEntities = await _dbContext.Set<T>()
-            .Where(e => keys.Contains(keySelector(e)))
+            .Where(predicate)
             .ToListAsync(cancellationToken);
 
-        Dictionary<TProperty, T> existingEntityDict = existingEntities.ToDictionary(keySelector, e => e);
+        Dictionary<TProperty, T> existingEntityDict = existingEntities.ToDictionary(keySelectorFn, e => e);
 
         foreach (T entity in entityList)
         {
-            TProperty key = keySelector(entity);
+            TProperty key = keySelectorFn(entity);
             if (existingEntityDict.TryGetValue(key, out var existingEntity))
             {
                 _dbContext.Entry(existingEntity).CurrentValues.SetValues(entity);
@@ -740,24 +813,20 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
 
     public async Task DeleteByConditionAsync(
         Expression<Func<T, bool>> condition,
-        bool saveChanges = true,
         CancellationToken cancellationToken = default
     )
     {
-        IEnumerable<T> entitiesToDelete = await _dbContext.Set<T>()
-            .Where(condition)
-            .ToListAsync(cancellationToken);
-
-        if (entitiesToDelete.Any())
-        {
-            _dbContext.Set<T>().RemoveRange(entitiesToDelete);
-            await SaveChangesIfRequestedAsync(saveChanges, cancellationToken, nameof(DeleteByConditionAsync));
-        }
+        if (condition == null) throw new ArgumentNullException(nameof(condition));
+        // ExecuteDeleteAsync translates directly to DELETE FROM ... WHERE — no round-trip to load entities
+        await ExecuteWithExceptionHandlingAsync(
+            () => _dbContext.Set<T>().Where(condition).ExecuteDeleteAsync(cancellationToken),
+            nameof(DeleteByConditionAsync));
     }
 
 
     public async Task ExecuteTransactionAsync(Func<Task> operations, CancellationToken cancellationToken = default)
     {
+        if (operations == null) throw new ArgumentNullException(nameof(operations));
         if (_dbContext.Database.CurrentTransaction != null)
         {
             await operations();
@@ -796,6 +865,7 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
         CancellationToken cancellationToken = default
     )
     {
+        if (entities == null) throw new ArgumentNullException(nameof(entities));
         var entityList = entities.ToList();
 
         Validation.ValidateEntitiesNotNull(entityList);
@@ -816,6 +886,7 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
         CancellationToken cancellationToken = default
     )
     {
+        if (entities == null) throw new ArgumentNullException(nameof(entities));
         var entityList = entities.ToList();
 
         Validation.ValidateEntitiesNotNull(entityList);
@@ -827,7 +898,7 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
                 await _dbContext.BulkUpdateAsync(entityList, bulkConfig, cancellationToken: cancellationToken);
                 return Task.CompletedTask;
             },
-            nameof(BulkInsertAsync));
+            nameof(BulkUpdateAsync));
     }
 
     public async Task BulkDeleteAsync(
@@ -836,6 +907,7 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
         CancellationToken cancellationToken = default
     )
     {
+        if (entities == null) throw new ArgumentNullException(nameof(entities));
         var entityList = entities.ToList();
 
         Validation.ValidateEntitiesNotNull(entityList);
@@ -856,6 +928,7 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
         CancellationToken cancellationToken = default
     )
     {
+        if (entities == null) throw new ArgumentNullException(nameof(entities));
         var entityList = entities.ToList();
 
         Validation.ValidateEntitiesNotNull(entityList);
@@ -929,16 +1002,25 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="query"/> or <paramref name="specification"/> is null.</exception>
     private IQueryable<T> ApplyOrdering(IQueryable<T> query, IQuerySpecification<T> specification)
     {
-        if (specification.OrderBy == null) return query;
+        // Fix #4: query is already IQueryable<T> — AsQueryable() was redundant
+        if (specification.ValiSort != null)
+            return specification.ValiSort.Apply(query);
+
+        // Fix #1: ThenBy without OrderBy is a programming mistake — fail fast
+        if (specification.OrderBy == null)
+        {
+            if (specification.ThenBys != null)
+                throw new InvalidOperationException(
+                    "ThenBy requires a primary OrderBy. Set OrderBy on the specification before adding ThenBy expressions.");
+            return query;
+        }
 
         IOrderedQueryable<T> orderedQuery = specification.OrderBy.ApplyOrderBy(query);
 
-        if (specification.ThenBys != null && specification.ThenBys.Any())
+        if (specification.ThenBys != null)
         {
             foreach (var thenBy in specification.ThenBys)
-            {
                 orderedQuery = thenBy.ApplyThenBy(orderedQuery);
-            }
         }
 
         return orderedQuery;
@@ -972,7 +1054,7 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
             int take = specification.PageSize.Value;
             query = query.Skip(skip).Take(take);
         }
-        else if (specification is { Top: not null, Page: null })
+        else if (specification.Top != null)
         {
             query = query.Take(specification.Top.Value);
         }
@@ -1009,13 +1091,11 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
     {
         IQueryable<T> query = _dbContext.Set<T>();
 
-        Validation.ValidateQueryNotNull(query);
-
         query = ApplyIgnoreQueryFilters(query, specification.IgnoreQueryFilters);
         query = ApplyWhere(query, specification.Filter, negateCondition);
         query = ApplyAsNoTracking(query, specification.AsNoTracking);
         query = ApplyIncludes(query, specification.Includes);
-        query = ApplyAsSplitQuery(query);
+        query = ApplyAsSplitQuery(query, specification.AsSplitQuery);
 
         return query;
     }
@@ -1026,22 +1106,21 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
     /// <param name="query">The query to which the filter condition will be applied. Cannot be null.</param>
     /// <param name="filter">The validation flow defining the filter criteria. Cannot be null.</param>
     /// <param name="negateCondition">A value indicating whether the filter condition should be negated. Defaults to <see langword="false"/>.</param>
-    /// <returns>The query with the filter condition applied using the <see cref="ValiFlow{T}"/> criteria.</returns>
+    /// <returns>The query with the filter condition applied using the <see cref="ValiFlowQuery{T}"/> criteria.</returns>
     /// <remarks>
     /// This method applies the filter criteria defined by the <paramref name="filter"/> to the query using Entity Framework Core's <c>Where</c> method. 
     /// If <paramref name="negateCondition"/> is <see langword="true"/>, the filter condition is negated (e.g., <c>NOT</c> is applied to the criteria), 
     /// allowing for exclusion-based filtering. The <paramref name="filter"/> is typically sourced from a specification's filter property.
-    /// This method is used internally to incorporate the filtering logic defined by <see cref="ValiFlow{T}"/> into the query pipeline, 
+    /// This method is used internally to incorporate the filtering logic defined by <see cref="ValiFlowQuery{T}"/> into the query pipeline, 
     /// enabling complex and reusable filter conditions. Use this method to ensure that filter criteria are consistently applied to queries, 
     /// supporting scenarios such as filtering entities based on business rules or excluding specific records when negating conditions.
     /// </remarks>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="query"/> or <paramref name="filter"/> is null.</exception>
-    private IQueryable<T> ApplyWhere(IQueryable<T> query, ValiFlow<T> filter, bool negateCondition = false)
+    private IQueryable<T> ApplyWhere(IQueryable<T> query, ValiFlowQuery<T> filter, bool negateCondition = false)
     {
-        Validation.ValidateQueryNotNull(query);
         Validation.ValidateFilterNotNull(filter);
 
-        Expression<Func<T, bool>> condition = negateCondition ? filter.BuildNegated() : filter.Build();
+        Expression<Func<T, bool>> condition = negateCondition ? filter.BuildNegated() : filter.BuildWithGlobal();
         return query.Where(condition);
     }
 
@@ -1053,6 +1132,19 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
     /// <returns>The constructed and ordered IQueryable.</returns>
     private IQueryable<T> BuildQuery(IQuerySpecification<T> specification, bool negateFilter = false)
     {
+        // Fix #5: Top and Page/PageSize are mutually exclusive
+        if (specification.Top.HasValue && (specification.Page.HasValue || specification.PageSize.HasValue))
+            throw new InvalidOperationException(
+                "Cannot combine Top with Page/PageSize pagination on the same specification. Use one or the other.");
+
+        // Fix #2: Skip/Take without ORDER BY produces non-deterministic results in SQL
+        bool hasPagination = specification.Page.HasValue || specification.PageSize.HasValue;
+        bool hasOrdering = specification.OrderBy != null || specification.ValiSort != null;
+        if (hasPagination && !hasOrdering)
+            throw new InvalidOperationException(
+                "Pagination requires an ordering to produce deterministic results. " +
+                "Set OrderBy or ValiSort on the specification before enabling pagination.");
+
         IQueryable<T> query = BuildBasicQuery(specification, negateFilter);
         query = ApplyOrdering(query, specification);
         query = ApplyPagination(query, specification);
@@ -1080,6 +1172,74 @@ public class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where 
 
     private IQueryable<T> ApplyIgnoreQueryFilters(IQueryable<T> query, bool ignoreQueryFilters = false) =>
         ignoreQueryFilters ? query.IgnoreQueryFilters() : query;
+
+    private sealed class ParameterReplacerVisitor : ExpressionVisitor
+    {
+        private readonly ParameterExpression _oldParameter;
+        private readonly ParameterExpression _newParameter;
+
+        internal ParameterReplacerVisitor(ParameterExpression oldParameter, ParameterExpression newParameter)
+        {
+            _oldParameter = oldParameter;
+            _newParameter = newParameter;
+        }
+
+        protected override Expression VisitParameter(ParameterExpression node)
+            => node == _oldParameter ? _newParameter : base.VisitParameter(node);
+    }
+
+    private async Task<Dictionary<TKey, TResult>> ExecuteGroupAggregateAsync<TKey, TResult>(
+        IQueryable<T> query,
+        Expression<Func<T, TKey>> keySelector,
+        Expression<Func<T, TResult>> valueSelector,
+        Func<IEnumerable<TResult>, TResult> aggregator,
+        string operationName,
+        CancellationToken cancellationToken
+    ) where TKey : notnull
+    {
+        ParameterExpression sharedParam = Expression.Parameter(typeof(T), "x");
+        Expression keyBody = new ParameterReplacerVisitor(keySelector.Parameters[0], sharedParam)
+            .Visit(keySelector.Body);
+        Expression valueBody = new ParameterReplacerVisitor(valueSelector.Parameters[0], sharedParam)
+            .Visit(valueSelector.Body);
+        ConstructorInfo tupleCtorInfo =
+            typeof(ValueTuple<TKey, TResult>).GetConstructor(new[] { typeof(TKey), typeof(TResult) })!;
+        NewExpression tupleNew = Expression.New(tupleCtorInfo, keyBody, valueBody);
+        Expression<Func<T, ValueTuple<TKey, TResult>>> projectionLambda =
+            Expression.Lambda<Func<T, ValueTuple<TKey, TResult>>>(tupleNew, sharedParam);
+        List<ValueTuple<TKey, TResult>> pairs = await ExecuteWithExceptionHandlingAsync(
+            () => query.Select(projectionLambda).ToListAsync(cancellationToken),
+            operationName);
+        return pairs
+            .GroupBy(p => p.Item1)
+            .ToDictionary(g => g.Key, g => aggregator(g.Select(p => p.Item2)));
+    }
+
+    private async Task<Dictionary<TKey, decimal>> ExecuteGroupAverageAsync<TKey, TResult>(
+        IQueryable<T> query,
+        Expression<Func<T, TKey>> keySelector,
+        Expression<Func<T, TResult>> valueSelector,
+        string operationName,
+        CancellationToken cancellationToken
+    ) where TKey : notnull where TResult : INumber<TResult>
+    {
+        ParameterExpression sharedParam = Expression.Parameter(typeof(T), "x");
+        Expression keyBody = new ParameterReplacerVisitor(keySelector.Parameters[0], sharedParam)
+            .Visit(keySelector.Body);
+        Expression valueBody = new ParameterReplacerVisitor(valueSelector.Parameters[0], sharedParam)
+            .Visit(valueSelector.Body);
+        ConstructorInfo tupleCtorInfo =
+            typeof(ValueTuple<TKey, TResult>).GetConstructor(new[] { typeof(TKey), typeof(TResult) })!;
+        NewExpression tupleNew = Expression.New(tupleCtorInfo, keyBody, valueBody);
+        Expression<Func<T, ValueTuple<TKey, TResult>>> projectionLambda =
+            Expression.Lambda<Func<T, ValueTuple<TKey, TResult>>>(tupleNew, sharedParam);
+        List<ValueTuple<TKey, TResult>> pairs = await ExecuteWithExceptionHandlingAsync(
+            () => query.Select(projectionLambda).ToListAsync(cancellationToken),
+            operationName);
+        return pairs
+            .GroupBy(p => p.Item1)
+            .ToDictionary(g => g.Key, g => g.Average(p => Convert.ToDecimal(p.Item2)));
+    }
 
     #endregion
 }

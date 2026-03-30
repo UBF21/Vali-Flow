@@ -8,7 +8,7 @@ using Vali_Flow.InMemory.Utils;
 
 namespace Vali_Flow.InMemory.Classes.Evaluators;
 
-public class ValiFlowEvaluator<T, TProperty> : IInMemoryEvaluatorRead<T>, IInMemoryEvaluatorWrite<T>
+public sealed class ValiFlowEvaluator<T, TProperty> : IInMemoryEvaluatorRead<T>, IInMemoryEvaluatorWrite<T>
     where T : class
 {
     private readonly List<T> _inMemoryStore;
@@ -46,7 +46,8 @@ public class ValiFlowEvaluator<T, TProperty> : IInMemoryEvaluatorRead<T>, IInMem
         var selectedValiFlow = valiFlow ?? _valiFlow;
         if (selectedValiFlow == null) return negated ? _ => false : _ => true;
 
-        return negated ? BuildNegated(selectedValiFlow).Compile() : Build(selectedValiFlow).Compile();
+        if (!negated) return selectedValiFlow.BuildCached();
+        return selectedValiFlow.BuildNegated().Compile();
     }
 
     private Expression<Func<T, bool>> Build(ValiFlow<T>? valiFlow = null)
@@ -156,6 +157,7 @@ public class ValiFlowEvaluator<T, TProperty> : IInMemoryEvaluatorRead<T>, IInMem
         bool negateCondition = false
     )
     {
+        if (selector == null) throw new ArgumentNullException(nameof(selector));
         IEnumerable<T> dataSource = entities ?? _inMemoryStore;
         IEnumerable<T> query = dataSource.Where(GetDefaultCondition(valiFlow, negateCondition))
             .GroupBy(selector)
@@ -174,6 +176,7 @@ public class ValiFlowEvaluator<T, TProperty> : IInMemoryEvaluatorRead<T>, IInMem
         bool negateCondition = false
     )
     {
+        if (selector == null) throw new ArgumentNullException(nameof(selector));
         IEnumerable<T> dataSource = entities ?? _inMemoryStore;
         IEnumerable<T> query = dataSource.Where(GetDefaultCondition(valiFlow, negateCondition))
             .GroupBy(selector)
@@ -195,7 +198,7 @@ public class ValiFlowEvaluator<T, TProperty> : IInMemoryEvaluatorRead<T>, IInMem
         IEnumerable<T> dataSource = entities ?? _inMemoryStore;
         List<T> ordered = ApplyOrdering(dataSource.Where(GetDefaultCondition(valiFlow, negateCondition)), orderBy,
             ascending, thenBys).ToList();
-        return ordered.FindIndex(item => GetDefaultCondition()(item));
+        return ordered.FindIndex(item => GetDefaultCondition(valiFlow, negateCondition)(item));
     }
 
     public int GetLastMatchIndex<TKey>(
@@ -210,7 +213,7 @@ public class ValiFlowEvaluator<T, TProperty> : IInMemoryEvaluatorRead<T>, IInMem
         IEnumerable<T> dataSource = entities ?? _inMemoryStore;
         List<T> ordered = ApplyOrdering(dataSource.Where(GetDefaultCondition(valiFlow, negateCondition)), orderBy,
             ascending, thenBys).ToList();
-        return ordered.FindLastIndex(item => GetDefaultCondition()(item));
+        return ordered.FindLastIndex(item => GetDefaultCondition(valiFlow, negateCondition)(item));
     }
 
     public T? GetLastFailed<TKey>(
@@ -243,6 +246,7 @@ public class ValiFlowEvaluator<T, TProperty> : IInMemoryEvaluatorRead<T>, IInMem
         bool negateCondition = false
     ) where TResult : INumber<TResult>
     {
+        if (selector == null) throw new ArgumentNullException(nameof(selector));
         IEnumerable<T> dataSource = entities ?? _inMemoryStore;
         return dataSource.Where(GetDefaultCondition(valiFlow, negateCondition)).Select(selector).Min() ?? TResult.Zero;
     }
@@ -254,6 +258,7 @@ public class ValiFlowEvaluator<T, TProperty> : IInMemoryEvaluatorRead<T>, IInMem
         bool negateCondition = false
     ) where TResult : INumber<TResult>
     {
+        if (selector == null) throw new ArgumentNullException(nameof(selector));
         IEnumerable<T> dataSource = entities ?? _inMemoryStore;
         return dataSource.Where(GetDefaultCondition(valiFlow, negateCondition)).Select(selector).Max() ?? TResult.Zero;
     }
@@ -265,6 +270,7 @@ public class ValiFlowEvaluator<T, TProperty> : IInMemoryEvaluatorRead<T>, IInMem
         bool negateCondition = false
     ) where TResult : INumber<TResult>
     {
+        if (selector == null) throw new ArgumentNullException(nameof(selector));
         IEnumerable<T> dataSource = entities ?? _inMemoryStore;
         return dataSource.Where(GetDefaultCondition(valiFlow, negateCondition)).Select(selector)
             .Average(x => Convert.ToDecimal(x));
@@ -277,9 +283,10 @@ public class ValiFlowEvaluator<T, TProperty> : IInMemoryEvaluatorRead<T>, IInMem
         bool negateCondition = false
     ) where TResult : INumber<TResult>
     {
+        if (selector == null) throw new ArgumentNullException(nameof(selector));
         IEnumerable<T> dataSource = entities ?? _inMemoryStore;
-        return dataSource.Where(GetDefaultCondition(valiFlow, negateCondition)).Select(selector)
-            .Aggregate((acc, x) => acc + x);
+        IEnumerable<TResult> values = dataSource.Where(GetDefaultCondition(valiFlow, negateCondition)).Select(selector).ToList();
+        return values.Any() ? values.Aggregate((acc, x) => acc + x) : TResult.Zero;
     }
 
     public TResult EvaluateAggregate<TResult>(
@@ -290,6 +297,8 @@ public class ValiFlowEvaluator<T, TProperty> : IInMemoryEvaluatorRead<T>, IInMem
         bool negateCondition = false
     ) where TResult : INumber<TResult>
     {
+        if (selector == null) throw new ArgumentNullException(nameof(selector));
+        if (aggregator == null) throw new ArgumentNullException(nameof(aggregator));
         IEnumerable<T> dataSource = entities ?? _inMemoryStore;
         IEnumerable<TResult> values = dataSource.Where(GetDefaultCondition(valiFlow, negateCondition)).Select(selector)
             .ToList();
@@ -303,6 +312,7 @@ public class ValiFlowEvaluator<T, TProperty> : IInMemoryEvaluatorRead<T>, IInMem
         bool negateCondition = false
     ) where TKey : notnull
     {
+        if (keySelector == null) throw new ArgumentNullException(nameof(keySelector));
         IEnumerable<T> dataSource = entities ?? _inMemoryStore;
         return dataSource.Where(GetDefaultCondition(valiFlow, negateCondition))
             .GroupBy(keySelector)
@@ -316,6 +326,7 @@ public class ValiFlowEvaluator<T, TProperty> : IInMemoryEvaluatorRead<T>, IInMem
         bool negateCondition = false
     ) where TKey : notnull
     {
+        if (keySelector == null) throw new ArgumentNullException(nameof(keySelector));
         IEnumerable<T> dataSource = entities ?? _inMemoryStore;
         return dataSource.Where(GetDefaultCondition(valiFlow, negateCondition))
             .GroupBy(keySelector)
@@ -330,10 +341,16 @@ public class ValiFlowEvaluator<T, TProperty> : IInMemoryEvaluatorRead<T>, IInMem
         bool negateCondition = false
     ) where TKey : notnull where TResult : INumber<TResult>
     {
+        if (keySelector == null) throw new ArgumentNullException(nameof(keySelector));
+        if (selector == null) throw new ArgumentNullException(nameof(selector));
         IEnumerable<T> dataSource = entities ?? _inMemoryStore;
         return dataSource.Where(GetDefaultCondition(valiFlow, negateCondition))
             .GroupBy(keySelector)
-            .ToDictionary(g => g.Key, g => g.Select(selector).Aggregate((acc, x) => acc + x));
+            .ToDictionary(g => g.Key, g =>
+            {
+                IEnumerable<TResult> vals = g.Select(selector).ToList();
+                return vals.Any() ? vals.Aggregate((acc, x) => acc + x) : TResult.Zero;
+            });
     }
 
     public Dictionary<TKey, TResult> EvaluateMinByGroup<TKey, TResult>(
@@ -344,6 +361,8 @@ public class ValiFlowEvaluator<T, TProperty> : IInMemoryEvaluatorRead<T>, IInMem
         bool negateCondition = false
     ) where TKey : notnull where TResult : INumber<TResult>
     {
+        if (keySelector == null) throw new ArgumentNullException(nameof(keySelector));
+        if (selector == null) throw new ArgumentNullException(nameof(selector));
         IEnumerable<T> dataSource = entities ?? _inMemoryStore;
         return dataSource.Where(GetDefaultCondition(valiFlow, negateCondition))
             .GroupBy(keySelector)
@@ -358,6 +377,8 @@ public class ValiFlowEvaluator<T, TProperty> : IInMemoryEvaluatorRead<T>, IInMem
         bool negateCondition = false
     ) where TKey : notnull where TResult : INumber<TResult>
     {
+        if (keySelector == null) throw new ArgumentNullException(nameof(keySelector));
+        if (selector == null) throw new ArgumentNullException(nameof(selector));
         IEnumerable<T> dataSource = entities ?? _inMemoryStore;
         return dataSource.Where(GetDefaultCondition(valiFlow, negateCondition))
             .GroupBy(keySelector)
@@ -372,6 +393,8 @@ public class ValiFlowEvaluator<T, TProperty> : IInMemoryEvaluatorRead<T>, IInMem
         bool negateCondition = false
     ) where TKey : notnull where TResult : INumber<TResult>
     {
+        if (keySelector == null) throw new ArgumentNullException(nameof(keySelector));
+        if (selector == null) throw new ArgumentNullException(nameof(selector));
         IEnumerable<T> dataSource = entities ?? _inMemoryStore;
         return dataSource.Where(GetDefaultCondition(valiFlow, negateCondition))
             .GroupBy(keySelector)
@@ -385,6 +408,7 @@ public class ValiFlowEvaluator<T, TProperty> : IInMemoryEvaluatorRead<T>, IInMem
         bool negateCondition = false
     ) where TKey : notnull
     {
+        if (keySelector == null) throw new ArgumentNullException(nameof(keySelector));
         IEnumerable<T> dataSource = entities ?? _inMemoryStore;
         return dataSource.Where(GetDefaultCondition(valiFlow, negateCondition))
             .GroupBy(keySelector)
@@ -399,6 +423,7 @@ public class ValiFlowEvaluator<T, TProperty> : IInMemoryEvaluatorRead<T>, IInMem
         bool negateCondition = false
     ) where TKey : notnull
     {
+        if (keySelector == null) throw new ArgumentNullException(nameof(keySelector));
         IEnumerable<T> dataSource = entities ?? _inMemoryStore;
         return dataSource.Where(GetDefaultCondition(valiFlow, negateCondition))
             .GroupBy(keySelector)

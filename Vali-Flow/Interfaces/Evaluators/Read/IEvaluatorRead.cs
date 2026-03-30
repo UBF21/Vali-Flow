@@ -3,6 +3,7 @@ using System.Numerics;
 using Vali_Flow.Core.Builder;
 using Vali_Flow.Core.Utils;
 using Vali_Flow.Interfaces.Specification;
+using Vali_Flow.Models;
 
 namespace Vali_Flow.Interfaces.Evaluators.Read;
 
@@ -126,17 +127,18 @@ public interface IEvaluatorRead<T> where T : class
     /// <param name="cancellationToken">A token to cancel the asynchronous operation.</param>
     /// <returns>A task that represents the asynchronous operation, returning the last entity that fails the specification or null if none fail.</returns>
     Task<T?> EvaluateGetLastFailedAsync(
-        IBasicSpecification<T> specification,
+        IQuerySpecification<T> specification,
         CancellationToken cancellationToken = default
     );
 
     /// <summary>
     /// Asynchronously retrieves the last entity that satisfies the specified specification.
+    /// Requires an ordering defined in the specification — SQL databases cannot determine "last" without ORDER BY.
     /// </summary>
-    /// <param name="specification">The specification defining the filtering and inclusion criteria.</param>
+    /// <param name="specification">The specification defining the filtering, ordering, and inclusion criteria. Must include an OrderBy.</param>
     /// <param name="cancellationToken">A token to cancel the asynchronous operation.</param>
     /// <returns>A task that represents the asynchronous operation, returning the last entity that satisfies the specification or null if none match.</returns>
-    Task<T?> EvaluateGetLastAsync(IBasicSpecification<T> specification, CancellationToken cancellationToken = default);
+    Task<T?> EvaluateGetLastAsync(IQuerySpecification<T> specification, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Asynchronously evaluates and returns the minimum value of a selected property from entities that satisfy the specification.
@@ -638,5 +640,16 @@ public interface IEvaluatorRead<T> where T : class
         Expression<Func<T, TKey>> keySelector,
         CancellationToken cancellationToken = default
     ) where TKey : notnull;
-    
+
+    /// <summary>
+    /// Asynchronously evaluates a paged result based on the provided specification.
+    /// </summary>
+    /// <param name="specification">The specification defining the filtering, ordering, and pagination criteria.</param>
+    /// <param name="cancellationToken">A token to cancel the asynchronous operation.</param>
+    /// <returns>A task that represents the asynchronous operation, returning a <see cref="PagedResult{T}"/> with the items and pagination metadata.</returns>
+    Task<PagedResult<T>> EvaluatePagedAsync(
+        IQuerySpecification<T> specification,
+        CancellationToken cancellationToken = default
+    );
+
 }

@@ -72,7 +72,7 @@ static async Task TestExpression(AppDbContext context, ListarModuloQuery request
 {
     try
     {
-        var builder = new ValiFlow<Modulo>();
+        var builder = new ValiFlowQuery<Modulo>();
         builder
             .Null(x => x.Deleted)
             .And()
@@ -80,7 +80,7 @@ static async Task TestExpression(AppDbContext context, ListarModuloQuery request
             //     group.Add(x => string.IsNullOrEmpty(request.Search))
             //         .Or()
             //         .Add(x => x.Nombre.ToLower().Contains(request.Search.ToLower())));
-            .NullOrEmpty(x => request.Search)
+            .IsNullOrEmpty(x => request.Search)
             .Or()
             .Contains(x => x.Nombre, request.Search)
             .And()

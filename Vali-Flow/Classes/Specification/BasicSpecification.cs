@@ -7,160 +7,166 @@ using Vali_Flow.Interfaces.Specification;
 namespace Vali_Flow.Classes.Specification;
 
 /// <summary>
-/// Implements a basic specification that allows defining filters, inclusions, and configurations for simple entity queries.
+/// Base class for all specifications. Provides filtering, inclusions, and EF Core query options
+/// with type-safe fluent chaining via the CRTP (Curiously Recurring Template Pattern).
 /// </summary>
-/// <typeparam name="T">The type of entity to which the specification applies, which must be a class.</typeparam>
-public class BasicSpecification<T>: IBasicSpecification<T> where T : class
+/// <typeparam name="TSpec">The concrete specification type (self-referential CRTP parameter).</typeparam>
+/// <typeparam name="T">The entity type. Must be a reference type.</typeparam>
+/// <remarks>
+/// Extend this class directly when building a custom specification that needs fluent chaining.
+/// <code>
+/// public class MySpec : BasicSpecification&lt;MySpec, User&gt;
+/// {
+///     public MySpec() { }
+/// }
+///
+/// new MySpec()
+///     .WithAsNoTracking(false)   // returns MySpec
+///     .AddInclude(u =&gt; u.Roles)  // returns MySpec
+///     .WithFilter(query);         // returns MySpec
+/// </code>
+/// For simple cases that don't require subclassing, use <see cref="BasicSpecification{T}"/> directly.
+/// </remarks>
+public class BasicSpecification<TSpec, T> : IBasicSpecification<T>
+    where TSpec : BasicSpecification<TSpec, T>
+    where T : class
 {
-    private ValiFlow<T> _filter;
+    private ValiFlowQuery<T> _filter;
     private readonly List<IEfInclude<T>> _includes = new();
     private bool _asNoTracking = true;
     private bool _asSplitQuery;
     private bool _ignoreQueryFilters;
-    
-    /// <summary>
-    /// Gets the validation flow used to filter the entities.
-    /// </summary>
-    public ValiFlow<T> Filter => _filter;
 
-    /// <summary>
-    /// Gets the collection of inclusion expressions for related properties.
-    /// </summary>
+    /// <summary>Gets the query filter used to filter entities.</summary>
+    public ValiFlowQuery<T> Filter => _filter;
+
+    /// <summary>Gets the collection of inclusion expressions for eager loading.</summary>
     public IEnumerable<IEfInclude<T>> Includes => _includes;
 
-    /// <summary>
-    /// Gets a value indicating whether the query should be executed without change tracking (no tracking).
-    /// </summary>
+    /// <summary>Gets a value indicating whether change tracking is disabled.</summary>
     public bool AsNoTracking => _asNoTracking;
 
-    /// <summary>
-    /// Gets a value indicating whether the query should be executed as a split query.
-    /// </summary>
+    /// <summary>Gets a value indicating whether the query executes as a split query.</summary>
     public bool AsSplitQuery => _asSplitQuery;
-    
-    /// <summary>
-    /// Gets a value indicating whether global query filters configured on the entity type should be ignored for this specification.
-    /// </summary>
-    /// <remarks>
-    /// When set to <see langword="true"/>, this property instructs Entity Framework Core to bypass any global query filters 
-    /// defined on the entity type (e.g., soft delete filters or tenant-specific filters) when executing the query. 
-    /// This is useful for scenarios where you need to retrieve entities that would otherwise be excluded by global filters, 
-    /// such as retrieving soft-deleted records or accessing data across all tenants in a multi-tenant application.
-    /// Use this property with caution, as ignoring global filters may expose sensitive data or break application logic 
-    /// that relies on these filters for data isolation.
-    /// </remarks>
+
+    /// <summary>Gets a value indicating whether global query filters are bypassed.</summary>
     public bool IgnoreQueryFilters => _ignoreQueryFilters;
-    
-    public BasicSpecification()
+
+    /// <summary>Initializes a new instance with an empty filter (matches all entities).</summary>
+    protected BasicSpecification()
     {
-        _filter = new ValiFlow<T>();
+        _filter = new ValiFlowQuery<T>();
     }
-    
+
     /// <summary>
-    /// Initializes a new instance of the <see cref="BasicSpecification{T}"/> class with a validation filter.
+    /// Initializes a new instance with the specified filter and EF Core query options.
     /// </summary>
-    /// <param name="filter">The validation flow that defines the filtering criteria. Cannot be null.</param>
-    /// <exception cref="ArgumentNullException">Thrown if the <paramref name="filter"/> parameter is null.</exception>
-    public BasicSpecification(ValiFlow<T> filter)
-    {
-        _filter = filter ?? throw new ArgumentNullException(nameof(filter), "The filter cannot be null.");
-    }
-    
-    /// <summary>
-    /// Initializes a new instance of the <see cref="BasicSpecification{T}"/> class with a validation filter and optional configurations.
-    /// </summary>
-    /// <param name="filter">The validation flow that defines the filtering criteria. Cannot be null.</param>
-    /// <param name="asNoTracking">Indicates whether the query should be executed without change tracking. Default is true.</param>
-    /// <param name="asSplitQuery">Indicates whether the query should be executed as a split query. Default is false.</param>
-    /// <param name="ignoreQueryFilters">Indicates whether global query filters should be ignored. Default is false.</param>
-    /// <exception cref="ArgumentNullException">Thrown if the <paramref name="filter"/> parameter is null.</exception>
-    public BasicSpecification(
-        ValiFlow<T> filter,
+    /// <param name="filter">The query filter. Cannot be null.</param>
+    /// <param name="asNoTracking">Disable change tracking. Default is <see langword="true"/>.</param>
+    /// <param name="asSplitQuery">Use split queries for includes. Default is <see langword="false"/>.</param>
+    /// <param name="ignoreQueryFilters">Bypass global EF Core query filters. Default is <see langword="false"/>.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="filter"/> is null.</exception>
+    protected BasicSpecification(
+        ValiFlowQuery<T> filter,
         bool asNoTracking = true,
         bool asSplitQuery = false,
-        bool ignoreQueryFilters = false
-    )
+        bool ignoreQueryFilters = false)
     {
         _filter = filter ?? throw new ArgumentNullException(nameof(filter), "The filter cannot be null.");
         _asNoTracking = asNoTracking;
         _asSplitQuery = asSplitQuery;
         _ignoreQueryFilters = ignoreQueryFilters;
     }
-    
-    /// <summary>
-    /// Updates the validation filter of the specification with a new validation flow.
-    /// </summary>
-    /// <param name="filter">The new validation flow that defines the filtering criteria. Cannot be null.</param>
-    /// <returns>The current instance of <see cref="BasicSpecification{T}"/> for chaining.</returns>
-    /// <exception cref="ArgumentNullException">Thrown if the <paramref name="filter"/> parameter is null.</exception>
-    public BasicSpecification<T> WithFilter(ValiFlow<T> filter)
+
+    /// <summary>Replaces the current filter with a new one.</summary>
+    /// <param name="filter">The new filter. Cannot be null.</param>
+    /// <returns>The current specification instance for method chaining.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="filter"/> is null.</exception>
+    public TSpec WithFilter(ValiFlowQuery<T> filter)
     {
         _filter = filter ?? throw new ArgumentNullException(nameof(filter), "The filter cannot be null.");
-        return this;
+        return (TSpec)this;
     }
 
     /// <summary>
-    /// Adds an inclusion expression for a related property of the specified type to the specification.
-    /// This method allows including navigation properties (e.g., collections or single entities) in the query 
-    /// using a strongly-typed lambda expression, avoiding boxing/unboxing overhead.
+    /// Adds an eager-loading expression for a related navigation property.
     /// </summary>
-    /// <typeparam name="TProperty">The type of the related property to include.</typeparam>
-    /// <param name="expression">The lambda expression that defines the related property to include. 
-    /// Cannot be null.</param>
-    /// <returns>The current instance of <see cref="BasicSpecification{T}"/> for method chaining.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when the <paramref name="expression"/> parameter is null.</exception>
+    /// <typeparam name="TProperty">The type of the navigation property.</typeparam>
+    /// <param name="expression">The navigation expression. Cannot be null.</param>
+    /// <returns>The current specification instance for method chaining.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="expression"/> is null.</exception>
     /// <example>
     /// <code>
-    /// var spec = new BasicSpecification&lt;User&gt;(u => u.Name != null)
-    ///     .AddInclude(u => u.Roles)
-    ///     .AddInclude(u => u.Address);
+    /// var spec = new BasicSpecification&lt;User&gt;(query)
+    ///     .AddInclude(u =&gt; u.Roles)
+    ///     .AddInclude(u =&gt; u.Address);
     /// </code>
     /// </example>
-    public BasicSpecification<T> AddInclude<TProperty>(Expression<Func<T, TProperty>> expression)
+    public TSpec AddInclude<TProperty>(Expression<Func<T, TProperty>> expression)
     {
         _includes.Add(new EfInclude<T, TProperty>(expression ?? throw new ArgumentNullException(nameof(expression))));
-        return this;
+        return (TSpec)this;
     }
-    
-    
-    /// <summary>
-    /// Configures whether the query should be executed without change tracking (no tracking).
-    /// </summary>
-    /// <param name="asNoTracking">A value indicating whether to use no tracking.</param>
-    /// <returns>The current instance of <see cref="BasicSpecification{T}"/> for chaining.</returns>
-    public BasicSpecification<T> WithAsNoTracking(bool asNoTracking)
+
+    /// <summary>Configures whether change tracking is disabled for this query.</summary>
+    /// <param name="asNoTracking">A value indicating whether to disable tracking.</param>
+    /// <returns>The current specification instance for method chaining.</returns>
+    public TSpec WithAsNoTracking(bool asNoTracking)
     {
         _asNoTracking = asNoTracking;
-        return this;
+        return (TSpec)this;
     }
-    
-    /// <summary>
-    /// Configures whether the query should be executed as a split query.
-    /// </summary>
-    /// <param name="asSplitQuery">A value indicating whether to use a split query.</param>
-    /// <returns>The current instance of <see cref="BasicSpecification{T}"/> for chaining.</returns>
-    public BasicSpecification<T> WithAsSplitQuery(bool asSplitQuery)
+
+    /// <summary>Configures whether the query executes as a split query.</summary>
+    /// <param name="asSplitQuery">A value indicating whether to use split queries.</param>
+    /// <returns>The current specification instance for method chaining.</returns>
+    public TSpec WithAsSplitQuery(bool asSplitQuery)
     {
         _asSplitQuery = asSplitQuery;
-        return this;
+        return (TSpec)this;
     }
 
     /// <summary>
-    /// Configures whether global query filters configured on the entity type should be ignored for this specification.
+    /// Configures whether global EF Core query filters (e.g. soft-delete, tenant) are bypassed.
     /// </summary>
-    /// <param name="ignoreQueryFilters">A value indicating whether to ignore global query filters. 
-    /// When set to <see langword="true"/>, Entity Framework Core bypasses any global query filters defined on the entity type.</param>
-    /// <returns>The current instance of <see cref="BasicSpecification{T}"/> for method chaining.</returns>
+    /// <param name="ignoreQueryFilters">
+    /// <see langword="true"/> to bypass global filters; <see langword="false"/> to apply them (default).
+    /// </param>
+    /// <returns>The current specification instance for method chaining.</returns>
     /// <remarks>
-    /// This method allows you to specify whether global query filters (e.g., soft delete filters or tenant-specific filters) 
-    /// should be ignored when executing the query. This is useful for scenarios where you need to retrieve entities that would 
-    /// otherwise be excluded by global filters, such as retrieving soft-deleted records or accessing data across all tenants 
-    /// in a multi-tenant application. Use this setting with caution, as ignoring global filters may expose sensitive data 
-    /// or break application logic that relies on these filters for data isolation.
+    /// Use with caution — ignoring global filters may expose data that is intentionally excluded
+    /// (e.g. soft-deleted records or records belonging to other tenants).
     /// </remarks>
-    public BasicSpecification<T> WithIgnoreQueryFilters(bool ignoreQueryFilters)
+    public TSpec WithIgnoreQueryFilters(bool ignoreQueryFilters)
     {
         _ignoreQueryFilters = ignoreQueryFilters;
-        return this;
+        return (TSpec)this;
     }
+}
+
+/// <summary>
+/// Sealed concrete specification for simple filtering, inclusions, and EF Core query options.
+/// For specs that also need ordering and pagination, use <see cref="QuerySpecification{T}"/> instead.
+/// </summary>
+/// <typeparam name="T">The entity type. Must be a reference type.</typeparam>
+public sealed class BasicSpecification<T> : BasicSpecification<BasicSpecification<T>, T>
+    where T : class
+{
+    /// <summary>Initializes a new instance with an empty filter (matches all entities).</summary>
+    public BasicSpecification() { }
+
+    /// <summary>
+    /// Initializes a new instance with the specified filter and EF Core query options.
+    /// </summary>
+    /// <param name="filter">The query filter. Cannot be null.</param>
+    /// <param name="asNoTracking">Disable change tracking. Default is <see langword="true"/>.</param>
+    /// <param name="asSplitQuery">Use split queries for includes. Default is <see langword="false"/>.</param>
+    /// <param name="ignoreQueryFilters">Bypass global EF Core query filters. Default is <see langword="false"/>.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="filter"/> is null.</exception>
+    public BasicSpecification(
+        ValiFlowQuery<T> filter,
+        bool asNoTracking = true,
+        bool asSplitQuery = false,
+        bool ignoreQueryFilters = false)
+        : base(filter, asNoTracking, asSplitQuery, ignoreQueryFilters) { }
 }

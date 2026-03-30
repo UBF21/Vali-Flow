@@ -1,3 +1,4 @@
+using Vali_Flow.Core.Builder;
 using Vali_Flow.Interfaces.Options;
 
 namespace Vali_Flow.Interfaces.Specification;
@@ -15,7 +16,7 @@ namespace Vali_Flow.Interfaces.Specification;
 /// Implementations should provide methods to define filters, includes, and query-specific options like 
 /// page size, block size, and ordering criteria.
 /// </remarks>
-public interface IQuerySpecification<T> : ISpecification<T> where T : class
+public interface IQuerySpecification<T> : IBasicSpecification<T> where T : class
 {
     /// <summary>
     /// Gets the primary ordering expression, if any.
@@ -41,5 +42,10 @@ public interface IQuerySpecification<T> : ISpecification<T> where T : class
     /// Gets the maximum number of items to take (top), if specified.
     /// </summary>
     int? Top { get; }
-    
+
+    /// <summary>
+    /// Gets the ValiSort instance used for ordering, if specified.
+    /// </summary>
+    ValiSort<T>? ValiSort { get; }
+
 }

@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net8.0;net9.0</TargetFrameworks>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>Vali_Flow.Sql</RootNamespace>
+    <PackageId>Vali-Flow.Sql</PackageId>
+    <Version>1.0.0</Version>
+    <Authors>Felipe Rafael Montenegro Morriberon</Authors>
+    <Description>SQL translator for Vali-Flow.Core — converts expression trees to parameterized SQL for Dapper and ADO.NET. Supports SQL Server, PostgreSQL, MySQL, and SQLite dialects.</Description>
+    <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Vali-Flow.Core\Vali-Flow.Core\Vali-Flow.Core.csproj" />
+  </ItemGroup>
+
+</Project>
