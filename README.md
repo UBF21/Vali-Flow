@@ -66,6 +66,18 @@ Install the Elasticsearch query builder:
 dotnet add package Vali-Flow.NoSql.Elasticsearch
 ```
 
+Install the Redis (RediSearch) query builder:
+
+```bash
+dotnet add package Vali-Flow.NoSql.Redis
+```
+
+Install the AWS DynamoDB filter builder:
+
+```bash
+dotnet add package Vali-Flow.NoSql.DynamoDB
+```
+
 `Vali-Flow.Core` is automatically included as a transitive dependency of all packages.
 
 ---
@@ -80,6 +92,8 @@ dotnet add package Vali-Flow.NoSql.Elasticsearch
 | `Vali-Flow.Sql` | SQL query builder | Parameterized SQL string + parameters |
 | `Vali-Flow.NoSql.MongoDB` | MongoDB filter builder | `BsonDocument` |
 | `Vali-Flow.NoSql.Elasticsearch` | Elasticsearch query builder | `Query` (Elastic.Clients.Elasticsearch) |
+| `Vali-Flow.NoSql.Redis` | Redis RediSearch query builder | `string` (RediSearch query) |
+| `Vali-Flow.NoSql.DynamoDB` | AWS DynamoDB filter builder | `DynamoFilterExpression` |
 
 ```
 Vali-Flow.Core  (ValiFlow<T> expression builder)
@@ -89,7 +103,9 @@ Vali-Flow.Core  (ValiFlow<T> expression builder)
        ├── Vali-Flow.Sql          (SQL — Dapper / ADO.NET)
        └── Vali-Flow.NoSql
                ├── Vali-Flow.NoSql.MongoDB        (BsonDocument)
-               └── Vali-Flow.NoSql.Elasticsearch  (Query DSL)
+               ├── Vali-Flow.NoSql.Elasticsearch  (Query DSL)
+               ├── Vali-Flow.NoSql.Redis          (RediSearch string)
+               └── Vali-Flow.NoSql.DynamoDB       (DynamoFilterExpression)
 ```
 
 All packages are **query builders only** — they do not manage connections, sessions, or execution. You pass the generated query object to your existing data access infrastructure.
@@ -518,30 +534,84 @@ Query esQuery = ((Expression<Func<Product, bool>>)(x => x.IsActive)).ToElasticse
 
 Both translators share the same provider-agnostic IR (intermediate representation) produced by `ToNoSqlIR()`. The mapping for each provider:
 
-| ValiFlow predicate | MongoDB | Elasticsearch |
-|---|---|---|
-| `EqualTo(x => x.F, v)` | `{ F: v }` | `TermQuery(F, v)` |
-| `NotEqualTo(x => x.F, v)` | `{ F: {$ne: v} }` | `BoolQuery.MustNot[TermQuery]` |
-| `GreaterThan(x => x.F, v)` | `{ F: {$gt: v} }` | `NumberRangeQuery.Gt` |
-| `Contains(x => x.F, s)` | regex `/s/i` | `WildcardQuery *s*` (case-insensitive) |
-| `In(x => x.F, list)` | `{ F: {$in: [...]} }` | `TermsQuery` |
-| `IsNull / IsNotNull` | `{$exists:false/true}` | `ExistsQuery` / `BoolQuery.MustNot` |
-| `And` | `{$and: [...]}` | `BoolQuery.Must` |
-| `Or` | `{$or: [...]}` | `BoolQuery.Should` |
-| `Not` | `{$nor: [...]}` | `BoolQuery.MustNot` |
+| ValiFlow predicate | MongoDB | Elasticsearch | Redis | DynamoDB |
+|---|---|---|---|---|
+| `EqualTo(x => x.F, v)` | `{ F: v }` | `TermQuery(F, v)` | `@F:[v v]` / `@F:{"v"}` | `#f = :v` |
+| `NotEqualTo(x => x.F, v)` | `{ F: {$ne: v} }` | `BoolQuery.MustNot` | `(-@F:[v v])` / `-@F:{"v"}` | `#f <> :v` |
+| `GreaterThan(x => x.F, v)` | `{ F: {$gt: v} }` | `NumberRangeQuery.Gt` | `@F:[(v +inf]` | `#f > :v` |
+| `Contains(x => x.F, s)` | regex `/s/i` | `WildcardQuery *s*` | `@F:*s*` | `contains(#f, :v)` |
+| `StartsWith(x => x.F, s)` | regex `^s/i` | `WildcardQuery s*` | `@F:s*` | `begins_with(#f, :v)` |
+| `In(x => x.F, list)` | `{ F: {$in: [...]} }` | `TermsQuery` | `@F:{"v1"\|"v2"}` | `#f IN (:v0, :v1)` |
+| `IsNull` | `{ F: null }` | `BoolQuery.MustNot[Exists]` | ❌ not supported | `attribute_not_exists(#f)` |
+| `IsNotNull` | `{ F: {$ne: null} }` | `ExistsQuery` | ❌ not supported | `attribute_exists(#f)` |
+| `And` | `{$and: [...]}` | `BoolQuery.Must` | `(left right)` | `(left AND right)` |
+| `Or` | `{$or: [...]}` | `BoolQuery.Should` | `(left \| right)` | `(left OR right)` |
+| `Not` | `{$nor: [...]}` | `BoolQuery.MustNot` | `-(inner)` | `NOT (inner)` |
+
+### Redis (RediSearch)
+
+```csharp
+using Vali_Flow.NoSql.Redis.Extensions;
+
+var filter = new ValiFlow<Product>()
+    .EqualTo(x => x.Category, "Electronics")
+    .GreaterThan(x => x.Price, 100m)
+    .Contains(x => x.Name, "phone");
+
+string redisQuery = filter.ToRedisSearch();
+
+// Pass to NRedisStack
+var results = db.FT().Search("idx:products", new Query(redisQuery));
+```
+
+Numeric fields use range queries; string fields use quoted tag queries (DIALECT 2). Wildcard patterns map directly to RediSearch's `*pattern*` syntax.
+
+> **Limitation:** `IsNull` / `IsNotNull` are not supported — RediSearch has no field-existence query syntax. Handle null checks at the application level or use `CustomValueConverter`.
+
+### DynamoDB
+
+```csharp
+using Vali_Flow.NoSql.DynamoDB.Extensions;
+
+var filter = new ValiFlow<Order>()
+    .EqualTo(x => x.Status, "Active")
+    .GreaterThan(x => x.Total, 100m);
+
+DynamoFilterExpression f = filter.ToDynamoDB();
+
+var request = new ScanRequest
+{
+    TableName                 = "Orders",
+    FilterExpression          = f.FilterExpression,
+    ExpressionAttributeNames  = f.ExpressionAttributeNames.ToDictionary(),
+    ExpressionAttributeValues = f.ExpressionAttributeValues.ToDictionary()
+};
+```
+
+`DynamoFilterExpression` encapsulates the `FilterExpression` string together with `ExpressionAttributeNames` (`#f0..n`) and `ExpressionAttributeValues` (`:v0..n`). Works identically for `ScanRequest` and `QueryRequest`.
+
+> **Limitations:** `EndsWith` is not supported (DynamoDB has no trailing-wildcard function). `IN` supports at most 100 values (DynamoDB SDK limit).
 
 ### Custom value conversion (OCP extension point)
 
-Both translators expose a static `CustomValueConverter` delegate for handling custom CLR types without modifying the library:
+All translators expose a static converter delegate for handling custom CLR types without modifying the library:
 
 ```csharp
-// MongoDB — convert a Money value object to BsonDecimal128
+// MongoDB
 MongoFilterTranslator.CustomValueConverter = v =>
     v is Money m ? new BsonDecimal128(m.Amount) : null;
 
-// Elasticsearch — convert a Money value object to FieldValue.Double
+// Elasticsearch
 ElasticsearchFilterTranslator.CustomValueConverter = v =>
     v is Money m ? FieldValue.Double((double)m.Amount) : null;
+
+// Redis — return raw tag value string
+RedisSearchFilterTranslator.CustomValueConverter = v =>
+    v is Money m ? m.Amount.ToString(CultureInfo.InvariantCulture) : null;
+
+// DynamoDB
+DynamoFilterTranslator.CustomAttributeValueConverter = v =>
+    v is Money m ? new AttributeValue { N = m.Amount.ToString() } : null;
 ```
 
 Return `null` to fall through to the built-in type conversion.
