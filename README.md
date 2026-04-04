@@ -2,11 +2,14 @@
 
 [![NuGet Version](https://img.shields.io/nuget/v/Vali-Flow?label=Vali-Flow&color=blue)](https://www.nuget.org/packages/Vali-Flow)
 [![NuGet Version](https://img.shields.io/nuget/v/Vali-Flow.InMemory?label=Vali-Flow.InMemory&color=blue)](https://www.nuget.org/packages/Vali-Flow.InMemory)
+[![NuGet Version](https://img.shields.io/nuget/v/Vali-Flow.Sql?label=Vali-Flow.Sql&color=blue)](https://www.nuget.org/packages/Vali-Flow.Sql)
+[![NuGet Version](https://img.shields.io/nuget/v/Vali-Flow.NoSql.MongoDB?label=Vali-Flow.NoSql.MongoDB&color=blue)](https://www.nuget.org/packages/Vali-Flow.NoSql.MongoDB)
+[![NuGet Version](https://img.shields.io/nuget/v/Vali-Flow.NoSql.Elasticsearch?label=Vali-Flow.NoSql.Elasticsearch&color=blue)](https://www.nuget.org/packages/Vali-Flow.NoSql.Elasticsearch)
 [![NuGet Version](https://img.shields.io/nuget/v/Vali-Flow.Core?label=Vali-Flow.Core&color=blue)](https://www.nuget.org/packages/Vali-Flow.Core)
-[![.NET](https://img.shields.io/badge/.NET-7%20%7C%208%20%7C%209-512BD4)](https://dotnet.microsoft.com)
+[![.NET](https://img.shields.io/badge/.NET-8%20%7C%209-512BD4)](https://dotnet.microsoft.com)
 [![License](https://img.shields.io/badge/license-Apache--2.0-green)](LICENSE)
 
-A .NET library that simplifies data access in Entity Framework Core applications through a fluent specification API. Build reusable, composable query criteria and execute them via a single evaluator — without scattering filter logic across repositories.
+A .NET library ecosystem for building reusable, composable query criteria with a fluent API. Translate the same `ValiFlow<T>` filter into EF Core queries, parameterized SQL, MongoDB BSON filters, or Elasticsearch Query DSL — without scattering filter logic across repositories or duplicating predicates per data store.
 
 ---
 
@@ -24,6 +27,9 @@ A .NET library that simplifies data access in Entity Framework Core applications
 - Upsert support: single entity (`UpsertAsync`) and collection (`UpsertRangeAsync`)
 - Transaction support via `ExecuteTransactionAsync`
 - `Vali-Flow.InMemory` package for in-memory evaluation without a database (unit testing, caching)
+- `Vali-Flow.Sql` package — translates `ValiFlow<T>` into parameterized SQL for Dapper / ADO.NET (SQL Server, PostgreSQL, MySQL, SQLite)
+- `Vali-Flow.NoSql.MongoDB` package — translates `ValiFlow<T>` into a `BsonDocument` filter for MongoDB
+- `Vali-Flow.NoSql.Elasticsearch` package — translates `ValiFlow<T>` into an Elasticsearch `Query` object
 - Built on top of `Vali-Flow.Core` expression builder — zero additional dependencies for filter construction
 
 ---
@@ -42,7 +48,51 @@ Install the in-memory package for testing or in-process evaluation:
 dotnet add package Vali-Flow.InMemory
 ```
 
-The `Vali-Flow.Core` expression builder is automatically included as a transitive dependency of both packages.
+Install the SQL query builder for Dapper / ADO.NET:
+
+```bash
+dotnet add package Vali-Flow.Sql
+```
+
+Install the MongoDB filter builder:
+
+```bash
+dotnet add package Vali-Flow.NoSql.MongoDB
+```
+
+Install the Elasticsearch query builder:
+
+```bash
+dotnet add package Vali-Flow.NoSql.Elasticsearch
+```
+
+`Vali-Flow.Core` is automatically included as a transitive dependency of all packages.
+
+---
+
+## Package Ecosystem
+
+| Package | Purpose | Output type |
+|---------|---------|-------------|
+| `Vali-Flow.Core` | Fluent expression builder (`ValiFlow<T>`) | `Expression<Func<T, bool>>` |
+| `Vali-Flow` | EF Core async evaluator + specifications | Executes against `DbContext` |
+| `Vali-Flow.InMemory` | Synchronous in-memory evaluator | Executes against `IEnumerable<T>` |
+| `Vali-Flow.Sql` | SQL query builder | Parameterized SQL string + parameters |
+| `Vali-Flow.NoSql.MongoDB` | MongoDB filter builder | `BsonDocument` |
+| `Vali-Flow.NoSql.Elasticsearch` | Elasticsearch query builder | `Query` (Elastic.Clients.Elasticsearch) |
+
+```
+Vali-Flow.Core  (ValiFlow<T> expression builder)
+       │
+       ├── Vali-Flow              (EF Core — DbContext)
+       ├── Vali-Flow.InMemory     (In-process — IEnumerable<T>)
+       ├── Vali-Flow.Sql          (SQL — Dapper / ADO.NET)
+       └── Vali-Flow.NoSql
+               ├── Vali-Flow.NoSql.MongoDB        (BsonDocument)
+               └── Vali-Flow.NoSql.Elasticsearch  (Query DSL)
+```
+
+All packages are **query builders only** — they do not manage connections, sessions, or execution. You pass the generated query object to your existing data access infrastructure.
 
 ---
 
@@ -338,6 +388,163 @@ var spec = new BasicSpecification<Order>()
     .WithIgnoreQueryFilters(true)
     .WithAsNoTracking(true);
 ```
+
+---
+
+## SQL Query Builder
+
+`Vali-Flow.Sql` translates a `ValiFlow<T>` filter into a parameterized SQL `WHERE` clause ready for Dapper, ADO.NET, or any raw SQL executor. It supports four dialects out of the box.
+
+### Basic usage
+
+```csharp
+using Vali_Flow.Sql.Extensions;
+using Vali_Flow.Sql.Dialects;
+
+var filter = new ValiFlow<Order>()
+    .EqualTo(x => x.Status, "Active")
+    .GreaterThan(x => x.Total, 100m);
+
+SqlResult result = filter.ToSql(new SqlServerDialect());
+// result.Sql        → "([Status] = @p0 AND [Total] > @p1)"
+// result.Parameters → { "@p0": "Active", "@p1": 100m }
+```
+
+### With Dapper
+
+```csharp
+var result = filter.ToSql(new PostgreSqlDialect());
+
+var orders = await connection.QueryAsync<Order>(
+    $"SELECT * FROM orders WHERE {result.Sql}",
+    result.Parameters);
+```
+
+### With ADO.NET
+
+```csharp
+using var cmd = connection.CreateCommand();
+cmd.CommandText = $"SELECT * FROM orders WHERE {result.Sql}";
+result.ApplyTo(cmd); // applies all parameters directly to the command
+```
+
+### Available dialects
+
+| Class | Quoting | Parameters | Notes |
+|-------|---------|-----------|-------|
+| `SqlServerDialect` | `[col]` | `@p0` | `LOWER()` for case-insensitive |
+| `PostgreSqlDialect` | `"col"` | `@p0` | Native `ILIKE` |
+| `MySqlDialect` | `` `col` `` | `@p0` | Case-insensitive `LIKE` |
+| `SqliteDialect` | `"col"` | `@p0` | `LOWER()` for case-insensitive |
+
+### SqlQueryBuilder — full SELECT statements
+
+For complete queries (SELECT, JOIN, GROUP BY, aggregates), use `SqlQueryBuilder<T>`:
+
+```csharp
+var query = new SqlQueryBuilder<Order>(new PostgreSqlDialect())
+    .Select(x => x.Id, x => x.Status, x => x.Total)
+    .From("orders")
+    .Where(w => w.EqualTo(x => x.Status, "Active"))
+    .OrderBy(x => x.CreatedAt, ascending: false)
+    .Paginate(page: 1, pageSize: 20);
+
+SqlResult result = query.Build();
+```
+
+```csharp
+// Aggregates + GROUP BY
+var query = new SqlQueryBuilder<Order>(new SqlServerDialect())
+    .From("orders")
+    .GroupBy(x => x.Status)
+    .Having(h => h.CountGreaterThan(5))
+    .SelectAggregates(b => b
+        .Column(x => x.Status)
+        .Sum(x => x.Total, alias: "TotalRevenue")
+        .Count(alias: "OrderCount"));
+
+SqlResult result = query.Build();
+```
+
+---
+
+## NoSql Query Builder
+
+`Vali-Flow.NoSql.MongoDB` and `Vali-Flow.NoSql.Elasticsearch` translate a `ValiFlow<T>` filter into the native query format of each database. Both packages are **query builders only** — they produce the filter object; you pass it to your own client.
+
+### MongoDB
+
+```csharp
+using Vali_Flow.NoSql.MongoDB.Extensions;
+
+var filter = new ValiFlow<User>()
+    .EqualTo(x => x.IsActive, true)
+    .GreaterThan(x => x.Age, 18);
+
+BsonDocument bsonFilter = filter.ToMongo();
+
+// Pass directly to the MongoDB driver (BsonDocument → FilterDefinition<T> implicitly)
+var users = await collection.Find(bsonFilter).ToListAsync();
+```
+
+From a raw expression:
+
+```csharp
+BsonDocument bsonFilter = ((Expression<Func<User, bool>>)(x => x.Name == "Alice")).ToMongo();
+```
+
+### Elasticsearch
+
+```csharp
+using Vali_Flow.NoSql.Elasticsearch.Extensions;
+
+var filter = new ValiFlow<Product>()
+    .EqualTo(x => x.Category, "Electronics")
+    .GreaterThanOrEqualTo(x => x.Price, 100m)
+    .Contains(x => x.Name, "phone");
+
+Query esQuery = filter.ToElasticsearch();
+
+var response = await client.SearchAsync<Product>(s => s.Query(esQuery));
+```
+
+From a raw expression:
+
+```csharp
+Query esQuery = ((Expression<Func<Product, bool>>)(x => x.IsActive)).ToElasticsearch();
+```
+
+### IR node mapping
+
+Both translators share the same provider-agnostic IR (intermediate representation) produced by `ToNoSqlIR()`. The mapping for each provider:
+
+| ValiFlow predicate | MongoDB | Elasticsearch |
+|---|---|---|
+| `EqualTo(x => x.F, v)` | `{ F: v }` | `TermQuery(F, v)` |
+| `NotEqualTo(x => x.F, v)` | `{ F: {$ne: v} }` | `BoolQuery.MustNot[TermQuery]` |
+| `GreaterThan(x => x.F, v)` | `{ F: {$gt: v} }` | `NumberRangeQuery.Gt` |
+| `Contains(x => x.F, s)` | regex `/s/i` | `WildcardQuery *s*` (case-insensitive) |
+| `In(x => x.F, list)` | `{ F: {$in: [...]} }` | `TermsQuery` |
+| `IsNull / IsNotNull` | `{$exists:false/true}` | `ExistsQuery` / `BoolQuery.MustNot` |
+| `And` | `{$and: [...]}` | `BoolQuery.Must` |
+| `Or` | `{$or: [...]}` | `BoolQuery.Should` |
+| `Not` | `{$nor: [...]}` | `BoolQuery.MustNot` |
+
+### Custom value conversion (OCP extension point)
+
+Both translators expose a static `CustomValueConverter` delegate for handling custom CLR types without modifying the library:
+
+```csharp
+// MongoDB — convert a Money value object to BsonDecimal128
+MongoFilterTranslator.CustomValueConverter = v =>
+    v is Money m ? new BsonDecimal128(m.Amount) : null;
+
+// Elasticsearch — convert a Money value object to FieldValue.Double
+ElasticsearchFilterTranslator.CustomValueConverter = v =>
+    v is Money m ? FieldValue.Double((double)m.Amount) : null;
+```
+
+Return `null` to fall through to the built-in type conversion.
 
 ---
 
