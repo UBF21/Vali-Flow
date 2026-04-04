@@ -21,36 +21,13 @@ namespace Vali_Flow.Sql.Builder;
 /// // SQL: COUNT(*) > @ph0 AND SUM([Amount]) > @ph1
 /// </code>
 /// </example>
-public sealed class SqlHavingBuilder<T> where T : class
+public sealed class SqlHavingBuilder<T> : SqlConditionBuilderBase<SqlHavingBuilder<T>, T>
+    where T : class
 {
-    private sealed class SharedState
-    {
-        public int ParamIndex;
-        public readonly Dictionary<string, object> Parameters = new();
-    }
-
-    private readonly SharedState _state;
-    private readonly List<(Func<ISqlDialect, string> SqlFactory, bool IsAnd)> _conditions = new();
-    private bool _nextIsAnd = true;
+    protected override string ParamPrefix => "ph";
 
     /// <summary>Creates a new HAVING builder.</summary>
-    public SqlHavingBuilder() => _state = new SharedState();
-
-    // ── Logic ─────────────────────────────────────────────────────────────────
-
-    /// <summary>The next condition will be ANDed with the previous (default behavior).</summary>
-    public SqlHavingBuilder<T> And()
-    {
-        _nextIsAnd = true;
-        return this;
-    }
-
-    /// <summary>The next condition will start a new OR group.</summary>
-    public SqlHavingBuilder<T> Or()
-    {
-        _nextIsAnd = false;
-        return this;
-    }
+    public SqlHavingBuilder() { }
 
     // ── COUNT(*) ──────────────────────────────────────────────────────────────
 
@@ -81,7 +58,24 @@ public sealed class SqlHavingBuilder<T> where T : class
             $"COUNT(*) BETWEEN {d.ParameterPrefix}{fromParam} AND {d.ParameterPrefix}{toParam}");
     }
 
+    /// <summary>Adds <c>COUNT(*) NOT BETWEEN @ph{n} AND @ph{n+1}</c>.</summary>
+    public SqlHavingBuilder<T> CountNotBetween(int from, int to)
+    {
+        var fromParam = AddParam(from);
+        var toParam = AddParam(to);
+        return AddCondition(d =>
+            $"COUNT(*) NOT BETWEEN {d.ParameterPrefix}{fromParam} AND {d.ParameterPrefix}{toParam}");
+    }
+
     // ── SUM ───────────────────────────────────────────────────────────────────
+
+    /// <summary>Adds <c>SUM([col]) = @ph{n}</c>.</summary>
+    public SqlHavingBuilder<T> SumEquals<TValue>(Expression<Func<T, TValue>> selector, TValue value)
+        => AddAggregateComparison("SUM", selector, "=", value);
+
+    /// <summary>Adds <c>SUM([col]) != @ph{n}</c>.</summary>
+    public SqlHavingBuilder<T> SumNotEquals<TValue>(Expression<Func<T, TValue>> selector, TValue value)
+        => AddAggregateComparison("SUM", selector, "!=", value);
 
     /// <summary>Adds <c>SUM([col]) > @ph{n}</c>.</summary>
     public SqlHavingBuilder<T> SumGreaterThan<TValue>(Expression<Func<T, TValue>> selector, TValue value)
@@ -103,7 +97,19 @@ public sealed class SqlHavingBuilder<T> where T : class
     public SqlHavingBuilder<T> SumBetween<TValue>(Expression<Func<T, TValue>> selector, TValue from, TValue to)
         => AddAggregateBetween("SUM", selector, from, to);
 
+    /// <summary>Adds <c>SUM([col]) NOT BETWEEN @ph{n} AND @ph{n+1}</c>.</summary>
+    public SqlHavingBuilder<T> SumNotBetween<TValue>(Expression<Func<T, TValue>> selector, TValue from, TValue to)
+        => AddAggregateNotBetween("SUM", selector, from, to);
+
     // ── AVG ───────────────────────────────────────────────────────────────────
+
+    /// <summary>Adds <c>AVG([col]) = @ph{n}</c>.</summary>
+    public SqlHavingBuilder<T> AverageEquals<TValue>(Expression<Func<T, TValue>> selector, TValue value)
+        => AddAggregateComparison("AVG", selector, "=", value);
+
+    /// <summary>Adds <c>AVG([col]) != @ph{n}</c>.</summary>
+    public SqlHavingBuilder<T> AverageNotEquals<TValue>(Expression<Func<T, TValue>> selector, TValue value)
+        => AddAggregateComparison("AVG", selector, "!=", value);
 
     /// <summary>Adds <c>AVG([col]) > @ph{n}</c>.</summary>
     public SqlHavingBuilder<T> AverageGreaterThan<TValue>(Expression<Func<T, TValue>> selector, TValue value)
@@ -125,7 +131,19 @@ public sealed class SqlHavingBuilder<T> where T : class
     public SqlHavingBuilder<T> AverageBetween<TValue>(Expression<Func<T, TValue>> selector, TValue from, TValue to)
         => AddAggregateBetween("AVG", selector, from, to);
 
+    /// <summary>Adds <c>AVG([col]) NOT BETWEEN @ph{n} AND @ph{n+1}</c>.</summary>
+    public SqlHavingBuilder<T> AverageNotBetween<TValue>(Expression<Func<T, TValue>> selector, TValue from, TValue to)
+        => AddAggregateNotBetween("AVG", selector, from, to);
+
     // ── MIN ───────────────────────────────────────────────────────────────────
+
+    /// <summary>Adds <c>MIN([col]) = @ph{n}</c>.</summary>
+    public SqlHavingBuilder<T> MinEquals<TValue>(Expression<Func<T, TValue>> selector, TValue value)
+        => AddAggregateComparison("MIN", selector, "=", value);
+
+    /// <summary>Adds <c>MIN([col]) != @ph{n}</c>.</summary>
+    public SqlHavingBuilder<T> MinNotEquals<TValue>(Expression<Func<T, TValue>> selector, TValue value)
+        => AddAggregateComparison("MIN", selector, "!=", value);
 
     /// <summary>Adds <c>MIN([col]) > @ph{n}</c>.</summary>
     public SqlHavingBuilder<T> MinGreaterThan<TValue>(Expression<Func<T, TValue>> selector, TValue value)
@@ -143,7 +161,23 @@ public sealed class SqlHavingBuilder<T> where T : class
     public SqlHavingBuilder<T> MinLessThanOrEqualTo<TValue>(Expression<Func<T, TValue>> selector, TValue value)
         => AddAggregateComparison("MIN", selector, "<=", value);
 
+    /// <summary>Adds <c>MIN([col]) BETWEEN @ph{n} AND @ph{n+1}</c>.</summary>
+    public SqlHavingBuilder<T> MinBetween<TValue>(Expression<Func<T, TValue>> selector, TValue from, TValue to)
+        => AddAggregateBetween("MIN", selector, from, to);
+
+    /// <summary>Adds <c>MIN([col]) NOT BETWEEN @ph{n} AND @ph{n+1}</c>.</summary>
+    public SqlHavingBuilder<T> MinNotBetween<TValue>(Expression<Func<T, TValue>> selector, TValue from, TValue to)
+        => AddAggregateNotBetween("MIN", selector, from, to);
+
     // ── MAX ───────────────────────────────────────────────────────────────────
+
+    /// <summary>Adds <c>MAX([col]) = @ph{n}</c>.</summary>
+    public SqlHavingBuilder<T> MaxEquals<TValue>(Expression<Func<T, TValue>> selector, TValue value)
+        => AddAggregateComparison("MAX", selector, "=", value);
+
+    /// <summary>Adds <c>MAX([col]) != @ph{n}</c>.</summary>
+    public SqlHavingBuilder<T> MaxNotEquals<TValue>(Expression<Func<T, TValue>> selector, TValue value)
+        => AddAggregateComparison("MAX", selector, "!=", value);
 
     /// <summary>Adds <c>MAX([col]) > @ph{n}</c>.</summary>
     public SqlHavingBuilder<T> MaxGreaterThan<TValue>(Expression<Func<T, TValue>> selector, TValue value)
@@ -161,41 +195,74 @@ public sealed class SqlHavingBuilder<T> where T : class
     public SqlHavingBuilder<T> MaxLessThanOrEqualTo<TValue>(Expression<Func<T, TValue>> selector, TValue value)
         => AddAggregateComparison("MAX", selector, "<=", value);
 
-    // ── Build ─────────────────────────────────────────────────────────────────
+    /// <summary>Adds <c>MAX([col]) BETWEEN @ph{n} AND @ph{n+1}</c>.</summary>
+    public SqlHavingBuilder<T> MaxBetween<TValue>(Expression<Func<T, TValue>> selector, TValue from, TValue to)
+        => AddAggregateBetween("MAX", selector, from, to);
 
-    /// <summary>
-    /// Builds the SQL HAVING fragment and returns it with its collected parameters.
-    /// Returns an empty string when no conditions have been added.
-    /// </summary>
-    internal (string Sql, IReadOnlyDictionary<string, object> Parameters) Build(ISqlDialect dialect)
-        => (BuildSql(dialect), _state.Parameters);
+    /// <summary>Adds <c>MAX([col]) NOT BETWEEN @ph{n} AND @ph{n+1}</c>.</summary>
+    public SqlHavingBuilder<T> MaxNotBetween<TValue>(Expression<Func<T, TValue>> selector, TValue from, TValue to)
+        => AddAggregateNotBetween("MAX", selector, from, to);
+
+    // ── COUNT(DISTINCT) ───────────────────────────────────────────────────────
+
+    /// <summary>Adds <c>COUNT(DISTINCT [col]) > @ph{n}</c>.</summary>
+    public SqlHavingBuilder<T> CountDistinctGreaterThan<TValue>(Expression<Func<T, TValue>> selector, int value)
+        => AddCountDistinctComparison(selector, ">", value);
+
+    /// <summary>Adds <c>COUNT(DISTINCT [col]) >= @ph{n}</c>.</summary>
+    public SqlHavingBuilder<T> CountDistinctGreaterThanOrEqualTo<TValue>(Expression<Func<T, TValue>> selector, int value)
+        => AddCountDistinctComparison(selector, ">=", value);
+
+    /// <summary>Adds <c>COUNT(DISTINCT [col]) &lt; @ph{n}</c>.</summary>
+    public SqlHavingBuilder<T> CountDistinctLessThan<TValue>(Expression<Func<T, TValue>> selector, int value)
+        => AddCountDistinctComparison(selector, "<", value);
+
+    /// <summary>Adds <c>COUNT(DISTINCT [col]) &lt;= @ph{n}</c>.</summary>
+    public SqlHavingBuilder<T> CountDistinctLessThanOrEqualTo<TValue>(Expression<Func<T, TValue>> selector, int value)
+        => AddCountDistinctComparison(selector, "<=", value);
+
+    /// <summary>Adds <c>COUNT(DISTINCT [col]) = @ph{n}</c>.</summary>
+    public SqlHavingBuilder<T> CountDistinctEquals<TValue>(Expression<Func<T, TValue>> selector, int value)
+        => AddCountDistinctComparison(selector, "=", value);
+
+    // ── SUM(DISTINCT) ─────────────────────────────────────────────────────────
+
+    /// <summary>Adds <c>SUM(DISTINCT [col]) > @ph{n}</c>.</summary>
+    public SqlHavingBuilder<T> SumDistinctGreaterThan<TValue>(Expression<Func<T, TValue>> selector, TValue value)
+        => AddDistinctAggregateComparison("SUM", selector, ">", value);
+
+    /// <summary>Adds <c>SUM(DISTINCT [col]) >= @ph{n}</c>.</summary>
+    public SqlHavingBuilder<T> SumDistinctGreaterThanOrEqualTo<TValue>(Expression<Func<T, TValue>> selector, TValue value)
+        => AddDistinctAggregateComparison("SUM", selector, ">=", value);
+
+    /// <summary>Adds <c>SUM(DISTINCT [col]) &lt; @ph{n}</c>.</summary>
+    public SqlHavingBuilder<T> SumDistinctLessThan<TValue>(Expression<Func<T, TValue>> selector, TValue value)
+        => AddDistinctAggregateComparison("SUM", selector, "<", value);
+
+    /// <summary>Adds <c>SUM(DISTINCT [col]) &lt;= @ph{n}</c>.</summary>
+    public SqlHavingBuilder<T> SumDistinctLessThanOrEqualTo<TValue>(Expression<Func<T, TValue>> selector, TValue value)
+        => AddDistinctAggregateComparison("SUM", selector, "<=", value);
+
+    /// <summary>Adds <c>SUM(DISTINCT [col]) = @ph{n}</c>.</summary>
+    public SqlHavingBuilder<T> SumDistinctEquals<TValue>(Expression<Func<T, TValue>> selector, TValue value)
+        => AddDistinctAggregateComparison("SUM", selector, "=", value);
 
     // ── Internals ─────────────────────────────────────────────────────────────
 
-    private string BuildSql(ISqlDialect dialect)
+    private SqlHavingBuilder<T> AddDistinctAggregateComparison<TValue>(
+        string function, Expression<Func<T, TValue>> selector, string op, TValue value)
     {
-        if (_conditions.Count == 0) return string.Empty;
+        var col = GetName(selector);
+        var param = AddParam(value);
+        return AddCondition(d => $"{function}(DISTINCT {d.QuoteIdentifier(col)}) {op} {d.ParameterPrefix}{param}");
+    }
 
-        var groups = new List<List<string>>();
-        List<string>? current = null;
-
-        foreach (var (factory, isAnd) in _conditions)
-        {
-            string sql = factory(dialect);
-            if (!isAnd || current == null)
-            {
-                current = new List<string>();
-                groups.Add(current);
-            }
-
-            current.Add(sql);
-        }
-
-        var groupSqls = groups.Select(g =>
-            g.Count == 1 ? g[0] : $"({string.Join(" AND ", g)})");
-
-        string result = string.Join(" OR ", groupSqls);
-        return groups.Count > 1 ? $"({result})" : result;
+    private SqlHavingBuilder<T> AddCountDistinctComparison<TValue>(
+        Expression<Func<T, TValue>> selector, string op, int value)
+    {
+        var col = GetName(selector);
+        var param = AddParam(value);
+        return AddCondition(d => $"COUNT(DISTINCT {d.QuoteIdentifier(col)}) {op} {d.ParameterPrefix}{param}");
     }
 
     private SqlHavingBuilder<T> AddCountComparison(string op, int value)
@@ -222,23 +289,13 @@ public sealed class SqlHavingBuilder<T> where T : class
             $"{function}({d.QuoteIdentifier(col)}) BETWEEN {d.ParameterPrefix}{fromParam} AND {d.ParameterPrefix}{toParam}");
     }
 
-    private SqlHavingBuilder<T> AddCondition(Func<ISqlDialect, string> factory)
+    private SqlHavingBuilder<T> AddAggregateNotBetween<TValue>(
+        string function, Expression<Func<T, TValue>> selector, TValue from, TValue to)
     {
-        _conditions.Add((factory, _nextIsAnd));
-        _nextIsAnd = true;
-        return this;
-    }
-
-    private string AddParam(object? value)
-    {
-        string name = $"ph{_state.ParamIndex++}";
-        _state.Parameters[name] = value ?? DBNull.Value;
-        return name;
-    }
-
-    private static string GetName<TValue>(Expression<Func<T, TValue>> selector)
-    {
-        if (selector == null) throw new ArgumentNullException(nameof(selector));
-        return ExpressionHelper.GetMemberName(selector);
+        var col = GetName(selector);
+        var fromParam = AddParam(from);
+        var toParam = AddParam(to);
+        return AddCondition(d =>
+            $"{function}({d.QuoteIdentifier(col)}) NOT BETWEEN {d.ParameterPrefix}{fromParam} AND {d.ParameterPrefix}{toParam}");
     }
 }

@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net8.0;net9.0</TargetFrameworks>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>Vali_Flow.NoSql</RootNamespace>
+    <PackageId>Vali-Flow.NoSql</PackageId>
+    <Version>1.0.0</Version>
+    <Authors>Felipe Rafael Montenegro Morriberon</Authors>
+    <Description>Provider-agnostic NoSql IR for Vali-Flow.Core — converts expression trees to a neutral condition node tree that can be translated to MongoDB, Elasticsearch, or any document store.</Description>
+    <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Vali-Flow.Core\Vali-Flow.Core\Vali-Flow.Core.csproj" />
+    <ProjectReference Include="..\Vali-Flow.Abstractions\Vali-Flow.Abstractions.csproj" />
+  </ItemGroup>
+
+</Project>

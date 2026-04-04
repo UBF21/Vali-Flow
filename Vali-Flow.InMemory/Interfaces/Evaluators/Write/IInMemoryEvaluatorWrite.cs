@@ -59,4 +59,28 @@ public interface IInMemoryEvaluatorWrite<T>
     /// </summary>
     /// <param name="entities">The optional collection of entities to save changes for. If null, uses a default context.</param>
     public void SaveChanges(IEnumerable<T>? entities = null);
+
+    /// <summary>
+    /// Inserts the entity if its key is not found in the store; otherwise updates it.
+    /// </summary>
+    /// <param name="entity">The entity to upsert.</param>
+    /// <param name="entities">Optional external collection. If null, operates on the internal store.</param>
+    /// <returns>The upserted entity.</returns>
+    T Upsert(T entity, IEnumerable<T>? entities = null);
+
+    /// <summary>
+    /// Upserts each entity in the collection — inserts if the key is new, updates if found.
+    /// </summary>
+    /// <param name="entitiesToUpsert">The entities to upsert.</param>
+    /// <param name="entities">Optional external collection. If null, operates on the internal store.</param>
+    /// <returns>The collection of upserted entities.</returns>
+    IEnumerable<T> UpsertRange(IEnumerable<T> entitiesToUpsert, IEnumerable<T>? entities = null);
+
+    /// <summary>
+    /// Deletes all entities that satisfy the given predicate.
+    /// </summary>
+    /// <param name="predicate">The condition to match entities for deletion.</param>
+    /// <param name="entities">Optional external collection. If null, operates on the internal store.</param>
+    /// <returns>The number of entities deleted.</returns>
+    int DeleteByCondition(Func<T, bool> predicate, IEnumerable<T>? entities = null);
 }

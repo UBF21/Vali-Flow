@@ -11,4 +11,7 @@ internal sealed class TestUser
     public string Department { get; set; } = string.Empty;
     public decimal Salary { get; set; }
     public int Status { get; set; }
+    public int Counter { get; set; }
+    public string NameBackup { get; set; } = string.Empty;
+    public DateTime UpdatedAt { get; set; }
 }

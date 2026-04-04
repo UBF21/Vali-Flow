@@ -36,6 +36,9 @@ public class BasicSpecification<TSpec, T> : IBasicSpecification<T>
     private bool _asNoTracking = true;
     private bool _asSplitQuery;
     private bool _ignoreQueryFilters;
+    private bool _ignoreAutoIncludes;
+    private bool _asNoTrackingWithIdentityResolution;
+    private string? _tagWith;
 
     /// <summary>Gets the query filter used to filter entities.</summary>
     public ValiFlowQuery<T> Filter => _filter;
@@ -51,6 +54,15 @@ public class BasicSpecification<TSpec, T> : IBasicSpecification<T>
 
     /// <summary>Gets a value indicating whether global query filters are bypassed.</summary>
     public bool IgnoreQueryFilters => _ignoreQueryFilters;
+
+    /// <summary>Gets a value indicating whether auto-includes are bypassed.</summary>
+    public bool IgnoreAutoIncludes => _ignoreAutoIncludes;
+
+    /// <summary>Gets a value indicating whether AsNoTrackingWithIdentityResolution is applied.</summary>
+    public bool AsNoTrackingWithIdentityResolution => _asNoTrackingWithIdentityResolution;
+
+    /// <summary>Gets the optional SQL comment tag appended to the generated query.</summary>
+    public string? TagWith => _tagWith;
 
     /// <summary>Initializes a new instance with an empty filter (matches all entities).</summary>
     protected BasicSpecification()
@@ -114,6 +126,7 @@ public class BasicSpecification<TSpec, T> : IBasicSpecification<T>
     public TSpec WithAsNoTracking(bool asNoTracking)
     {
         _asNoTracking = asNoTracking;
+        if (asNoTracking) _asNoTrackingWithIdentityResolution = false;
         return (TSpec)this;
     }
 
@@ -140,6 +153,78 @@ public class BasicSpecification<TSpec, T> : IBasicSpecification<T>
     public TSpec WithIgnoreQueryFilters(bool ignoreQueryFilters)
     {
         _ignoreQueryFilters = ignoreQueryFilters;
+        return (TSpec)this;
+    }
+
+    /// <summary>
+    /// Configures whether auto-includes defined in <c>OnModelCreating</c> via <c>AutoInclude()</c> are bypassed.
+    /// </summary>
+    /// <param name="ignoreAutoIncludes"><see langword="true"/> to skip auto-includes.</param>
+    /// <returns>The current specification instance for method chaining.</returns>
+    public TSpec WithIgnoreAutoIncludes(bool ignoreAutoIncludes)
+    {
+        _ignoreAutoIncludes = ignoreAutoIncludes;
+        return (TSpec)this;
+    }
+
+    /// <summary>
+    /// Configures the query to use <c>AsNoTrackingWithIdentityResolution</c>.
+    /// Mutually exclusive with <see cref="WithAsNoTracking"/>: enabling this disables plain AsNoTracking.
+    /// </summary>
+    /// <param name="enabled"><see langword="true"/> to enable identity resolution without tracking.</param>
+    /// <returns>The current specification instance for method chaining.</returns>
+    public TSpec WithAsNoTrackingWithIdentityResolution(bool enabled)
+    {
+        _asNoTrackingWithIdentityResolution = enabled;
+        if (enabled) _asNoTracking = false;
+        return (TSpec)this;
+    }
+
+    /// <summary>
+    /// Sets an EF Core <c>TagWith</c> comment on the query for APM tracing and diagnostics.
+    /// </summary>
+    /// <param name="tag">The comment string to embed in the SQL query.</param>
+    /// <returns>The current specification instance for method chaining.</returns>
+    public TSpec WithTagWith(string? tag)
+    {
+        _tagWith = tag;
+        return (TSpec)this;
+    }
+
+    /// <summary>
+    /// Adds a ThenInclude for a collection navigation (e.g. <c>u =&gt; u.Orders</c> then <c>o =&gt; o.Items</c>).
+    /// </summary>
+    /// <typeparam name="TProperty">The type of the first-level navigation (a collection element).</typeparam>
+    /// <typeparam name="TNav">The type of the nested navigation property.</typeparam>
+    /// <param name="include">The first-level collection include expression.</param>
+    /// <param name="thenInclude">The nested navigation expression.</param>
+    /// <returns>The current specification instance for method chaining.</returns>
+    public TSpec AddThenInclude<TProperty, TNav>(
+        Expression<Func<T, IEnumerable<TProperty>>> include,
+        Expression<Func<TProperty, TNav>> thenInclude)
+    {
+        _includes.Add(new EfThenInclude<T, TProperty, TNav>(
+            include ?? throw new ArgumentNullException(nameof(include)),
+            thenInclude ?? throw new ArgumentNullException(nameof(thenInclude))));
+        return (TSpec)this;
+    }
+
+    /// <summary>
+    /// Adds a ThenInclude for a reference navigation (e.g. <c>u =&gt; u.Profile</c> then <c>p =&gt; p.Avatar</c>).
+    /// </summary>
+    /// <typeparam name="TProperty">The type of the first-level reference navigation.</typeparam>
+    /// <typeparam name="TNav">The type of the nested navigation property.</typeparam>
+    /// <param name="include">The first-level reference include expression.</param>
+    /// <param name="thenInclude">The nested navigation expression.</param>
+    /// <returns>The current specification instance for method chaining.</returns>
+    public TSpec AddThenIncludeReference<TProperty, TNav>(
+        Expression<Func<T, TProperty?>> include,
+        Expression<Func<TProperty?, TNav>> thenInclude)
+        where TProperty : class
+    {
+        _includes.Add(new EfThenIncludeReference<T, TProperty, TNav>(
+            include ?? throw new ArgumentNullException(nameof(include)),
+            thenInclude ?? throw new ArgumentNullException(nameof(thenInclude))));
         return (TSpec)this;
     }
 }

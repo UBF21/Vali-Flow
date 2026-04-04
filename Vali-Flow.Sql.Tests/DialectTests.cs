@@ -143,7 +143,7 @@ public sealed class DialectTests
 
     [Fact]
     public void Sqlite_LimitOffset_OffsetOnly()
-        => new SqliteDialect().LimitOffset(null, 3).Should().Be("OFFSET 3");
+        => new SqliteDialect().LimitOffset(null, 3).Should().Be("LIMIT -1 OFFSET 3");
 
     // ── Default interface implementations ─────────────────────────────────────
 

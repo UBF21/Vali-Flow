@@ -1,9 +1,12 @@
+using System.Linq.Expressions;
 using System.Numerics;
+using Vali_Flow.Abstractions.Interfaces;
 using Vali_Flow.Core.Builder;
 using Vali_Flow.InMemory.Classes.Evaluators;
 using Vali_Flow.InMemory.Classes.Options;
 using Vali_Flow.InMemory.Interfaces.Evaluators.Read;
 using Vali_Flow.InMemory.Interfaces.Evaluators.Write;
+using Vali_Flow.InMemory.Models;
 
 namespace Vali_Flow.InMemory.Classes.Repositories;
 
@@ -12,9 +15,12 @@ public abstract class EvaluatorBase<T, TProperty> : IInMemoryEvaluatorRead<T>, I
 {
     protected readonly ValiFlowEvaluator<T, TProperty> Evaluator;
 
-    protected EvaluatorBase(IEnumerable<T>? initialData = null, Func<T, TProperty>? getId = null)
+    protected EvaluatorBase(
+        IEnumerable<T>? initialData = null,
+        ValiFlow<T>? valiFlow = null,
+        Func<T, TProperty>? getId = null)
     {
-        Evaluator = new ValiFlowEvaluator<T, TProperty>(initialData, getId: getId);
+        Evaluator = new ValiFlowEvaluator<T, TProperty>(initialData, valiFlow, getId);
     }
 
     public void SetValiFlow(ValiFlow<T> valiFlow) => Evaluator.SetValiFlow(valiFlow);
@@ -239,16 +245,27 @@ public abstract class EvaluatorBase<T, TProperty> : IInMemoryEvaluatorRead<T>, I
     ) where TKey : notnull
         => Evaluator.EvaluateUniquesByGroup(entities, keySelector, valiFlow, negateCondition);
     
-    public Dictionary<TKey, List<T>> EvaluateTopByGroup<TKey>(
+    public Dictionary<TKey, List<T>> EvaluateTopByGroup<TKey, TOrderKey>(
         IEnumerable<T>? entities,
         Func<T, TKey> keySelector,
         int count,
-        Func<T, object>? orderBy = null,
+        Func<T, TOrderKey>? orderBy = null,
         bool ascending = true,
         ValiFlow<T>? valiFlow = null,
         bool negateCondition = false
     ) where TKey : notnull
         => Evaluator.EvaluateTopByGroup(entities, keySelector, count, orderBy, ascending, valiFlow, negateCondition);
+
+    public PagedResult<T> EvaluatePagedResult<TKey>(
+        IEnumerable<T>? entities,
+        int page,
+        int pageSize,
+        Func<T, TKey>? orderBy = null,
+        bool ascending = true,
+        IEnumerable<InMemoryThenBy<T, TKey>>? thenBys = null,
+        ValiFlow<T>? valiFlow = null,
+        bool negateCondition = false
+    ) => Evaluator.EvaluatePagedResult(entities, page, pageSize, orderBy, ascending, thenBys, valiFlow, negateCondition);
 
     public bool Add(T entity, IEnumerable<T>? entities) => Evaluator.Add(entity, entities);
     
@@ -266,4 +283,44 @@ public abstract class EvaluatorBase<T, TProperty> : IInMemoryEvaluatorRead<T>, I
         Evaluator.DeleteRange(entitiesToDelete, entities);
     
     public void SaveChanges(IEnumerable<T>? entities = null) => Evaluator.SaveChanges(entities);
+
+    public T Upsert(T entity, IEnumerable<T>? entities = null) => Evaluator.Upsert(entity, entities);
+
+    public IEnumerable<T> UpsertRange(IEnumerable<T> entitiesToUpsert, IEnumerable<T>? entities = null)
+        => Evaluator.UpsertRange(entitiesToUpsert, entities);
+
+    public int DeleteByCondition(Func<T, bool> predicate, IEnumerable<T>? entities = null)
+        => Evaluator.DeleteByCondition(predicate, entities);
+
+    #region IQueryReader<T> + IQueryAggregator<T> — provider-agnostic methods
+
+    Task<bool> IQueryReader<T>.EvaluateAnyAsync(ValiFlow<T>? filter, CancellationToken cancellationToken)
+        => ((IQueryReader<T>)Evaluator).EvaluateAnyAsync(filter, cancellationToken);
+
+    Task<int> IQueryReader<T>.EvaluateCountAsync(ValiFlow<T>? filter, CancellationToken cancellationToken)
+        => ((IQueryReader<T>)Evaluator).EvaluateCountAsync(filter, cancellationToken);
+
+    Task<T?> IQueryReader<T>.EvaluateGetFirstAsync(ValiFlow<T>? filter, CancellationToken cancellationToken)
+        => ((IQueryReader<T>)Evaluator).EvaluateGetFirstAsync(filter, cancellationToken);
+
+    Task<T?> IQueryReader<T>.EvaluateGetLastAsync(ValiFlow<T>? filter, CancellationToken cancellationToken)
+        => ((IQueryReader<T>)Evaluator).EvaluateGetLastAsync(filter, cancellationToken);
+
+    Task<TResult> IQueryAggregator<T>.EvaluateMinAsync<TResult>(
+        Expression<Func<T, TResult>> selector, ValiFlow<T>? filter, CancellationToken cancellationToken)
+        => ((IQueryAggregator<T>)Evaluator).EvaluateMinAsync(selector, filter, cancellationToken);
+
+    Task<TResult> IQueryAggregator<T>.EvaluateMaxAsync<TResult>(
+        Expression<Func<T, TResult>> selector, ValiFlow<T>? filter, CancellationToken cancellationToken)
+        => ((IQueryAggregator<T>)Evaluator).EvaluateMaxAsync(selector, filter, cancellationToken);
+
+    Task<decimal> IQueryAggregator<T>.EvaluateAverageAsync<TResult>(
+        Expression<Func<T, TResult>> selector, ValiFlow<T>? filter, CancellationToken cancellationToken)
+        => ((IQueryAggregator<T>)Evaluator).EvaluateAverageAsync(selector, filter, cancellationToken);
+
+    Task<TResult> IQueryAggregator<T>.EvaluateSumAsync<TResult>(
+        Expression<Func<T, TResult>> selector, ValiFlow<T>? filter, CancellationToken cancellationToken)
+        => ((IQueryAggregator<T>)Evaluator).EvaluateSumAsync(selector, filter, cancellationToken);
+
+    #endregion
 }

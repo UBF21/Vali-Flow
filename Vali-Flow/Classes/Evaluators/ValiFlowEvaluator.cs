@@ -1,9 +1,9 @@
 using System.Linq.Expressions;
-using System.Numerics
-    ;
+using System.Numerics;
 using System.Reflection;
 using EFCore.BulkExtensions;
 using Microsoft.EntityFrameworkCore;
+using Vali_Flow.Abstractions.Interfaces;
 using Vali_Flow.Core.Builder;
 using Vali_Flow.Interfaces.Evaluators.Read;
 using Vali_Flow.Interfaces.Evaluators.Write;
@@ -80,18 +80,49 @@ public sealed class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T>
     public Task<IQueryable<T>> EvaluateQueryFailedAsync(IQuerySpecification<T> specification)
     {
         if (specification == null) throw new ArgumentNullException(nameof(specification));
-        IQueryable<T> query = BuildQuery(specification, negateFilter: true);
-        return Task.FromResult(query);
+        return ExecuteWithExceptionHandlingAsync(() =>
+        {
+            IQueryable<T> query = BuildQuery(specification, negateFilter: true);
+            return Task.FromResult(query);
+        }, nameof(EvaluateQueryFailedAsync));
     }
 
     public Task<IQueryable<T>> EvaluateQueryAsync(IQuerySpecification<T> specification)
     {
         if (specification == null) throw new ArgumentNullException(nameof(specification));
-        IQueryable<T> query = BuildQuery(specification);
-        return Task.FromResult(query);
+        return ExecuteWithExceptionHandlingAsync(() =>
+        {
+            IQueryable<T> query = BuildQuery(specification);
+            return Task.FromResult(query);
+        }, nameof(EvaluateQueryAsync));
     }
 
-    public Task<IQueryable<T>> EvaluateDistinctAsync<TKey>(
+    public Task<IQueryable<T>> EvaluateTopAsync(
+        IQuerySpecification<T> specification,
+        int count,
+        CancellationToken cancellationToken = default)
+    {
+        if (specification == null) throw new ArgumentNullException(nameof(specification));
+        if (count <= 0) throw new ArgumentOutOfRangeException(nameof(count), "Count must be greater than zero.");
+        IQueryable<T> query = BuildBasicQuery(specification);
+        query = ApplyOrdering(query, specification);
+        return Task.FromResult(query.Take(count));
+    }
+
+    public Task<IQueryable<T>> EvaluateAllAsync(IQuerySpecification<T> specification)
+    {
+        if (specification == null) throw new ArgumentNullException(nameof(specification));
+        return EvaluateQueryAsync(specification);
+    }
+
+    public Task<IQueryable<T>> EvaluateAllFailedAsync(IQuerySpecification<T> specification)
+    {
+        if (specification == null) throw new ArgumentNullException(nameof(specification));
+        return EvaluateQueryFailedAsync(specification);
+    }
+
+    /// <remarks>This method loads all matching entities into memory before grouping. For large unfiltered tables, apply a filter in the specification to limit the result set.</remarks>
+    public async Task<IEnumerable<T>> EvaluateDistinctAsync<TKey>(
         IQuerySpecification<T> specification,
         Expression<Func<T, TKey>> selector
     ) where TKey : notnull
@@ -100,11 +131,20 @@ public sealed class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T>
         if (selector == null) throw new ArgumentNullException(nameof(selector));
         IQueryable<T> query = BuildBasicQuery(specification);
         query = ApplyOrdering(query, specification);
-        query = query.GroupBy(selector).Select(g => g.First());
-        return Task.FromResult(ApplyPagination(query, specification));
+        List<T> items = await query.ToListAsync();
+        Func<T, TKey> keySelectorFn = selector.Compile();
+        IEnumerable<T> result = items.GroupBy(keySelectorFn).Select(g => g.First());
+        // Pagination applied AFTER grouping so it operates on distinct groups, not raw rows
+        if (specification is { Page: not null, PageSize: not null })
+            result = result.Skip((specification.Page.Value - Constants.One) * specification.PageSize.Value)
+                           .Take(specification.PageSize.Value);
+        else if (specification.Top != null)
+            result = result.Take(specification.Top.Value);
+        return result;
     }
 
-    public Task<IQueryable<T>> EvaluateDuplicatesAsync<TKey>(
+    /// <remarks>This method loads all matching entities into memory before grouping. For large unfiltered tables, apply a filter in the specification to limit the result set.</remarks>
+    public async Task<IEnumerable<T>> EvaluateDuplicatesAsync<TKey>(
         IQuerySpecification<T> specification,
         Expression<Func<T, TKey>> selector
     ) where TKey : notnull
@@ -113,8 +153,18 @@ public sealed class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T>
         if (selector == null) throw new ArgumentNullException(nameof(selector));
         IQueryable<T> query = BuildBasicQuery(specification);
         query = ApplyOrdering(query, specification);
-        query = query.GroupBy(selector).Where(g => g.Count() > Constants.One).SelectMany(g => g);
-        return Task.FromResult(ApplyPagination(query, specification));
+        List<T> items = await query.ToListAsync();
+        Func<T, TKey> keySelectorFn = selector.Compile();
+        IEnumerable<T> result = items.GroupBy(keySelectorFn)
+            .Where(g => g.Count() > Constants.One)
+            .SelectMany(g => g);
+        // Pagination applied AFTER grouping so it operates on the duplicate set, not raw rows
+        if (specification is { Page: not null, PageSize: not null })
+            result = result.Skip((specification.Page.Value - Constants.One) * specification.PageSize.Value)
+                           .Take(specification.PageSize.Value);
+        else if (specification.Top != null)
+            result = result.Take(specification.Top.Value);
+        return result;
     }
 
     public async Task<T?> EvaluateGetLastFailedAsync(
@@ -156,8 +206,25 @@ public sealed class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T>
         if (specification == null) throw new ArgumentNullException(nameof(specification));
         if (selector == null) throw new ArgumentNullException(nameof(selector));
         IQueryable<T> query = BuildBasicQuery(specification);
-        return await ExecuteWithExceptionHandlingAsync(() => query.Select(selector).MinAsync(cancellationToken),
-            nameof(EvaluateMinAsync));
+        return await ExecuteWithExceptionHandlingAsync(async () =>
+        {
+            // Guard: MinAsync throws on empty sequences for non-nullable types
+            if (!await query.AnyAsync(cancellationToken)) return TResult.Zero;
+            // Delegate to DB-side MIN for types EF Core supports directly (avoids loading all rows)
+            if (selector is Expression<Func<T, decimal>> decSel)
+                return (TResult)(object)await query.MinAsync(decSel, cancellationToken);
+            if (selector is Expression<Func<T, int>> intSel)
+                return (TResult)(object)await query.MinAsync(intSel, cancellationToken);
+            if (selector is Expression<Func<T, long>> lngSel)
+                return (TResult)(object)await query.MinAsync(lngSel, cancellationToken);
+            if (selector is Expression<Func<T, double>> dblSel)
+                return (TResult)(object)await query.MinAsync(dblSel, cancellationToken);
+            if (selector is Expression<Func<T, float>> fltSel)
+                return (TResult)(object)await query.MinAsync(fltSel, cancellationToken);
+            // Fallback: project and compute in memory
+            var values = await query.Select(selector).ToListAsync(cancellationToken);
+            return values.Count == 0 ? TResult.Zero : values.Min()!;
+        }, nameof(EvaluateMinAsync));
     }
 
     public async Task<TResult> EvaluateMaxAsync<TResult>(
@@ -169,8 +236,25 @@ public sealed class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T>
         if (specification == null) throw new ArgumentNullException(nameof(specification));
         if (selector == null) throw new ArgumentNullException(nameof(selector));
         IQueryable<T> query = BuildBasicQuery(specification);
-        return await ExecuteWithExceptionHandlingAsync(() => query.Select(selector).MaxAsync(cancellationToken),
-            nameof(EvaluateMaxAsync));
+        return await ExecuteWithExceptionHandlingAsync(async () =>
+        {
+            // Guard: MaxAsync throws on empty sequences for non-nullable types
+            if (!await query.AnyAsync(cancellationToken)) return TResult.Zero;
+            // Delegate to DB-side MAX for types EF Core supports directly (avoids loading all rows)
+            if (selector is Expression<Func<T, decimal>> decSel)
+                return (TResult)(object)await query.MaxAsync(decSel, cancellationToken);
+            if (selector is Expression<Func<T, int>> intSel)
+                return (TResult)(object)await query.MaxAsync(intSel, cancellationToken);
+            if (selector is Expression<Func<T, long>> lngSel)
+                return (TResult)(object)await query.MaxAsync(lngSel, cancellationToken);
+            if (selector is Expression<Func<T, double>> dblSel)
+                return (TResult)(object)await query.MaxAsync(dblSel, cancellationToken);
+            if (selector is Expression<Func<T, float>> fltSel)
+                return (TResult)(object)await query.MaxAsync(fltSel, cancellationToken);
+            // Fallback: project and compute in memory
+            var values = await query.Select(selector).ToListAsync(cancellationToken);
+            return values.Count == 0 ? TResult.Zero : values.Max()!;
+        }, nameof(EvaluateMaxAsync));
     }
 
     public async Task<decimal> EvaluateAverageAsync<TResult>(
@@ -182,9 +266,13 @@ public sealed class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T>
         if (specification == null) throw new ArgumentNullException(nameof(specification));
         if (selector == null) throw new ArgumentNullException(nameof(selector));
         var query = BuildBasicQuery(specification);
-        return await ExecuteWithExceptionHandlingAsync(
-            () => query.Select(selector).AverageAsync(x => Convert.ToDecimal(x), cancellationToken),
+        List<TResult> values = await ExecuteWithExceptionHandlingAsync(
+            () => query.Select(selector).ToListAsync(cancellationToken),
             nameof(EvaluateAverageAsync));
+        if (values.Count == 0) return 0m;
+        // Use decimal.CreateChecked per value to preserve fractional precision for float/double columns
+        decimal total = values.Aggregate(0m, (acc, x) => acc + decimal.CreateChecked(x));
+        return total / values.Count;
     }
 
     public async Task<int> EvaluateSumAsync(
@@ -252,6 +340,7 @@ public sealed class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T>
             nameof(EvaluateSumAsync));
     }
 
+    /// <remarks>All matching values are loaded into memory to apply the custom aggregator. For standard aggregations (Sum, Min, Max, Avg), prefer the dedicated methods which delegate computation to the database.</remarks>
     public async Task<TResult> EvaluateAggregateAsync<TResult>(
         IBasicSpecification<T> specification,
         Expression<Func<T, TResult>> selector,
@@ -267,6 +356,7 @@ public sealed class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T>
         return !values.Any() ? TResult.Zero : values.Aggregate(TResult.Zero, aggregator);
     }
 
+    /// <remarks>This method loads all matching entities into memory before grouping. Avoid using it on large, unfiltered tables.</remarks>
     public async Task<Dictionary<TKey, List<T>>> EvaluateGroupedAsync<TKey>(
         IBasicSpecification<T> specification,
         Expression<Func<T, TKey>> keySelector,
@@ -276,12 +366,10 @@ public sealed class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T>
         if (specification == null) throw new ArgumentNullException(nameof(specification));
         if (keySelector == null) throw new ArgumentNullException(nameof(keySelector));
         IQueryable<T> query = BuildBasicQuery(specification);
-        return await ExecuteWithExceptionHandlingAsync(() =>
-        {
-            return query
-                .GroupBy(keySelector)
-                .ToDictionaryAsync(g => g.Key, g => g.ToList(), cancellationToken);
-        }, nameof(EvaluateGroupedAsync));
+        var list = await query.ToListAsync(cancellationToken);
+        return list
+            .GroupBy(keySelector.Compile())
+            .ToDictionary(g => g.Key, g => g.ToList());
     }
 
     public async Task<Dictionary<TKey, int>> EvaluateCountByGroupAsync<TKey>(
@@ -525,6 +613,7 @@ public sealed class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T>
             nameof(EvaluateAverageByGroupAsync), cancellationToken);
     }
 
+    /// <remarks>This method loads all matching entities into memory before grouping. Avoid using it on large, unfiltered tables.</remarks>
     public async Task<Dictionary<TKey, List<T>>> EvaluateDuplicatesByGroupAsync<TKey>(
         IBasicSpecification<T> specification,
         Expression<Func<T, TKey>> keySelector,
@@ -534,14 +623,18 @@ public sealed class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T>
         if (specification == null) throw new ArgumentNullException(nameof(specification));
         if (keySelector == null) throw new ArgumentNullException(nameof(keySelector));
         IQueryable<T> query = BuildBasicQuery(specification);
-        return await ExecuteWithExceptionHandlingAsync(
-            () => query
-                .GroupBy(keySelector)
-                .Where(g => g.Count() > 1)
-                .ToDictionaryAsync(g => g.Key, g => g.ToList(), cancellationToken),
+        return await ExecuteWithExceptionHandlingAsync(async () =>
+            {
+                var compiled = keySelector.Compile();
+                var all = await query.ToListAsync(cancellationToken);
+                return all.GroupBy(compiled)
+                    .Where(g => g.Count() > 1)
+                    .ToDictionary(g => g.Key, g => g.ToList());
+            },
             nameof(EvaluateDuplicatesByGroupAsync));
     }
 
+    /// <remarks>This method loads all matching entities into memory before grouping. For large unfiltered tables, apply a filter in the specification to limit the result set.</remarks>
     public async Task<Dictionary<TKey, T>> EvaluateUniquesByGroupAsync<TKey>(
         IBasicSpecification<T> specification,
         Expression<Func<T, TKey>> keySelector,
@@ -551,15 +644,24 @@ public sealed class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T>
         if (specification == null) throw new ArgumentNullException(nameof(specification));
         if (keySelector == null) throw new ArgumentNullException(nameof(keySelector));
         IQueryable<T> query = BuildBasicQuery(specification);
-        return await ExecuteWithExceptionHandlingAsync(
-            () => query
-                .GroupBy(keySelector)
-                .Where(g => g.Count() == 1)
-                .Select(g => new { g.Key, First = g.First() })
-                .ToDictionaryAsync(x => x.Key, x => x.First, cancellationToken),
+        return await ExecuteWithExceptionHandlingAsync(async () =>
+            {
+                var compiled = keySelector.Compile();
+                var all = await query.ToListAsync(cancellationToken);
+                return all.GroupBy(compiled)
+                    .Where(g => g.Count() == 1)
+                    .ToDictionary(g => g.Key, g => g.First());
+            },
             nameof(EvaluateUniquesByGroupAsync));
     }
 
+    /// <remarks>
+    /// All matching entities are loaded into memory before grouping and top-N selection. Use a targeted query with explicit filters to limit the result set.
+    /// <para>
+    /// If <see cref="IQuerySpecification{T}.Top"/> is not set, defaults to 50 entities per group.
+    /// Set <c>Top</c> on the specification to control the per-group limit.
+    /// </para>
+    /// </remarks>
     public async Task<Dictionary<TKey, List<T>>> EvaluateTopByGroupAsync<TKey>(
         IQuerySpecification<T> specification,
         Expression<Func<T, TKey>> keySelector,
@@ -582,6 +684,7 @@ public sealed class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T>
             .ToDictionary(g => g.Key, g => g.Take(top).ToList());
     }
 
+    /// <remarks>Issues two separate database round-trips (COUNT then SELECT). In concurrent scenarios the total count may be stale relative to the returned items. Wrap both calls in a transaction if strict consistency is required.</remarks>
     public async Task<PagedResult<T>> EvaluatePagedAsync(
         IQuerySpecification<T> specification,
         CancellationToken cancellationToken = default
@@ -793,6 +896,8 @@ public sealed class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T>
 
         Dictionary<TProperty, T> existingEntityDict = existingEntities.ToDictionary(keySelectorFn, e => e);
 
+        var newEntities = new List<T>();
+
         foreach (T entity in entityList)
         {
             TProperty key = keySelectorFn(entity);
@@ -802,9 +907,12 @@ public sealed class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T>
             }
             else
             {
-                await _dbContext.Set<T>().AddAsync(entity, cancellationToken);
+                newEntities.Add(entity);
             }
         }
+
+        if (newEntities.Any())
+            await _dbContext.Set<T>().AddRangeAsync(newEntities, cancellationToken);
 
         await SaveChangesIfRequestedAsync(saveChanges, cancellationToken, nameof(UpsertRangeAsync));
         return entityList;
@@ -817,10 +925,41 @@ public sealed class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T>
     )
     {
         if (condition == null) throw new ArgumentNullException(nameof(condition));
-        // ExecuteDeleteAsync translates directly to DELETE FROM ... WHERE — no round-trip to load entities
-        await ExecuteWithExceptionHandlingAsync(
-            () => _dbContext.Set<T>().Where(condition).ExecuteDeleteAsync(cancellationToken),
+        await ExecuteWithExceptionHandlingAsync(async () =>
+            {
+                bool isInMemory = _dbContext.Database.ProviderName
+                    ?.Contains("InMemory", StringComparison.OrdinalIgnoreCase) == true;
+
+                if (!isInMemory)
+                {
+                    // ExecuteDeleteAsync translates directly to DELETE FROM … WHERE — no round-trip to load entities
+                    await _dbContext.Set<T>().Where(condition).ExecuteDeleteAsync(cancellationToken);
+                }
+                else
+                {
+                    // Fallback for providers that do not support ExecuteDeleteAsync (e.g., InMemory)
+                    var entities = await _dbContext.Set<T>().Where(condition).ToListAsync(cancellationToken);
+                    if (entities.Count > 0)
+                    {
+                        _dbContext.Set<T>().RemoveRange(entities);
+                        await _dbContext.SaveChangesAsync(cancellationToken);
+                    }
+                }
+                return 0;
+            },
             nameof(DeleteByConditionAsync));
+    }
+
+    public async Task<int> ExecuteUpdateAsync(
+        Expression<Func<T, bool>> condition,
+        Expression<Func<Microsoft.EntityFrameworkCore.Query.SetPropertyCalls<T>, Microsoft.EntityFrameworkCore.Query.SetPropertyCalls<T>>> setPropertyCalls,
+        CancellationToken cancellationToken = default)
+    {
+        if (condition == null) throw new ArgumentNullException(nameof(condition));
+        if (setPropertyCalls == null) throw new ArgumentNullException(nameof(setPropertyCalls));
+        return await ExecuteWithExceptionHandlingAsync(
+            () => _dbContext.Set<T>().Where(condition).ExecuteUpdateAsync(setPropertyCalls, cancellationToken),
+            nameof(ExecuteUpdateAsync));
     }
 
 
@@ -961,6 +1100,15 @@ public sealed class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T>
     /// </returns>
     private IQueryable<T> ApplyAsNoTracking(IQueryable<T> query, bool asNoTracking = true) => asNoTracking ? query.AsNoTracking() : query;
 
+    private IQueryable<T> ApplyAsNoTrackingWithIdentityResolution(IQueryable<T> query, bool apply)
+        => apply ? query.AsNoTrackingWithIdentityResolution() : query;
+
+    private IQueryable<T> ApplyTagWith(IQueryable<T> query, string? tag)
+        => tag != null ? query.TagWith(tag) : query;
+
+    private IQueryable<T> ApplyIgnoreAutoIncludes(IQueryable<T> query, bool apply)
+        => apply ? query.IgnoreAutoIncludes() : query;
+
     /// <summary>
     /// Applies the specified include expressions to an <see cref="IQueryable{T}"/> query.
     /// </summary>
@@ -1092,10 +1240,20 @@ public sealed class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T>
         IQueryable<T> query = _dbContext.Set<T>();
 
         query = ApplyIgnoreQueryFilters(query, specification.IgnoreQueryFilters);
+        query = ApplyIgnoreAutoIncludes(query, specification.IgnoreAutoIncludes);
         query = ApplyWhere(query, specification.Filter, negateCondition);
+
+        // Guard: prevent EF Core runtime error when both tracking modes are active
+        if (specification.AsNoTracking && specification.AsNoTrackingWithIdentityResolution)
+            throw new InvalidOperationException(
+                "AsNoTracking and AsNoTrackingWithIdentityResolution are mutually exclusive. " +
+                "Use WithAsNoTracking(false) before calling WithAsNoTrackingWithIdentityResolution(true).");
+
         query = ApplyAsNoTracking(query, specification.AsNoTracking);
+        query = ApplyAsNoTrackingWithIdentityResolution(query, specification.AsNoTrackingWithIdentityResolution);
         query = ApplyIncludes(query, specification.Includes);
         query = ApplyAsSplitQuery(query, specification.AsSplitQuery);
+        query = ApplyTagWith(query, specification.TagWith);
 
         return query;
     }
@@ -1239,6 +1397,75 @@ public sealed class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T>
         return pairs
             .GroupBy(p => p.Item1)
             .ToDictionary(g => g.Key, g => g.Average(p => Convert.ToDecimal(p.Item2)));
+    }
+
+    #endregion
+
+    #region IQueryReader<T> + IQueryAggregator<T> — provider-agnostic methods
+
+    async Task<bool> IQueryReader<T>.EvaluateAnyAsync(ValiFlow<T>? filter, CancellationToken cancellationToken)
+    {
+        IQueryable<T> query = _dbContext.Set<T>().AsNoTracking();
+        if (filter != null) query = query.Where(filter.Build());
+        return await query.AnyAsync(cancellationToken);
+    }
+
+    async Task<int> IQueryReader<T>.EvaluateCountAsync(ValiFlow<T>? filter, CancellationToken cancellationToken)
+    {
+        IQueryable<T> query = _dbContext.Set<T>().AsNoTracking();
+        if (filter != null) query = query.Where(filter.Build());
+        return await query.CountAsync(cancellationToken);
+    }
+
+    async Task<T?> IQueryReader<T>.EvaluateGetFirstAsync(ValiFlow<T>? filter, CancellationToken cancellationToken)
+    {
+        IQueryable<T> query = _dbContext.Set<T>().AsNoTracking();
+        if (filter != null) query = query.Where(filter.Build());
+        return await query.FirstOrDefaultAsync(cancellationToken);
+    }
+
+    async Task<T?> IQueryReader<T>.EvaluateGetLastAsync(ValiFlow<T>? filter, CancellationToken cancellationToken)
+    {
+        IQueryable<T> query = _dbContext.Set<T>().AsNoTracking();
+        if (filter != null) query = query.Where(filter.Build());
+        var list = await query.ToListAsync(cancellationToken);
+        return list.LastOrDefault();
+    }
+
+    async Task<TResult> IQueryAggregator<T>.EvaluateMinAsync<TResult>(
+        Expression<Func<T, TResult>> selector, ValiFlow<T>? filter, CancellationToken cancellationToken)
+    {
+        IQueryable<T> query = _dbContext.Set<T>().AsNoTracking();
+        if (filter != null) query = query.Where(filter.Build());
+        return await query.MinAsync(selector, cancellationToken);
+    }
+
+    async Task<TResult> IQueryAggregator<T>.EvaluateMaxAsync<TResult>(
+        Expression<Func<T, TResult>> selector, ValiFlow<T>? filter, CancellationToken cancellationToken)
+    {
+        IQueryable<T> query = _dbContext.Set<T>().AsNoTracking();
+        if (filter != null) query = query.Where(filter.Build());
+        return await query.MaxAsync(selector, cancellationToken);
+    }
+
+    async Task<decimal> IQueryAggregator<T>.EvaluateAverageAsync<TResult>(
+        Expression<Func<T, TResult>> selector, ValiFlow<T>? filter, CancellationToken cancellationToken)
+    {
+        IQueryable<T> query = _dbContext.Set<T>().AsNoTracking();
+        if (filter != null) query = query.Where(filter.Build());
+        var values = await query.Select(selector).ToListAsync(cancellationToken);
+        if (values.Count == 0) return 0m;
+        return values.Select(v => Convert.ToDecimal(v)).Average();
+    }
+
+    async Task<TResult> IQueryAggregator<T>.EvaluateSumAsync<TResult>(
+        Expression<Func<T, TResult>> selector, ValiFlow<T>? filter, CancellationToken cancellationToken)
+    {
+        // EF Core SumAsync only supports concrete numeric types — materialize then aggregate generically.
+        IQueryable<T> query = _dbContext.Set<T>().AsNoTracking();
+        if (filter != null) query = query.Where(filter.Build());
+        var values = await query.Select(selector).ToListAsync(cancellationToken);
+        return values.Aggregate(TResult.Zero, (acc, v) => acc + v);
     }
 
     #endregion

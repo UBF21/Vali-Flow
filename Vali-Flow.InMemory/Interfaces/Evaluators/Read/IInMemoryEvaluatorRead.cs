@@ -1,6 +1,8 @@
 using System.Numerics;
+using Vali_Flow.Abstractions.Interfaces;
 using Vali_Flow.Core.Builder;
 using Vali_Flow.InMemory.Classes.Options;
+using Vali_Flow.InMemory.Models;
 
 namespace Vali_Flow.InMemory.Interfaces.Evaluators.Read;
 
@@ -8,7 +10,7 @@ namespace Vali_Flow.InMemory.Interfaces.Evaluators.Read;
 /// Defines methods for evaluating and querying entities in memory using ValiFlow conditions.
 /// </summary>
 /// <typeparam name="T">The type of the entities to evaluate.</typeparam>
-public interface IInMemoryEvaluatorRead<T>
+public interface IInMemoryEvaluatorRead<T> : IQueryEvaluator<T> where T : class
 {
     /// <summary>
     /// Evaluates whether a single entity satisfies the specified Vali-Flow condition.
@@ -488,6 +490,30 @@ public interface IInMemoryEvaluatorRead<T>
     ) where TKey : notnull;
 
     /// <summary>
+    /// Retrieves a paginated result including metadata (total count, page info) for entities that satisfy the specified Vali-Flow condition.
+    /// </summary>
+    /// <typeparam name="TKey">The type of the key used for ordering.</typeparam>
+    /// <param name="entities">The collection of entities to evaluate.</param>
+    /// <param name="page">The page number to retrieve (1-based).</param>
+    /// <param name="pageSize">The number of entities per page.</param>
+    /// <param name="orderBy">A function to extract the key for primary ordering. If null, no ordering is applied.</param>
+    /// <param name="ascending">If true, orders in ascending order; otherwise, descending.</param>
+    /// <param name="thenBys">A collection of secondary ordering specifications.</param>
+    /// <param name="valiFlow">The Vali-Flow condition to apply. If null, evaluates all entities.</param>
+    /// <param name="negateCondition">If true, negates the Vali-Flow condition.</param>
+    /// <returns>A <see cref="PagedResult{T}"/> containing the page items and metadata.</returns>
+    PagedResult<T> EvaluatePagedResult<TKey>(
+        IEnumerable<T>? entities,
+        int page,
+        int pageSize,
+        Func<T, TKey>? orderBy = null,
+        bool ascending = true,
+        IEnumerable<InMemoryThenBy<T, TKey>>? thenBys = null,
+        ValiFlow<T>? valiFlow = null,
+        bool negateCondition = false
+    );
+
+    /// <summary>
     /// Groups entities that satisfy the specified Vali-Flow condition by a key and returns the top N entities for each group, with optional ordering.
     /// </summary>
     /// <typeparam name="TKey">The type of the key used for grouping.</typeparam>
@@ -499,11 +525,11 @@ public interface IInMemoryEvaluatorRead<T>
     /// <param name="valiFlow">The Vali-Flow condition to apply. If null, evaluates all entities.</param>
     /// <param name="negateCondition">If true, negates the Vali-Flow condition.</param>
     /// <returns>A dictionary where each key is a grouping key and the value is a list of the top N entities in that group, ordered as specified.</returns>
-    Dictionary<TKey, List<T>> EvaluateTopByGroup<TKey>(
+    Dictionary<TKey, List<T>> EvaluateTopByGroup<TKey, TOrderKey>(
         IEnumerable<T>? entities,
         Func<T, TKey> keySelector,
         int count,
-        Func<T, object>? orderBy = null,
+        Func<T, TOrderKey>? orderBy = null,
         bool ascending = true,
         ValiFlow<T>? valiFlow = null,
         bool negateCondition = false

@@ -1,5 +1,6 @@
 using System.Linq.Expressions;
 using System.Numerics;
+using Vali_Flow.Abstractions.Interfaces;
 using Vali_Flow.Core.Builder;
 using Vali_Flow.Core.Utils;
 using Vali_Flow.Interfaces.Specification;
@@ -11,7 +12,7 @@ namespace Vali_Flow.Interfaces.Evaluators.Read;
 /// Defines asynchronous methods for reading and querying entities using Vali-Flow with Entity Framework support.
 /// </summary>
 /// <typeparam name="T">The type of the entities to evaluate.</typeparam>
-public interface IEvaluatorRead<T> where T : class
+public interface IEvaluatorRead<T> : IQueryEvaluator<T> where T : class
 {
     /// <summary>
     /// Asynchronously evaluates whether a single entity satisfies the specified Vali-Flow condition.
@@ -88,7 +89,7 @@ public interface IEvaluatorRead<T> where T : class
     /// This method applies the filtering, ordering, and pagination defined in the specification after grouping by the key selector.
     /// If pagination or block size is specified in the <paramref name="specification"/>, it will be applied to the resulting query.
     /// </remarks>
-    Task<IQueryable<T>> EvaluateDistinctAsync<TKey>(
+    Task<IEnumerable<T>> EvaluateDistinctAsync<TKey>(
         IQuerySpecification<T> specification,
         Expression<Func<T, TKey>> selector
     ) where TKey : notnull;
@@ -115,7 +116,7 @@ public interface IEvaluatorRead<T> where T : class
     /// Only groups with more than one entity are included in the result. If pagination or block size is specified in the <paramref name="specification"/>,
     /// it will be applied to the resulting query.
     /// </remarks>
-    Task<IQueryable<T>> EvaluateDuplicatesAsync<TKey>(
+    Task<IEnumerable<T>> EvaluateDuplicatesAsync<TKey>(
         IQuerySpecification<T> specification,
         Expression<Func<T, TKey>> selector
     ) where TKey : notnull;
@@ -651,5 +652,29 @@ public interface IEvaluatorRead<T> where T : class
         IQuerySpecification<T> specification,
         CancellationToken cancellationToken = default
     );
+
+    /// <summary>
+    /// Asynchronously retrieves the top <paramref name="count"/> entities satisfying the specification.
+    /// </summary>
+    /// <param name="specification">The query specification defining filtering and ordering criteria.</param>
+    /// <param name="count">The maximum number of entities to return. Must be greater than zero.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    Task<IQueryable<T>> EvaluateTopAsync(
+        IQuerySpecification<T> specification,
+        int count,
+        CancellationToken cancellationToken = default
+    );
+
+    /// <summary>
+    /// Asynchronously retrieves all entities satisfying the specification.
+    /// Alias for <see cref="EvaluateQueryAsync"/> — provided for API symmetry with Vali-Flow.InMemory.
+    /// </summary>
+    Task<IQueryable<T>> EvaluateAllAsync(IQuerySpecification<T> specification);
+
+    /// <summary>
+    /// Asynchronously retrieves all entities that fail the specification.
+    /// Alias for <see cref="EvaluateQueryFailedAsync"/> — provided for API symmetry with Vali-Flow.InMemory.
+    /// </summary>
+    Task<IQueryable<T>> EvaluateAllFailedAsync(IQuerySpecification<T> specification);
 
 }

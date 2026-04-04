@@ -179,7 +179,7 @@ public interface IEvaluatorWrite<T>
     /// </example>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="entities"/> is null.</exception>
     /// <exception cref="ArgumentException">Thrown when <paramref name="entities"/> is empty.</exception>
-    /// <exception cref="InvalidOperationException">Thrown when an error occurs during the bulk insert operation.</exception>ƒ
+    /// <exception cref="InvalidOperationException">Thrown when an error occurs during the bulk insert operation.</exception>
     public Task BulkInsertAsync(
         IEnumerable<T> entities,
         BulkConfig? bulkConfig = null,
@@ -268,5 +268,23 @@ public interface IEvaluatorWrite<T>
     public Task BulkInsertOrUpdateAsync(
         IEnumerable<T> entities,
         BulkConfig? bulkConfig = null,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Executes a direct SQL UPDATE against all entities matching <paramref name="condition"/>,
+    /// without loading the entities into memory. Uses EF Core 7+ <c>ExecuteUpdateAsync</c>.
+    /// </summary>
+    /// <param name="condition">A predicate identifying which entities to update.</param>
+    /// <param name="setPropertyCalls">
+    /// An expression that chains <c>SetProperty</c> calls to define the columns and values to set.
+    /// Example: <c>s => s.SetProperty(e => e.IsActive, false).SetProperty(e => e.UpdatedAt, DateTime.UtcNow)</c>
+    /// </param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>The number of rows affected.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="condition"/> or <paramref name="setPropertyCalls"/> is null.</exception>
+    /// <exception cref="InvalidOperationException">Thrown if the operation fails.</exception>
+    Task<int> ExecuteUpdateAsync(
+        Expression<Func<T, bool>> condition,
+        Expression<Func<Microsoft.EntityFrameworkCore.Query.SetPropertyCalls<T>, Microsoft.EntityFrameworkCore.Query.SetPropertyCalls<T>>> setPropertyCalls,
         CancellationToken cancellationToken = default);
 }

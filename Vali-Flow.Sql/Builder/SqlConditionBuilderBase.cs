@@ -1,0 +1,122 @@
+using System.Linq.Expressions;
+using Vali_Flow.Sql.Dialects;
+
+namespace Vali_Flow.Sql.Builder;
+
+/// <summary>
+/// Abstract base for SQL condition builders (WHERE, HAVING).
+/// Encapsulates the shared AND/OR grouping algorithm, parameter store, and condition list.
+/// Concrete builders supply their own parameter prefix and public condition methods.
+/// </summary>
+/// <typeparam name="TBuilder">The concrete builder type (CRTP — enables fluent return of the correct type).</typeparam>
+/// <typeparam name="T">The entity type.</typeparam>
+public abstract class SqlConditionBuilderBase<TBuilder, T>
+    where TBuilder : SqlConditionBuilderBase<TBuilder, T>
+    where T : class
+{
+    /// <summary>
+    /// Shared parameter counter and dictionary.
+    /// Sub-builders (e.g. AddSubGroup) receive the parent's state so parameter names never collide.
+    /// </summary>
+    protected sealed class SharedState
+    {
+        public int ParamIndex;
+        public readonly Dictionary<string, object> Parameters = new();
+    }
+
+    private readonly List<(Func<ISqlDialect, string> SqlFactory, bool IsAnd)> _conditions = new();
+    private bool _nextIsAnd = true;
+    protected readonly SharedState _state;
+
+    /// <summary>Parameter name prefix, e.g. "pw" for WHERE or "ph" for HAVING.</summary>
+    protected abstract string ParamPrefix { get; }
+
+    /// <summary>Creates a root builder with its own parameter store.</summary>
+    protected SqlConditionBuilderBase() => _state = new SharedState();
+
+    /// <summary>Creates a child builder that shares a parent's parameter store (used for sub-groups).</summary>
+    protected SqlConditionBuilderBase(SharedState state) => _state = state;
+
+    // ── Logic ─────────────────────────────────────────────────────────────────
+
+    /// <summary>The next condition will be ANDed with the previous group (default behavior).</summary>
+    public TBuilder And()
+    {
+        _nextIsAnd = true;
+        return (TBuilder)this;
+    }
+
+    /// <summary>The next condition will start a new OR group.</summary>
+    public TBuilder Or()
+    {
+        _nextIsAnd = false;
+        return (TBuilder)this;
+    }
+
+    // ── Build ─────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Builds the SQL clause fragment and returns it with its collected parameters.
+    /// Returns an empty string when no conditions have been added.
+    /// </summary>
+    internal (string Sql, IReadOnlyDictionary<string, object> Parameters) Build(ISqlDialect dialect)
+        => (BuildSql(dialect), _state.Parameters);
+
+    // ── Protected helpers ─────────────────────────────────────────────────────
+
+    protected TBuilder AddCondition(Func<ISqlDialect, string> factory)
+    {
+        _conditions.Add((factory, _nextIsAnd));
+        _nextIsAnd = true;
+        return (TBuilder)this;
+    }
+
+    protected string AddParam(object? value)
+    {
+        string name = $"{ParamPrefix}{_state.ParamIndex++}";
+        _state.Parameters[name] = value ?? DBNull.Value;
+        return name;
+    }
+
+    protected static string GetName<TValue>(Expression<Func<T, TValue>> selector)
+    {
+        if (selector == null) throw new ArgumentNullException(nameof(selector));
+        return ExpressionHelper.GetMemberName(selector);
+    }
+
+    // ── AND/OR grouping algorithm ─────────────────────────────────────────────
+
+    /// <summary>
+    /// Groups conditions by OR boundaries: each <c>Or()</c> call starts a new group;
+    /// conditions within a group are joined with AND; groups are joined with OR.
+    /// </summary>
+    internal string BuildSql(ISqlDialect dialect)
+    {
+        if (_conditions.Count == 0) return string.Empty;
+
+        var groups = new List<List<string>>();
+        List<string>? current = null;
+
+        foreach (var (factory, isAnd) in _conditions)
+        {
+            string sql = factory(dialect);
+            if (!isAnd || current == null)
+            {
+                current = new List<string>();
+                groups.Add(current);
+            }
+
+            current.Add(sql);
+        }
+
+        bool multipleGroups = groups.Count > 1;
+
+        var groupSqls = groups.Select(g =>
+            g.Count == 1 ? g[0] :
+            multipleGroups ? $"({string.Join(" AND ", g)})" :
+            string.Join(" AND ", g));
+
+        string result = string.Join(" OR ", groupSqls);
+        return multipleGroups ? $"({result})" : result;
+    }
+}

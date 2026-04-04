@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFrameworks>net8.0;net9.0</TargetFrameworks>
+        <RootNamespace>Vali_Flow.Abstractions</RootNamespace>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <Title>Vali-Flow.Abstractions</Title>
+        <Authors>Felipe Rafael Montenegro Morriberon</Authors>
+        <Description>Provider-agnostic contracts for the Vali-Flow ecosystem. Contains shared interfaces (IQueryEvaluator) implemented by Vali-Flow (EF Core), Vali-Flow.InMemory, and future providers.</Description>
+        <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+        <RepositoryUrl>https://github.com/UBF21/vali-flow</RepositoryUrl>
+        <RepositoryType>git</RepositoryType>
+        <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
+        <Copyright>Copyright © 2025 - FM. Todos los derechos reservados.</Copyright>
+        <Version>1.0.0</Version>
+        <PackageId>Vali-Flow.Abstractions</PackageId>
+        <Product>Vali-Flow.Abstractions</Product>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\Vali-Flow.Core\Vali-Flow.Core\Vali-Flow.Core.csproj" />
+    </ItemGroup>
+
+</Project>

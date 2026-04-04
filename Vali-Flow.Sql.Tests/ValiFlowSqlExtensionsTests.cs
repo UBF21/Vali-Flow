@@ -1,3 +1,4 @@
+using System.Linq.Expressions;
 using Vali_Flow.Core.Builder;
 using Vali_Flow.Sql.Dialects;
 using Vali_Flow.Sql.Extensions;
@@ -91,5 +92,85 @@ public sealed class ValiFlowSqlExtensionsTests
     {
         var act = () => ((ValiFlow<TestUser>?)null).ToSqlCount(null!);
         act.Should().Throw<ArgumentNullException>().WithParameterName("dialect");
+    }
+
+    // ── ToSql (ValiFlowQuery<T> overload) ─────────────────────────────────────
+
+    [Fact]
+    public void ToSql_ValiFlowQuery_SimpleCondition_ReturnsSqlResult()
+    {
+        var flow = new ValiFlowQuery<TestUser>().Add(x => x.Age > 18);
+        var result = flow.ToSql(SqlServer);
+
+        result.Sql.Should().Be("[Age] > @p0");
+        result.Parameters["p0"].Should().Be(18);
+    }
+
+    [Fact]
+    public void ToSql_ValiFlowQuery_NullFlow_ThrowsArgumentNull()
+    {
+        ValiFlowQuery<TestUser>? flow = null;
+        var act = () => flow!.ToSql(SqlServer);
+        act.Should().Throw<ArgumentNullException>().WithParameterName("flow");
+    }
+
+    [Fact]
+    public void ToSql_ValiFlowQuery_NullDialect_ThrowsArgumentNull()
+    {
+        var flow = new ValiFlowQuery<TestUser>().Add(x => x.Age > 18);
+        var act = () => flow.ToSql(null!);
+        act.Should().Throw<ArgumentNullException>().WithParameterName("dialect");
+    }
+
+    [Fact]
+    public void ToSql_ValiFlowQuery_PostgreSQL_UsesDoubleQuotes()
+    {
+        var flow = new ValiFlowQuery<TestUser>().Add(x => x.IsActive);
+        var result = flow.ToSql(Postgres);
+        result.Sql.Should().Be("\"IsActive\" = TRUE");
+    }
+
+    // ── ToSqlCount (ValiFlowQuery<T> overload) ────────────────────────────────
+
+    [Fact]
+    public void ToSqlCount_ValiFlowQuery_WithFilter_GeneratesCountQueryWithWhere()
+    {
+        var flow = new ValiFlowQuery<TestUser>().Add(x => x.IsActive);
+        var result = flow.ToSqlCount(SqlServer, "Users");
+
+        result.Sql.Should().Be("SELECT COUNT(*) FROM [Users] WHERE [IsActive] = 1");
+        result.Parameters.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void ToSqlCount_ValiFlowQuery_NullFlow_CountsAllRows()
+    {
+        ValiFlowQuery<TestUser>? flow = null;
+        var result = flow.ToSqlCount(SqlServer, "Users");
+
+        result.Sql.Should().Be("SELECT COUNT(*) FROM [Users]");
+        result.Parameters.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void ToSqlCount_ValiFlowQuery_NoTableName_UsesTypeName()
+    {
+        var result = ((ValiFlowQuery<TestUser>?)null).ToSqlCount(SqlServer);
+        result.Sql.Should().Be("SELECT COUNT(*) FROM [TestUser]");
+    }
+
+    [Fact]
+    public void ToSqlCount_ValiFlowQuery_NullDialect_ThrowsArgumentNull()
+    {
+        var act = () => ((ValiFlowQuery<TestUser>?)null).ToSqlCount(null!);
+        act.Should().Throw<ArgumentNullException>().WithParameterName("dialect");
+    }
+
+    [Fact]
+    public void ToSqlCount_ValiFlowQuery_PostgreSQL_UsesDoubleQuotes()
+    {
+        var flow = new ValiFlowQuery<TestUser>().Add(x => x.Age > 21);
+        var result = flow.ToSqlCount(Postgres, "users");
+        result.Sql.Should().Be("SELECT COUNT(*) FROM \"users\" WHERE \"Age\" > @p0");
     }
 }
