@@ -1,4 +1,5 @@
 using System.Linq.Expressions;
+using Amazon.DynamoDBv2.Model;
 using Vali_Flow.Core.Builder;
 using Vali_Flow.NoSql.DynamoDB.Models;
 using Vali_Flow.NoSql.DynamoDB.Translators;
@@ -42,21 +43,21 @@ public static class ValiFlowDynamoExtensions
     /// };
     /// </code>
     /// </example>
-    public static DynamoFilterExpression ToDynamoDB<T>(this ValiFlow<T> flow) where T : class
+    public static DynamoFilterExpression ToDynamoDB<T>(this ValiFlow<T> flow, Func<object?, AttributeValue?>? customConverter = null) where T : class
     {
         if (flow == null) throw new ArgumentNullException(nameof(flow));
 
-        return DynamoFilterTranslator.Translate(flow.ToNoSqlIR());
+        return DynamoFilterTranslator.Translate(flow.ToNoSqlIR(), customConverter);
     }
 
     /// <summary>
     /// Translates a prebuilt <see cref="Expression{TDelegate}"/> into a DynamoDB <see cref="DynamoFilterExpression"/>.
     /// Use this overload when you already have a compiled expression.
     /// </summary>
-    public static DynamoFilterExpression ToDynamoDB<T>(this Expression<Func<T, bool>> expression)
+    public static DynamoFilterExpression ToDynamoDB<T>(this Expression<Func<T, bool>> expression, Func<object?, AttributeValue?>? customConverter = null)
     {
         if (expression == null) throw new ArgumentNullException(nameof(expression));
 
-        return DynamoFilterTranslator.Translate(expression.ToNoSqlIR());
+        return DynamoFilterTranslator.Translate(expression.ToNoSqlIR(), customConverter);
     }
 }

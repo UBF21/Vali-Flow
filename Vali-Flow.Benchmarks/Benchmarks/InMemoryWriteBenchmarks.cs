@@ -12,8 +12,6 @@ namespace Vali_Flow.Benchmarks.Benchmarks;
 [MemoryDiagnoser]
 public class InMemoryWriteBenchmarks
 {
-    private static readonly string[] Statuses = ["Pending", "Completed", "Cancelled"];
-
     [Params(100, 1_000, 10_000)]
     public int N;
 
@@ -28,19 +26,7 @@ public class InMemoryWriteBenchmarks
     [GlobalSetup]
     public void Setup()
     {
-        var baseDate = new DateTime(2024, 1, 1);
-        _snapshot = Enumerable.Range(1, N)
-            .Select(i => new BenchmarkOrder
-            {
-                Id        = i,
-                Amount    = i * 1.5m,
-                IsActive  = i % 2 == 0,
-                Name      = $"Order-{i}",
-                Status    = Statuses[i % 3],
-                Quantity  = i % 200,
-                CreatedAt = baseDate.AddDays(i % 365)
-            })
-            .ToList();
+        _snapshot = BenchmarkDataFactory.Generate(N);
 
         _newOrder = new BenchmarkOrder { Id = N + 1, Amount = 999m, IsActive = true, Name = "New", Status = "Pending", Quantity = 1 };
         _newBatch = Enumerable.Range(N + 1, 10)

@@ -258,38 +258,23 @@ public sealed class MongoFilterTranslatorTests
     [Fact]
     public void CustomValueConverter_WhenSet_UsedForMatchingType()
     {
-        MongoFilterTranslator.CustomValueConverter = v =>
-            v is decimal d ? new BsonDecimal128(d) : null;
+        Func<object?, BsonValue?> converter = v => v is decimal d ? new BsonDecimal128(d) : null;
 
-        try
-        {
-            var node = new EqualNode("Price", 9.99m, false);
-            BsonDocument doc = MongoFilterTranslator.Translate(node);
+        var node = new EqualNode("Price", 9.99m, false);
+        BsonDocument doc = MongoFilterTranslator.Translate(node, converter);
 
-            doc["Price"].BsonType.Should().Be(BsonType.Decimal128);
-        }
-        finally
-        {
-            MongoFilterTranslator.CustomValueConverter = null;
-        }
+        doc["Price"].BsonType.Should().Be(BsonType.Decimal128);
     }
 
     [Fact]
     public void CustomValueConverter_WhenReturnsNull_FallsThroughToDefault()
     {
-        MongoFilterTranslator.CustomValueConverter = _ => null;
+        Func<object?, BsonValue?> converter = _ => null;
 
-        try
-        {
-            var node = new EqualNode("Name", "Alice", false);
-            BsonDocument doc = MongoFilterTranslator.Translate(node);
+        var node = new EqualNode("Name", "Alice", false);
+        BsonDocument doc = MongoFilterTranslator.Translate(node, converter);
 
-            doc["Name"].AsString.Should().Be("Alice");
-        }
-        finally
-        {
-            MongoFilterTranslator.CustomValueConverter = null;
-        }
+        doc["Name"].AsString.Should().Be("Alice");
     }
 
     // ── ToBsonValue type coverage ─────────────────────────────────────────────

@@ -348,41 +348,26 @@ public sealed class ElasticsearchFilterTranslatorTests
     [Fact]
     public void CustomValueConverter_WhenSet_UsedForMatchingType()
     {
-        ElasticsearchFilterTranslator.CustomValueConverter = v =>
-            v is decimal d ? FieldValue.Double((double)d) : null;
+        Func<object?, FieldValue?> converter = v => v is decimal d ? FieldValue.Double((double)d) : null;
 
-        try
-        {
-            var node = new EqualNode("Price", 9.99m, false);
-            Query q = ElasticsearchFilterTranslator.Translate(node);
+        var node = new EqualNode("Price", 9.99m, false);
+        Query q = ElasticsearchFilterTranslator.Translate(node, converter);
 
-            q.TryGet<TermQuery>(out var term);
-            term.Should().NotBeNull();
-            term!.Value.Should().Be(FieldValue.Double(9.99));
-        }
-        finally
-        {
-            ElasticsearchFilterTranslator.CustomValueConverter = null;
-        }
+        q.TryGet<TermQuery>(out var term);
+        term.Should().NotBeNull();
+        term!.Value.Should().Be(FieldValue.Double(9.99));
     }
 
     [Fact]
     public void CustomValueConverter_WhenReturnsNull_FallsThroughToDefault()
     {
-        ElasticsearchFilterTranslator.CustomValueConverter = _ => null;
+        Func<object?, FieldValue?> converter = _ => null;
 
-        try
-        {
-            var node = new EqualNode("Name", "Alice", false);
-            Query q = ElasticsearchFilterTranslator.Translate(node);
+        var node = new EqualNode("Name", "Alice", false);
+        Query q = ElasticsearchFilterTranslator.Translate(node, converter);
 
-            q.TryGet<TermQuery>(out var term);
-            term!.Value.Should().Be(FieldValue.String("Alice"));
-        }
-        finally
-        {
-            ElasticsearchFilterTranslator.CustomValueConverter = null;
-        }
+        q.TryGet<TermQuery>(out var term);
+        term!.Value.Should().Be(FieldValue.String("Alice"));
     }
 
     // ── Direct node construction ──────────────────────────────────────────────

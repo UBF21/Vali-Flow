@@ -4,6 +4,8 @@ using Vali_Flow.NoSql.IR;
 
 namespace Vali_Flow.NoSql.Elasticsearch.Translators;
 
+// TODO: Visitor pattern if IR grows beyond 10 node types
+
 /// <summary>
 /// Translates a <see cref="IConditionNode"/> IR tree into an Elasticsearch <see cref="Query"/>.
 /// </summary>
@@ -17,55 +19,47 @@ namespace Vali_Flow.NoSql.Elasticsearch.Translators;
 public static class ElasticsearchFilterTranslator
 {
     /// <summary>
-    /// Optional hook for converting custom CLR types to <see cref="FieldValue"/>.
-    /// When set, it is called before the built-in type switch in <see cref="ToFieldValue"/>.
-    /// Return <c>null</c> to fall through to the default conversion.
-    /// </summary>
-    /// <example>
-    /// <code>
-    /// ElasticsearchFilterTranslator.CustomValueConverter = value =>
-    ///     value is Money m ? FieldValue.Double((double)m.Amount) : null;
-    /// </code>
-    /// </example>
-    public static Func<object?, FieldValue?>? CustomValueConverter { get; set; }
-
-    /// <summary>
     /// Translates the given <see cref="IConditionNode"/> into an Elasticsearch <see cref="Query"/>.
     /// </summary>
     /// <param name="node">The root condition node to translate.</param>
+    /// <param name="customConverter">
+    /// Optional hook for converting custom CLR types to <see cref="FieldValue"/>.
+    /// Called before the built-in type switch. Return <c>null</c> to fall through to the default conversion.
+    /// Thread-safe: the converter is scoped to this call only.
+    /// </param>
     /// <returns>
     /// A <see cref="Query"/> ready to pass to <c>Search</c>, <c>Count</c>, <c>DeleteByQuery</c>, etc.
     /// </returns>
     /// <example>
     /// <code>
-    /// Query esFilter = filter.ToElasticsearch();
+    /// Query esFilter = filter.ToElasticsearch(v => v is Money m ? FieldValue.Double((double)m.Amount) : null);
     /// var results = await client.SearchAsync&lt;User&gt;(s =&gt; s.Query(esFilter));
     /// </code>
     /// </example>
-    public static Query Translate(IConditionNode node)
+    public static Query Translate(IConditionNode node, Func<object?, FieldValue?>? customConverter = null)
     {
         if (node == null) throw new ArgumentNullException(nameof(node));
 
-        return TranslateNode(node);
+        return TranslateNode(node, customConverter);
     }
 
-    private static Query TranslateNode(IConditionNode node) => node switch
+    private static Query TranslateNode(IConditionNode node, Func<object?, FieldValue?>? customConverter) => node switch
     {
         // ── Logical combinators ───────────────────────────────────────────────
         AndNode and => Query.Bool(new BoolQuery
         {
-            Must = [TranslateNode(and.Left), TranslateNode(and.Right)]
+            Must = [TranslateNode(and.Left, customConverter), TranslateNode(and.Right, customConverter)]
         }),
 
         OrNode or => Query.Bool(new BoolQuery
         {
-            Should             = [TranslateNode(or.Left), TranslateNode(or.Right)],
+            Should             = [TranslateNode(or.Left, customConverter), TranslateNode(or.Right, customConverter)],
             MinimumShouldMatch = 1
         }),
 
         NotNode not => Query.Bool(new BoolQuery
         {
-            MustNot = [TranslateNode(not.Inner)]
+            MustNot = [TranslateNode(not.Inner, customConverter)]
         }),
 
         // ── Null checks ───────────────────────────────────────────────────────
@@ -81,11 +75,11 @@ public static class ElasticsearchFilterTranslator
 
         // ── Equality ──────────────────────────────────────────────────────────
         EqualNode { IsNegated: false } eq =>
-            Query.Term(new TermQuery(eq.Field) { Value = ToFieldValue(eq.Value) }),
+            Query.Term(new TermQuery(eq.Field) { Value = ToFieldValue(eq.Value, customConverter) }),
 
         EqualNode { IsNegated: true } eq => Query.Bool(new BoolQuery
         {
-            MustNot = [Query.Term(new TermQuery(eq.Field) { Value = ToFieldValue(eq.Value) })]
+            MustNot = [Query.Term(new TermQuery(eq.Field) { Value = ToFieldValue(eq.Value, customConverter) })]
         }),
 
         // ── Range ─────────────────────────────────────────────────────────────
@@ -114,7 +108,7 @@ public static class ElasticsearchFilterTranslator
         InNode inNode => Query.Terms(new TermsQuery
         {
             Field = inNode.Field,
-            Term  = new TermsQueryField(inNode.Values.Select(ToFieldValue).ToArray())
+            Term  = new TermsQueryField(inNode.Values.Select(v => ToFieldValue(v, customConverter)).ToArray())
         }),
 
         _ => throw new NotSupportedException(
@@ -141,11 +135,11 @@ public static class ElasticsearchFilterTranslator
         catch { throw new NotSupportedException($"Cannot convert '{value?.GetType().Name}' to double for a range query."); }
     }
 
-    private static FieldValue ToFieldValue(object? value)
+    private static FieldValue ToFieldValue(object? value, Func<object?, FieldValue?>? customConverter)
     {
-        if (CustomValueConverter != null)
+        if (customConverter != null)
         {
-            var custom = CustomValueConverter(value);
+            var custom = customConverter(value);
             if (custom.HasValue) return custom.Value;
         }
 

@@ -27,45 +27,37 @@ public static class DynamoFilterTranslator
     private const int MaxInValues = 100;
 
     /// <summary>
-    /// Optional hook for converting custom CLR types to <see cref="AttributeValue"/>.
-    /// When set, it is called before the built-in type switch in <see cref="ToAttributeValue"/>.
-    /// Return <c>null</c> to fall through to the default conversion.
-    /// </summary>
-    /// <example>
-    /// <code>
-    /// DynamoFilterTranslator.CustomAttributeValueConverter = value =>
-    ///     value is Money m ? new AttributeValue { N = m.Amount.ToString() } : null;
-    /// </code>
-    /// </example>
-    public static Func<object?, AttributeValue?>? CustomAttributeValueConverter { get; set; }
-
-    /// <summary>
     /// Translates the given <see cref="IConditionNode"/> into a <see cref="DynamoFilterExpression"/>.
     /// </summary>
     /// <param name="node">The root condition node to translate.</param>
+    /// <param name="customConverter">
+    /// Optional hook for converting custom CLR types to <see cref="AttributeValue"/>.
+    /// Called before the built-in type switch. Return <c>null</c> to fall through to the default conversion.
+    /// Thread-safe: the converter is scoped to this call only.
+    /// </param>
     /// <returns>
     /// A <see cref="DynamoFilterExpression"/> ready to apply to a <c>ScanRequest</c> or <c>QueryRequest</c>.
     /// </returns>
-    public static DynamoFilterExpression Translate(IConditionNode node)
+    public static DynamoFilterExpression Translate(IConditionNode node, Func<object?, AttributeValue?>? customConverter = null)
     {
         if (node == null) throw new ArgumentNullException(nameof(node));
 
         var ctx = new TranslationContext();
-        var expression = TranslateNode(node, ctx);
+        var expression = TranslateNode(node, ctx, customConverter);
         return new DynamoFilterExpression(expression, ctx.Names, ctx.Values);
     }
 
-    private static string TranslateNode(IConditionNode node, TranslationContext ctx) => node switch
+    private static string TranslateNode(IConditionNode node, TranslationContext ctx, Func<object?, AttributeValue?>? customConverter) => node switch
     {
         // ── Logical combinators ──────────────────────────────────────────────
         AndNode and =>
-            $"({TranslateNode(and.Left, ctx)} AND {TranslateNode(and.Right, ctx)})",
+            $"({TranslateNode(and.Left, ctx, customConverter)} AND {TranslateNode(and.Right, ctx, customConverter)})",
 
         OrNode or =>
-            $"({TranslateNode(or.Left, ctx)} OR {TranslateNode(or.Right, ctx)})",
+            $"({TranslateNode(or.Left, ctx, customConverter)} OR {TranslateNode(or.Right, ctx, customConverter)})",
 
         NotNode not =>
-            $"NOT ({TranslateNode(not.Inner, ctx)})",
+            $"NOT ({TranslateNode(not.Inner, ctx, customConverter)})",
 
         // ── Null checks ───────────────────────────────────────────────────────
         NullNode { Check: NullCheckOp.IsNull }    n => $"attribute_not_exists({ctx.AddName(n.Field)})",
@@ -73,14 +65,14 @@ public static class DynamoFilterTranslator
 
         // ── Equality ──────────────────────────────────────────────────────────
         EqualNode { IsNegated: false } eq =>
-            $"{ctx.AddName(eq.Field)} = {ctx.AddValue(ToAttributeValue(eq.Value))}",
+            $"{ctx.AddName(eq.Field)} = {ctx.AddValue(ToAttributeValue(eq.Value, customConverter))}",
 
         EqualNode { IsNegated: true } eq =>
-            $"{ctx.AddName(eq.Field)} <> {ctx.AddValue(ToAttributeValue(eq.Value))}",
+            $"{ctx.AddName(eq.Field)} <> {ctx.AddValue(ToAttributeValue(eq.Value, customConverter))}",
 
         // ── Range ─────────────────────────────────────────────────────────────
         ComparisonNode cmp =>
-            $"{ctx.AddName(cmp.Field)} {MapComparisonOp(cmp.Op)} {ctx.AddValue(ToAttributeValue(cmp.Value))}",
+            $"{ctx.AddName(cmp.Field)} {MapComparisonOp(cmp.Op)} {ctx.AddValue(ToAttributeValue(cmp.Value, customConverter))}",
 
         // ── Pattern match ─────────────────────────────────────────────────────
         LikeNode { Op: LikeOp.Contains }   like =>
@@ -104,7 +96,7 @@ public static class DynamoFilterTranslator
                 $"DynamoDB IN expression supports at most {MaxInValues} values; " +
                 $"received {inNode.Values.Count}. Split the query or batch the values."),
 
-        InNode inNode => BuildInExpression(inNode, ctx),
+        InNode inNode => BuildInExpression(inNode, ctx, customConverter),
 
         _ => throw new NotSupportedException(
             $"IR node type '{node.GetType().Name}' is not supported by DynamoFilterTranslator.")
@@ -112,11 +104,11 @@ public static class DynamoFilterTranslator
 
     // ── Helpers ──────────────────────────────────────────────────────────────────
 
-    private static string BuildInExpression(InNode inNode, TranslationContext ctx)
+    private static string BuildInExpression(InNode inNode, TranslationContext ctx, Func<object?, AttributeValue?>? customConverter)
     {
         var field = ctx.AddName(inNode.Field);
         var valuePlaceholders = inNode.Values
-            .Select(v => ctx.AddValue(ToAttributeValue(v)));
+            .Select(v => ctx.AddValue(ToAttributeValue(v, customConverter)));
         return $"{field} IN ({string.Join(", ", valuePlaceholders)})";
     }
 
@@ -129,11 +121,11 @@ public static class DynamoFilterTranslator
         _ => throw new NotSupportedException($"ComparisonOp.{op} is not mapped.")
     };
 
-    private static AttributeValue ToAttributeValue(object? value)
+    private static AttributeValue ToAttributeValue(object? value, Func<object?, AttributeValue?>? customConverter)
     {
-        if (CustomAttributeValueConverter != null)
+        if (customConverter != null)
         {
-            var custom = CustomAttributeValueConverter(value);
+            var custom = customConverter(value);
             if (custom != null) return custom;
         }
 

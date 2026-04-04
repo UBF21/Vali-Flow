@@ -306,38 +306,24 @@ public sealed class RedisSearchFilterTranslatorTests
     [Fact]
     public void CustomValueConverter_WhenSet_UsedForMatchingType()
     {
-        RedisSearchFilterTranslator.CustomValueConverter = v =>
+        Func<object?, string?> converter = v =>
             v is decimal d ? d.ToString("G", System.Globalization.CultureInfo.InvariantCulture) : null;
 
-        try
-        {
-            var node = new EqualNode("Price", 9.99m, false);
-            string q = RedisSearchFilterTranslator.Translate(node);
+        var node = new EqualNode("Price", 9.99m, false);
+        string q = RedisSearchFilterTranslator.Translate(node, converter);
 
-            q.Should().Be(@"@Price:{""9.99""}");
-        }
-        finally
-        {
-            RedisSearchFilterTranslator.CustomValueConverter = null;
-        }
+        q.Should().Be(@"@Price:{""9.99""}");
     }
 
     [Fact]
     public void CustomValueConverter_WhenReturnsNull_FallsThroughToDefault()
     {
-        RedisSearchFilterTranslator.CustomValueConverter = _ => null;
+        Func<object?, string?> converter = _ => null;
 
-        try
-        {
-            var node = new EqualNode("Name", "Alice", false);
-            string q = RedisSearchFilterTranslator.Translate(node);
+        var node = new EqualNode("Name", "Alice", false);
+        string q = RedisSearchFilterTranslator.Translate(node, converter);
 
-            q.Should().Be(@"@Name:{""Alice""}");
-        }
-        finally
-        {
-            RedisSearchFilterTranslator.CustomValueConverter = null;
-        }
+        q.Should().Be(@"@Name:{""Alice""}");
     }
 
     // ── Direct node construction ──────────────────────────────────────────────

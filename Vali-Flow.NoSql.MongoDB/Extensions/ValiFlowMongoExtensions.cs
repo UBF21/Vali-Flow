@@ -37,21 +37,21 @@ public static class ValiFlowMongoExtensions
     /// var users = await collection.Find(mongoFilter).ToListAsync();
     /// </code>
     /// </example>
-    public static BsonDocument ToMongo<T>(this ValiFlow<T> flow) where T : class
+    public static BsonDocument ToMongo<T>(this ValiFlow<T> flow, Func<object?, BsonValue?>? customConverter = null) where T : class
     {
         if (flow == null) throw new ArgumentNullException(nameof(flow));
 
-        return MongoFilterTranslator.Translate(flow.ToNoSqlIR());
+        return MongoFilterTranslator.Translate(flow.ToNoSqlIR(), customConverter);
     }
 
     /// <summary>
     /// Translates a prebuilt <see cref="Expression{TDelegate}"/> into a MongoDB filter.
     /// Use this overload when you already have a compiled expression.
     /// </summary>
-    public static BsonDocument ToMongo<T>(this Expression<Func<T, bool>> expression)
+    public static BsonDocument ToMongo<T>(this Expression<Func<T, bool>> expression, Func<object?, BsonValue?>? customConverter = null)
     {
         if (expression == null) throw new ArgumentNullException(nameof(expression));
 
-        return MongoFilterTranslator.Translate(expression.ToNoSqlIR());
+        return MongoFilterTranslator.Translate(expression.ToNoSqlIR(), customConverter);
     }
 }

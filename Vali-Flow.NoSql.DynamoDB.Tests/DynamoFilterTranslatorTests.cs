@@ -312,38 +312,24 @@ public sealed class DynamoFilterTranslatorTests
     [Fact]
     public void CustomAttributeValueConverter_WhenSet_UsedForMatchingType()
     {
-        DynamoFilterTranslator.CustomAttributeValueConverter = v =>
+        Func<object?, AttributeValue?> converter = v =>
             v is decimal d ? new AttributeValue { N = d.ToString("G", System.Globalization.CultureInfo.InvariantCulture) } : null;
 
-        try
-        {
-            var node = new EqualNode("Price", 9.99m, false);
-            DynamoFilterExpression f = DynamoFilterTranslator.Translate(node);
+        var node = new EqualNode("Price", 9.99m, false);
+        DynamoFilterExpression f = DynamoFilterTranslator.Translate(node, converter);
 
-            f.ExpressionAttributeValues[":v0"].N.Should().Be("9.99");
-        }
-        finally
-        {
-            DynamoFilterTranslator.CustomAttributeValueConverter = null;
-        }
+        f.ExpressionAttributeValues[":v0"].N.Should().Be("9.99");
     }
 
     [Fact]
     public void CustomAttributeValueConverter_WhenReturnsNull_FallsThroughToDefault()
     {
-        DynamoFilterTranslator.CustomAttributeValueConverter = _ => null;
+        Func<object?, AttributeValue?> converter = _ => null;
 
-        try
-        {
-            var node = new EqualNode("Name", "Alice", false);
-            DynamoFilterExpression f = DynamoFilterTranslator.Translate(node);
+        var node = new EqualNode("Name", "Alice", false);
+        DynamoFilterExpression f = DynamoFilterTranslator.Translate(node, converter);
 
-            f.ExpressionAttributeValues[":v0"].S.Should().Be("Alice");
-        }
-        finally
-        {
-            DynamoFilterTranslator.CustomAttributeValueConverter = null;
-        }
+        f.ExpressionAttributeValues[":v0"].S.Should().Be("Alice");
     }
 
     // ── Direct node construction ──────────────────────────────────────────────

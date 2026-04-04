@@ -13,8 +13,6 @@ namespace Vali_Flow.Benchmarks.Benchmarks;
 [MemoryDiagnoser]
 public class InMemoryAggregateBenchmarks
 {
-    private static readonly string[] Statuses = ["Pending", "Completed", "Cancelled"];
-
     [Params(1_000, 10_000, 100_000)]
     public int N;
 
@@ -26,19 +24,7 @@ public class InMemoryAggregateBenchmarks
     [GlobalSetup]
     public void Setup()
     {
-        var baseDate = new DateTime(2024, 1, 1);
-        _data = Enumerable.Range(1, N)
-            .Select(i => new BenchmarkOrder
-            {
-                Id        = i,
-                Amount    = i * 1.5m,
-                IsActive  = i % 2 == 0,
-                Name      = $"Order-{i}",
-                Status    = Statuses[i % 3],
-                Quantity  = i % 200,
-                CreatedAt = baseDate.AddDays(i % 365)
-            })
-            .ToList();
+        _data = BenchmarkDataFactory.Generate(N);
 
         var filter = new ValiFlow<BenchmarkOrder>().IsTrue(o => o.IsActive);
         _evalIsActive = new ValiFlowEvaluator<BenchmarkOrder, int>(_data, filter, o => o.Id);
@@ -53,7 +39,7 @@ public class InMemoryAggregateBenchmarks
     public decimal Sum_Amount_ValiFlow() => _evalIsActive.EvaluateSum(_data, o => o.Amount);
 
     [Benchmark(Baseline = true)]
-    public long Sum_Quantity_Linq() => _data.Where(o => o.IsActive).Sum(o => (long)o.Quantity);
+    public int Sum_Quantity_Linq() => _data.Where(o => o.IsActive).Sum(o => o.Quantity);
 
     [Benchmark]
     public int Sum_Quantity_ValiFlow() => _evalIsActive.EvaluateSum(_data, o => o.Quantity);

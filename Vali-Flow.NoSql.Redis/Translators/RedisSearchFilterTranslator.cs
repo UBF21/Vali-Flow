@@ -17,62 +17,54 @@ namespace Vali_Flow.NoSql.Redis.Translators;
 /// </para>
 /// <para>
 /// <b>Limitation:</b> <see cref="NullNode"/> (IsNull / IsNotNull) is not supported — RediSearch
-/// has no native field-existence query. Use <see cref="CustomValueConverter"/> or handle
+/// has no native field-existence query. Use a <c>customConverter</c> or handle
 /// null checks at the application level.
 /// </para>
 /// </remarks>
 public static class RedisSearchFilterTranslator
 {
     /// <summary>
-    /// Optional hook for converting custom CLR types to their Redis tag-value string.
-    /// When set, it is called before the built-in type switch in <see cref="BuildTagValue"/>.
-    /// Return <c>null</c> to fall through to the default conversion.
-    /// </summary>
-    /// <example>
-    /// <code>
-    /// RedisSearchFilterTranslator.CustomValueConverter = value =>
-    ///     value is Money m ? m.Amount.ToString(CultureInfo.InvariantCulture) : null;
-    /// </code>
-    /// </example>
-    public static Func<object?, string?>? CustomValueConverter { get; set; }
-
-    /// <summary>
     /// Translates the given <see cref="IConditionNode"/> into a RediSearch query string.
     /// </summary>
     /// <param name="node">The root condition node to translate.</param>
+    /// <param name="customConverter">
+    /// Optional hook for converting custom CLR types to their Redis tag-value string.
+    /// Called before the built-in type switch. Return <c>null</c> to fall through to the default conversion.
+    /// Thread-safe: the converter is scoped to this call only.
+    /// </param>
     /// <returns>
     /// A RediSearch query string ready to pass to <c>new Query(result)</c>.
     /// </returns>
     /// <example>
     /// <code>
-    /// string query = filter.ToRedisSearch();
+    /// string query = filter.ToRedisSearch(v => v is Money m ? m.Amount.ToString(CultureInfo.InvariantCulture) : null);
     /// var results = db.FT().Search("idx:products", new Query(query));
     /// </code>
     /// </example>
-    public static string Translate(IConditionNode node)
+    public static string Translate(IConditionNode node, Func<object?, string?>? customConverter = null)
     {
         if (node == null) throw new ArgumentNullException(nameof(node));
 
-        return TranslateNode(node);
+        return TranslateNode(node, customConverter);
     }
 
-    private static string TranslateNode(IConditionNode node) => node switch
+    private static string TranslateNode(IConditionNode node, Func<object?, string?>? customConverter) => node switch
     {
         // ── Logical combinators ──────────────────────────────────────────────
-        AndNode and => $"({TranslateNode(and.Left)} {TranslateNode(and.Right)})",
+        AndNode and => $"({TranslateNode(and.Left, customConverter)} {TranslateNode(and.Right, customConverter)})",
 
-        OrNode or => $"({TranslateNode(or.Left)} | {TranslateNode(or.Right)})",
+        OrNode or => $"({TranslateNode(or.Left, customConverter)} | {TranslateNode(or.Right, customConverter)})",
 
-        NotNode not => $"-({TranslateNode(not.Inner)})",
+        NotNode not => $"-({TranslateNode(not.Inner, customConverter)})",
 
         // ── Null checks — not natively supported in RediSearch ───────────────
         NullNode => throw new NotSupportedException(
             "RediSearch does not support field-existence / null checks without schema-specific handling. " +
-            "Use CustomValueConverter or handle null checks at the application level before querying."),
+            "Use a customConverter or handle null checks at the application level before querying."),
 
         // ── Equality ─────────────────────────────────────────────────────────
-        EqualNode { IsNegated: false } eq => BuildEqualQuery(eq.Field, eq.Value, negated: false),
-        EqualNode { IsNegated: true }  eq => BuildEqualQuery(eq.Field, eq.Value, negated: true),
+        EqualNode { IsNegated: false } eq => BuildEqualQuery(eq.Field, eq.Value, negated: false, customConverter),
+        EqualNode { IsNegated: true }  eq => BuildEqualQuery(eq.Field, eq.Value, negated: true,  customConverter),
 
         // ── Range ─────────────────────────────────────────────────────────────
         // Exclusive bound uses leading '(' before the number: [(v +inf]
@@ -98,7 +90,7 @@ public static class RedisSearchFilterTranslator
         // Empty IN → always false (negate match-all)
         InNode { Values.Count: 0 } => "(-*)",
 
-        InNode inNode => BuildInQuery(inNode),
+        InNode inNode => BuildInQuery(inNode, customConverter),
 
         _ => throw new NotSupportedException(
             $"IR node type '{node.GetType().Name}' is not supported by RedisSearchFilterTranslator.")
@@ -106,12 +98,12 @@ public static class RedisSearchFilterTranslator
 
     // ── Helpers ──────────────────────────────────────────────────────────────────
 
-    private static string BuildEqualQuery(string field, object value, bool negated)
+    private static string BuildEqualQuery(string field, object value, bool negated, Func<object?, string?>? customConverter)
     {
         // OCP: custom converter takes priority over built-in type detection
-        if (CustomValueConverter != null)
+        if (customConverter != null)
         {
-            var custom = CustomValueConverter(value);
+            var custom = customConverter(value);
             if (custom != null)
             {
                 var customTag = $"\"{EscapeTagValue(custom)}\"";
@@ -129,35 +121,47 @@ public static class RedisSearchFilterTranslator
                 : $"@{field}:[{num} {num}]";
         }
 
-        // String / other → quoted tag query (DIALECT 2)
-        var tag = BuildTagValue(value);
+        // String / other → quoted tag query (DIALECT 2).
+        // Converter already returned null above — pass null to avoid double-invocation (O1 fix).
+        var tag = BuildTagValue(value, null);
         return negated
             ? $"-@{field}:{{{tag}}}"
             : $"@{field}:{{{tag}}}";
     }
 
-    private static string BuildInQuery(InNode inNode)
+    private static string BuildInQuery(InNode inNode, Func<object?, string?>? customConverter)
     {
-        var first = inNode.Values.FirstOrDefault(v => v != null);
+        var nonNull = inNode.Values.Where(v => v != null).ToList();
 
-        if (IsNumericOrBool(first))
+        if (nonNull.Count > 0)
         {
-            // OR'd range queries: (@field:[v1 v1]|@field:[v2 v2]|...)
-            var parts = inNode.Values
-                .Select(v => $"@{inNode.Field}:[{ToNumericString(v!)} {ToNumericString(v!)}]");
-            return $"({string.Join("|", parts)})";
+            bool allNumeric = nonNull.All(IsNumericOrBool);
+            bool anyNumeric = nonNull.Any(IsNumericOrBool);
+
+            // M3 fix: reject heterogeneous lists before producing a silently wrong query
+            if (anyNumeric && !allNumeric)
+                throw new InvalidOperationException(
+                    $"InNode '{inNode.Field}' contains mixed numeric and non-numeric values. " +
+                    "All non-null values must be of the same kind.");
+
+            if (allNumeric)
+            {
+                // OR'd range queries: (@field:[v1 v1]|@field:[v2 v2]|...)
+                var parts = nonNull.Select(v => $"@{inNode.Field}:[{ToNumericString(v!)} {ToNumericString(v!)}]");
+                return $"({string.Join("|", parts)})";
+            }
         }
 
         // Tag OR query: @field:{"v1"|"v2"|"v3"}
-        var tags = inNode.Values.Select(BuildTagValue);
+        var tags = inNode.Values.Select(v => BuildTagValue(v, customConverter));
         return $"@{inNode.Field}:{{{string.Join("|", tags)}}}";
     }
 
-    private static string BuildTagValue(object? value)
+    private static string BuildTagValue(object? value, Func<object?, string?>? customConverter)
     {
-        if (CustomValueConverter != null)
+        if (customConverter != null)
         {
-            var custom = CustomValueConverter(value);
+            var custom = customConverter(value);
             if (custom != null) return $"\"{EscapeTagValue(custom)}\"";
         }
 

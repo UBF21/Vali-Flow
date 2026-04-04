@@ -4,6 +4,8 @@ using Vali_Flow.NoSql.IR;
 
 namespace Vali_Flow.NoSql.MongoDB.Translators;
 
+// TODO: Visitor pattern if IR grows beyond 10 node types
+
 /// <summary>
 /// Translates a <see cref="IConditionNode"/> IR tree into a MongoDB <see cref="BsonDocument"/> filter.
 /// </summary>
@@ -18,59 +20,51 @@ namespace Vali_Flow.NoSql.MongoDB.Translators;
 public static class MongoFilterTranslator
 {
     /// <summary>
-    /// Optional hook for converting custom CLR types to <see cref="BsonValue"/>.
-    /// When set, it is called before the built-in type switch in <see cref="ToBsonValue"/>.
-    /// Return <c>null</c> to fall through to the default conversion.
-    /// </summary>
-    /// <example>
-    /// <code>
-    /// MongoFilterTranslator.CustomValueConverter = value =>
-    ///     value is Money m ? new BsonDecimal128(m.Amount) : null;
-    /// </code>
-    /// </example>
-    public static Func<object?, BsonValue?>? CustomValueConverter { get; set; }
-
-    /// <summary>
     /// Translates the given <see cref="IConditionNode"/> into a MongoDB <see cref="BsonDocument"/> filter.
     /// </summary>
     /// <param name="node">The root condition node to translate.</param>
+    /// <param name="customConverter">
+    /// Optional hook for converting custom CLR types to <see cref="BsonValue"/>.
+    /// Called before the built-in type switch. Return <c>null</c> to fall through to the default conversion.
+    /// Thread-safe: the converter is scoped to this call only.
+    /// </param>
     /// <returns>
     /// A <see cref="BsonDocument"/> representing the filter.
     /// Pass directly to <c>collection.Find()</c>, <c>CountDocuments()</c>, etc.
     /// </returns>
     /// <example>
     /// <code>
-    /// BsonDocument filter = filter.ToMongo();
+    /// BsonDocument filter = filter.ToMongo(v => v is Money m ? new BsonDecimal128(m.Amount) : null);
     /// var users = await collection.Find(filter).ToListAsync();
     /// </code>
     /// </example>
-    public static BsonDocument Translate(IConditionNode node)
+    public static BsonDocument Translate(IConditionNode node, Func<object?, BsonValue?>? customConverter = null)
     {
         if (node == null) throw new ArgumentNullException(nameof(node));
 
-        return TranslateNode(node);
+        return TranslateNode(node, customConverter);
     }
 
-    private static BsonDocument TranslateNode(IConditionNode node) => node switch
+    private static BsonDocument TranslateNode(IConditionNode node, Func<object?, BsonValue?>? customConverter) => node switch
     {
         // ── Logical combinators ───────────────────────────────────────
         AndNode and =>
             new BsonDocument("$and", new BsonArray
             {
-                TranslateNode(and.Left),
-                TranslateNode(and.Right)
+                TranslateNode(and.Left, customConverter),
+                TranslateNode(and.Right, customConverter)
             }),
 
         OrNode or =>
             new BsonDocument("$or", new BsonArray
             {
-                TranslateNode(or.Left),
-                TranslateNode(or.Right)
+                TranslateNode(or.Left, customConverter),
+                TranslateNode(or.Right, customConverter)
             }),
 
         // $nor with a single element = logical NOT
         NotNode not =>
-            new BsonDocument("$nor", new BsonArray { TranslateNode(not.Inner) }),
+            new BsonDocument("$nor", new BsonArray { TranslateNode(not.Inner, customConverter) }),
 
         // ── Null checks ───────────────────────────────────────────────
         NullNode { Check: NullCheckOp.IsNull } n =>
@@ -81,10 +75,10 @@ public static class MongoFilterTranslator
 
         // ── Equality ──────────────────────────────────────────────────
         EqualNode { IsNegated: false } eq =>
-            new BsonDocument(eq.Field, ToBsonValue(eq.Value)),
+            new BsonDocument(eq.Field, ToBsonValue(eq.Value, customConverter)),
 
         EqualNode { IsNegated: true } eq =>
-            new BsonDocument(eq.Field, new BsonDocument("$ne", ToBsonValue(eq.Value))),
+            new BsonDocument(eq.Field, new BsonDocument("$ne", ToBsonValue(eq.Value, customConverter))),
 
         // ── Comparison ────────────────────────────────────────────────
         ComparisonNode cmp =>
@@ -97,7 +91,7 @@ public static class MongoFilterTranslator
                     ComparisonOp.LessThanOrEqual    => "$lte",
                     _ => throw new NotSupportedException($"ComparisonOp.{cmp.Op} is not mapped.")
                 },
-                ToBsonValue(cmp.Value))),
+                ToBsonValue(cmp.Value, customConverter))),
 
         // ── Pattern match (regex) ─────────────────────────────────────
         LikeNode like =>
@@ -109,7 +103,7 @@ public static class MongoFilterTranslator
         InNode inNode =>
             new BsonDocument(inNode.Field,
                 new BsonDocument("$in",
-                    new BsonArray(inNode.Values.Select(ToBsonValue)))),
+                    new BsonArray(inNode.Values.Select(v => ToBsonValue(v, customConverter))))),
 
         _ => throw new NotSupportedException(
             $"IR node type '{node.GetType().Name}' is not supported by MongoFilterTranslator.")
@@ -125,11 +119,11 @@ public static class MongoFilterTranslator
         _ => throw new NotSupportedException($"LikeOp.{op} is not mapped.")
     };
 
-    private static BsonValue ToBsonValue(object? value)
+    private static BsonValue ToBsonValue(object? value, Func<object?, BsonValue?>? customConverter)
     {
-        if (CustomValueConverter != null)
+        if (customConverter != null)
         {
-            var custom = CustomValueConverter(value);
+            var custom = customConverter(value);
             if (custom != null) return custom;
         }
 
