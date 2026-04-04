@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>net8.0;net9.0</TargetFrameworks>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>Vali_Flow.NoSql.DynamoDB</RootNamespace>
+    <PackageId>Vali-Flow.NoSql.DynamoDB</PackageId>
+    <Version>1.0.0</Version>
+    <Authors>Felipe Rafael Montenegro Morriberon</Authors>
+    <Description>AWS DynamoDB adapter for Vali-Flow.NoSql — translates the provider-agnostic IR tree into DynamoDB FilterExpression strings with ExpressionAttributeNames and ExpressionAttributeValues.</Description>
+    <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Vali-Flow.NoSql\Vali-Flow.NoSql.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="AWSSDK.DynamoDBv2" Version="3.7.406.1" />
+  </ItemGroup>
+</Project>
