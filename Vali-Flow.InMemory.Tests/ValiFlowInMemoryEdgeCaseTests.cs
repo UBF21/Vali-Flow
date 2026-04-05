@@ -120,10 +120,10 @@ public sealed class ValiFlowInMemoryEdgeCaseTests
         act.Should().Throw<ArgumentException>().WithParameterName("entities");
     }
 
-    // ── GetFirstFailed — negation semantics ──────────────────────────────────
+    // ── GetFirstFailed — always returns first entity that fails the filter ──────
 
     [Fact]
-    public void GetFirstFailed_DefaultNegate_ReturnsEntityThatFailsFilter()
+    public void GetFirstFailed_AlwaysReturnsEntityThatFailsFilter()
     {
         var products = new List<TestProduct>
         {
@@ -133,17 +133,66 @@ public sealed class ValiFlowInMemoryEdgeCaseTests
         var filter = new ValiFlow<TestProduct>().IsTrue(p => p.IsActive);
         var ev = new ValiFlowEvaluator<TestProduct, int>(products, filter);
 
-        // GetFirstFailed(negateCondition: false) → entity that does NOT satisfy IsActive
         var result = ev.GetFirstFailed(products);
 
         result.Should().NotBeNull();
         result!.IsActive.Should().BeFalse();
     }
 
-    // ── EvaluateAllFailed ─────────────────────────────────────────────────────
+    [Fact]
+    public void GetFirstFailed_WithNullEntities_FallsBackToInternalStore()
+    {
+        var products = new List<TestProduct>
+        {
+            new() { Id = 1, Name = "A", IsActive = true,  Price = 10m, Stock = 1, Category = "X" },
+            new() { Id = 2, Name = "B", IsActive = false, Price = 20m, Stock = 2, Category = "X" }
+        };
+        var filter = new ValiFlow<TestProduct>().IsTrue(p => p.IsActive);
+        var ev = new ValiFlowEvaluator<TestProduct, int>(products, filter);
+
+        var result = ev.GetFirstFailed(valiFlow: filter);
+
+        result.Should().NotBeNull();
+        result!.IsActive.Should().BeFalse();
+    }
 
     [Fact]
-    public void EvaluateAllFailed_DefaultNegate_OnlyReturnsFailingEntities()
+    public void GetFirstFailed_WhenAllEntitiesFail_ReturnsFirst()
+    {
+        var products = new List<TestProduct>
+        {
+            new() { Id = 1, Name = "A", IsActive = false, Price = 10m, Stock = 1, Category = "X" },
+            new() { Id = 2, Name = "B", IsActive = false, Price = 20m, Stock = 2, Category = "X" }
+        };
+        var filter = new ValiFlow<TestProduct>().IsTrue(p => p.IsActive);
+        var ev = new ValiFlowEvaluator<TestProduct, int>(products, filter);
+
+        var result = ev.GetFirstFailed(products);
+
+        result.Should().NotBeNull();
+        result!.Id.Should().Be(1);
+    }
+
+    [Fact]
+    public void GetFirstFailed_WhenNoEntityFails_ReturnsNull()
+    {
+        var products = new List<TestProduct>
+        {
+            new() { Id = 1, Name = "A", IsActive = true, Price = 10m, Stock = 1, Category = "X" },
+            new() { Id = 2, Name = "B", IsActive = true, Price = 20m, Stock = 2, Category = "X" }
+        };
+        var filter = new ValiFlow<TestProduct>().IsTrue(p => p.IsActive);
+        var ev = new ValiFlowEvaluator<TestProduct, int>(products, filter);
+
+        var result = ev.GetFirstFailed(products);
+
+        result.Should().BeNull();
+    }
+
+    // ── EvaluateAllFailed — always returns all entities that fail the filter ───
+
+    [Fact]
+    public void EvaluateAllFailed_AlwaysReturnsOnlyFailingEntities()
     {
         var products = new List<TestProduct>
         {
@@ -158,6 +207,43 @@ public sealed class ValiFlowInMemoryEdgeCaseTests
 
         failed.Should().HaveCount(2);
         failed.Should().OnlyContain(p => !p.IsActive);
+    }
+
+    [Fact]
+    public void EvaluateAllFailed_WithNullEntities_FallsBackToInternalStore()
+    {
+        var products = new List<TestProduct>
+        {
+            new() { Id = 1, Name = "A", IsActive = true,  Price = 10m, Stock = 1, Category = "X" },
+            new() { Id = 2, Name = "B", IsActive = false, Price = 20m, Stock = 2, Category = "X" }
+        };
+        var filter = new ValiFlow<TestProduct>().IsTrue(p => p.IsActive);
+        var ev = new ValiFlowEvaluator<TestProduct, int>(products, filter);
+
+        var failed = ev.EvaluateAllFailed<int>(valiFlow: filter).ToList();
+
+        failed.Should().ContainSingle();
+        failed.Single().IsActive.Should().BeFalse();
+    }
+
+    // ── GetLastFailed — always returns last entity that fails the filter ───────
+
+    [Fact]
+    public void GetLastFailed_WithNullEntities_FallsBackToInternalStore()
+    {
+        var products = new List<TestProduct>
+        {
+            new() { Id = 1, Name = "A", IsActive = false, Price = 10m, Stock = 1, Category = "X" },
+            new() { Id = 2, Name = "B", IsActive = true,  Price = 20m, Stock = 2, Category = "X" },
+            new() { Id = 3, Name = "C", IsActive = false, Price = 30m, Stock = 3, Category = "X" }
+        };
+        var filter = new ValiFlow<TestProduct>().IsTrue(p => p.IsActive);
+        var ev = new ValiFlowEvaluator<TestProduct, int>(products, filter);
+
+        var result = ev.GetLastFailed<int>(orderBy: p => p.Id, valiFlow: filter);
+
+        result.Should().NotBeNull();
+        result!.Id.Should().Be(3);
     }
 
     // ── SaveChanges — internal store consistency ──────────────────────────────
