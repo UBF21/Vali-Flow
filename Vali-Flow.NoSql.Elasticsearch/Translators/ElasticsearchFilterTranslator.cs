@@ -1,6 +1,7 @@
 using Elastic.Clients.Elasticsearch;
 using Elastic.Clients.Elasticsearch.QueryDsl;
 using Vali_Flow.NoSql.IR;
+using Vali_Flow.NoSql.Translators;
 
 namespace Vali_Flow.NoSql.Elasticsearch.Translators;
 
@@ -83,13 +84,14 @@ public static class ElasticsearchFilterTranslator
         }),
 
         // ── Range ─────────────────────────────────────────────────────────────
-        ComparisonNode cmp => Query.Range(new NumberRangeQuery(cmp.Field)
+        ComparisonNode cmp => cmp.Op switch
         {
-            Gt  = cmp.Op == ComparisonOp.GreaterThan        ? ToDouble(cmp.Value) : null,
-            Gte = cmp.Op == ComparisonOp.GreaterThanOrEqual ? ToDouble(cmp.Value) : null,
-            Lt  = cmp.Op == ComparisonOp.LessThan           ? ToDouble(cmp.Value) : null,
-            Lte = cmp.Op == ComparisonOp.LessThanOrEqual    ? ToDouble(cmp.Value) : null,
-        }),
+            ComparisonOp.GreaterThan        => Query.Range(new NumberRangeQuery(cmp.Field) { Gt  = ToDouble(cmp.Value) }),
+            ComparisonOp.GreaterThanOrEqual => Query.Range(new NumberRangeQuery(cmp.Field) { Gte = ToDouble(cmp.Value) }),
+            ComparisonOp.LessThan           => Query.Range(new NumberRangeQuery(cmp.Field) { Lt  = ToDouble(cmp.Value) }),
+            ComparisonOp.LessThanOrEqual    => Query.Range(new NumberRangeQuery(cmp.Field) { Lte = ToDouble(cmp.Value) }),
+            _ => throw new NotSupportedException($"ComparisonOp.{cmp.Op} is not mapped.")
+        },
 
         // ── Pattern match (wildcard) ──────────────────────────────────────────
         LikeNode like => Query.Wildcard(new WildcardQuery(like.Field)
@@ -135,15 +137,8 @@ public static class ElasticsearchFilterTranslator
         catch { throw new NotSupportedException($"Cannot convert '{value?.GetType().Name}' to double for a range query."); }
     }
 
-    private static FieldValue ToFieldValue(object? value, Func<object?, FieldValue?>? customConverter)
-    {
-        if (customConverter != null)
-        {
-            var custom = customConverter(value);
-            if (custom.HasValue) return custom.Value;
-        }
-
-        return value switch
+    private static FieldValue ToFieldValue(object? value, Func<object?, FieldValue?>? customConverter) =>
+        ConditionValueResolver.Resolve(value, customConverter, v => v switch
         {
             null          => FieldValue.Null,
             bool b        => FieldValue.Boolean(b),
@@ -154,7 +149,6 @@ public static class ElasticsearchFilterTranslator
             decimal dec   => FieldValue.Double((double)dec),
             string s      => FieldValue.String(s),
             Enum e        => FieldValue.Long(Convert.ToInt64(e)),
-            _             => FieldValue.String(value.ToString()!)
-        };
-    }
+            _             => FieldValue.String(v!.ToString()!)
+        });
 }

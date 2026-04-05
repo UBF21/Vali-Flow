@@ -76,67 +76,45 @@ public sealed class ValiFlowEvaluator<T, TProperty> : IInMemoryEvaluatorRead<T>,
         return GetDefaultCondition(valiFlow, negateCondition)(entity);
     }
 
-    public bool EvaluateAny(IEnumerable<T>? entities, ValiFlow<T>? valiFlow = null, bool negateCondition = false)
+    public bool EvaluateAny(IEnumerable<T>? entities = null, ValiFlow<T>? valiFlow = null, bool negateCondition = false)
     {
         IEnumerable<T> dataSource = entities ?? _inMemoryStore;
         return dataSource.Any(GetDefaultCondition(valiFlow, negateCondition));
     }
 
-    public int EvaluateCount(IEnumerable<T>? entities, ValiFlow<T>? valiFlow = null, bool negateCondition = false)
+    public int EvaluateCount(IEnumerable<T>? entities = null, ValiFlow<T>? valiFlow = null, bool negateCondition = false)
     {
         IEnumerable<T> dataSource = entities ?? _inMemoryStore;
         return dataSource.Count(GetDefaultCondition(valiFlow, negateCondition));
     }
 
-    /// <remarks>
-    /// When <paramref name="negateCondition"/> is <see langword="false"/> (default), returns entities that do not satisfy
-    /// the Vali-Flow condition. When <see langword="true"/>, returns entities that do satisfy the condition
-    /// (effectively equivalent to the non-Failed variant).
-    /// <para>
-    /// In detail: when <paramref name="negateCondition"/> is <c>false</c> (default), returns the first entity
-    /// that does <b>not</b> satisfy the filter — i.e., the first "failed" entity.
-    /// When <paramref name="negateCondition"/> is <c>true</c>, the logic is inverted and returns
-    /// the first entity that <b>does</b> satisfy the filter.
-    /// </para>
-    /// </remarks>
-    public T? GetFirstFailed(IEnumerable<T>? entities, ValiFlow<T>? valiFlow = null, bool negateCondition = false)
+    public T? GetFirstFailed(IEnumerable<T>? entities = null, ValiFlow<T>? valiFlow = null)
     {
         IEnumerable<T> dataSource = entities ?? _inMemoryStore;
-        return dataSource.FirstOrDefault(t => GetDefaultCondition(valiFlow, !negateCondition)(t));
+        return dataSource.FirstOrDefault(t => GetDefaultCondition(valiFlow, negated: true)(t));
     }
 
-    public T? GetFirst(IEnumerable<T>? entities, ValiFlow<T>? valiFlow = null, bool negateCondition = false)
+    public T? GetFirst(IEnumerable<T>? entities = null, ValiFlow<T>? valiFlow = null, bool negateCondition = false)
     {
         IEnumerable<T> dataSource = entities ?? _inMemoryStore;
         return dataSource.FirstOrDefault(GetDefaultCondition(valiFlow, negateCondition));
     }
 
-    /// <remarks>
-    /// When <paramref name="negateCondition"/> is <see langword="false"/> (default), returns entities that do not satisfy
-    /// the Vali-Flow condition. When <see langword="true"/>, returns entities that do satisfy the condition
-    /// (effectively equivalent to the non-Failed variant).
-    /// <para>
-    /// In detail: when <paramref name="negateCondition"/> is <c>false</c> (default), returns all entities
-    /// that do <b>not</b> satisfy the filter — i.e., the "failed" entities.
-    /// When <paramref name="negateCondition"/> is <c>true</c>, the logic is inverted and returns
-    /// all entities that <b>do</b> satisfy the filter.
-    /// </para>
-    /// </remarks>
     public IEnumerable<T> EvaluateAllFailed<TKey>(
-        IEnumerable<T>? entities, Func<T, TKey>? orderBy = null,
+        IEnumerable<T>? entities = null,
+        Func<T, TKey>? orderBy = null,
         bool ascending = true,
         IEnumerable<InMemoryThenBy<T, TKey>>? thenBys = null,
-        ValiFlow<T>? valiFlow = null,
-        bool negateCondition = false
+        ValiFlow<T>? valiFlow = null
     )
     {
         IEnumerable<T> dataSource = entities ?? _inMemoryStore;
-        IEnumerable<T> query = dataSource.Where(GetDefaultCondition(valiFlow, !negateCondition));
+        IEnumerable<T> query = dataSource.Where(GetDefaultCondition(valiFlow, negated: true));
         return ApplyOrdering(query, orderBy, ascending, thenBys);
     }
 
     public IEnumerable<T> EvaluateAll<TKey>(
-        IEnumerable<T>? entities, Func<T, TKey>? orderBy = null,
+        IEnumerable<T>? entities = null, Func<T, TKey>? orderBy = null,
         bool ascending = true,
         IEnumerable<InMemoryThenBy<T, TKey>>? thenBys = null,
         ValiFlow<T>? valiFlow = null,
@@ -149,9 +127,9 @@ public sealed class ValiFlowEvaluator<T, TProperty> : IInMemoryEvaluatorRead<T>,
     }
 
     public IEnumerable<T> EvaluatePaged<TKey>(
-        IEnumerable<T>? entities,
-        int page,
-        int pageSize,
+        IEnumerable<T>? entities = null,
+        int page = 1,
+        int pageSize = 10,
         Func<T, TKey>? orderBy = null,
         bool ascending = true,
         IEnumerable<InMemoryThenBy<T, TKey>>? thenBys = null,
@@ -166,9 +144,9 @@ public sealed class ValiFlowEvaluator<T, TProperty> : IInMemoryEvaluatorRead<T>,
     }
 
     public PagedResult<T> EvaluatePagedResult<TKey>(
-        IEnumerable<T>? entities,
-        int page,
-        int pageSize,
+        IEnumerable<T>? entities = null,
+        int page = 1,
+        int pageSize = 10,
         Func<T, TKey>? orderBy = null,
         bool ascending = true,
         IEnumerable<InMemoryThenBy<T, TKey>>? thenBys = null,
@@ -187,8 +165,8 @@ public sealed class ValiFlowEvaluator<T, TProperty> : IInMemoryEvaluatorRead<T>,
     }
 
     public IEnumerable<T> EvaluateTop<TKey>(
-        IEnumerable<T>? entities,
-        int count,
+        IEnumerable<T>? entities = null,
+        int count = 10,
         Func<T, TKey>? orderBy = null,
         bool ascending = true,
         IEnumerable<InMemoryThenBy<T, TKey>>? thenBys = null,
@@ -242,7 +220,7 @@ public sealed class ValiFlowEvaluator<T, TProperty> : IInMemoryEvaluatorRead<T>,
     }
 
     public int GetFirstMatchIndex<TKey>(
-        IEnumerable<T>? entities,
+        IEnumerable<T>? entities = null,
         Func<T, TKey>? orderBy = null,
         bool ascending = true,
         IEnumerable<InMemoryThenBy<T, TKey>>? thenBys = null,
@@ -257,7 +235,7 @@ public sealed class ValiFlowEvaluator<T, TProperty> : IInMemoryEvaluatorRead<T>,
     }
 
     public int GetLastMatchIndex<TKey>(
-        IEnumerable<T>? entities,
+        IEnumerable<T>? entities = null,
         Func<T, TKey>? orderBy = null,
         bool ascending = true,
         IEnumerable<InMemoryThenBy<T, TKey>>? thenBys = null,
@@ -271,25 +249,19 @@ public sealed class ValiFlowEvaluator<T, TProperty> : IInMemoryEvaluatorRead<T>,
         return ordered.FindLastIndex(item => condition(item));
     }
 
-    /// <remarks>
-    /// When <paramref name="negateCondition"/> is <c>false</c> (default), returns the last entity
-    /// that does <b>not</b> satisfy the filter — i.e., the last "failed" entity.
-    /// When <paramref name="negateCondition"/> is <c>true</c>, the logic is inverted and returns
-    /// the last entity that <b>does</b> satisfy the filter.
-    /// </remarks>
     public T? GetLastFailed<TKey>(
-        IEnumerable<T>? entities, Func<T, TKey>? orderBy = null,
+        IEnumerable<T>? entities = null,
+        Func<T, TKey>? orderBy = null,
         bool ascending = true,
         IEnumerable<InMemoryThenBy<T, TKey>>? thenBys = null,
-        ValiFlow<T>? valiFlow = null,
-        bool negateCondition = false
+        ValiFlow<T>? valiFlow = null
     )
     {
-        return EvaluateAllFailed(entities, orderBy, ascending, thenBys, valiFlow, negateCondition).LastOrDefault();
+        return EvaluateAllFailed(entities, orderBy, ascending, thenBys, valiFlow).LastOrDefault();
     }
 
     public T? GetLast<TKey>(
-        IEnumerable<T>? entities,
+        IEnumerable<T>? entities = null,
         Func<T, TKey>? orderBy = null,
         bool ascending = true,
         IEnumerable<InMemoryThenBy<T, TKey>>? thenBys = null,

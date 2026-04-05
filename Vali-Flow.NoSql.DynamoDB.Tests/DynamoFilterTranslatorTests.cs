@@ -368,4 +368,165 @@ public sealed class DynamoFilterTranslatorTests
 
         f.ExpressionAttributeValues[":v0"].N.Should().Be("9.99");
     }
+
+    // ── Type Coverage adicional ───────────────────────────────────────────────
+
+    [Fact]
+    public void ToDynamoDB_GuidValue_ProducesStringAttribute()
+    {
+        var guid = Guid.NewGuid();
+        var node = new EqualNode("Id", guid, false);
+
+        DynamoFilterExpression f = DynamoFilterTranslator.Translate(node);
+
+        f.FilterExpression.Should().Be("#f0 = :v0");
+        f.ExpressionAttributeValues[":v0"].S.Should().Be(guid.ToString());
+    }
+
+    [Fact]
+    public void ToDynamoDB_FloatValue_ProducesNumberAttribute()
+    {
+        var node = new EqualNode("Score", 3.14f, false);
+
+        DynamoFilterExpression f = DynamoFilterTranslator.Translate(node);
+
+        f.FilterExpression.Should().Be("#f0 = :v0");
+        f.ExpressionAttributeValues[":v0"].N.Should()
+            .Be(((float)3.14f).ToString(System.Globalization.CultureInfo.InvariantCulture));
+    }
+
+    [Fact]
+    public void ToDynamoDB_DoubleValue_ProducesNumberAttribute()
+    {
+        var node = new EqualNode("Score", 3.14, false);
+
+        DynamoFilterExpression f = DynamoFilterTranslator.Translate(node);
+
+        f.FilterExpression.Should().Be("#f0 = :v0");
+        f.ExpressionAttributeValues[":v0"].N.Should()
+            .Be(((double)3.14).ToString(System.Globalization.CultureInfo.InvariantCulture));
+    }
+
+    [Fact]
+    public void ToDynamoDB_LongValue_ProducesNumberAttribute()
+    {
+        var node = new EqualNode("Score", 12345678901L, false);
+
+        DynamoFilterExpression f = DynamoFilterTranslator.Translate(node);
+
+        f.FilterExpression.Should().Be("#f0 = :v0");
+        f.ExpressionAttributeValues[":v0"].N.Should().Be("12345678901");
+    }
+
+    [Fact]
+    public void ToDynamoDB_EnumValue_ProducesNumberAttribute()
+    {
+        var node = new EqualNode("Status", DynamoTestStatus.Active, false);
+
+        DynamoFilterExpression f = DynamoFilterTranslator.Translate(node);
+
+        f.FilterExpression.Should().Be("#f0 = :v0");
+        f.ExpressionAttributeValues[":v0"].N.Should().Be("1");
+    }
+
+    // ── Boolean false ─────────────────────────────────────────────────────────
+
+    [Fact]
+    public void ToDynamoDB_EqualBoolFalse_ProducesBoolFalseAttribute()
+    {
+        var node = new EqualNode("IsActive", false, false);
+
+        DynamoFilterExpression f = DynamoFilterTranslator.Translate(node);
+
+        f.FilterExpression.Should().Be("#f0 = :v0");
+        f.ExpressionAttributeValues[":v0"].BOOL.Should().BeFalse();
+    }
+
+    // ── Boundary: exactamente 100 items ──────────────────────────────────────
+
+    [Fact]
+    public void ToDynamoDB_ListWith100Items_ProducesValidInExpression()
+    {
+        var values = Enumerable.Range(1, 100).Select(i => (object?)i).ToList();
+        var node   = new InNode("Id", values);
+
+        DynamoFilterExpression f = DynamoFilterTranslator.Translate(node);
+
+        f.FilterExpression.Should().StartWith("#f0 IN (");
+        f.ExpressionAttributeValues.Should().HaveCount(100);
+        f.ExpressionAttributeValues.Should().ContainKey(":v0");
+        f.ExpressionAttributeValues.Should().ContainKey(":v99");
+    }
+
+    // ── Lógica anidada ────────────────────────────────────────────────────────
+
+    [Fact]
+    public void ToDynamoDB_NestedAndOr_ProducesCorrectParentheses()
+    {
+        // (A AND B) OR C  →  ((A AND B) OR C)
+        var a    = new EqualNode("IsActive", true, false);
+        var b    = new ComparisonNode("Age", 18, ComparisonOp.GreaterThan);
+        var c    = new EqualNode("Name", "Admin", false);
+        var node = new OrNode(new AndNode(a, b), c);
+
+        DynamoFilterExpression f = DynamoFilterTranslator.Translate(node);
+
+        f.FilterExpression.Should().StartWith("(");
+        f.FilterExpression.Should().Contain("AND");
+        f.FilterExpression.Should().Contain("OR");
+        // Inner AND must be parenthesised
+        f.FilterExpression.Should().MatchRegex(@"\(.*AND.*\).*OR");
+    }
+
+    [Fact]
+    public void ToDynamoDB_TripleNesting_ProducesValidExpression()
+    {
+        // NOT (A AND (B OR C))
+        var a    = new EqualNode("IsActive", true, false);
+        var b    = new ComparisonNode("Age", 18, ComparisonOp.GreaterThan);
+        var c    = new EqualNode("Name", "Admin", false);
+        var node = new NotNode(new AndNode(a, new OrNode(b, c)));
+
+        DynamoFilterExpression f = DynamoFilterTranslator.Translate(node);
+
+        f.FilterExpression.Should().StartWith("NOT (");
+        f.FilterExpression.Should().Contain("AND");
+        f.FilterExpression.Should().Contain("OR");
+    }
+
+    // ── ExpressionAttributeNames deduplication ────────────────────────────────
+
+    [Fact]
+    public void ToDynamoDB_SameFieldTwice_UsesDifferentNamePlaceholders()
+    {
+        var left  = new EqualNode("Age", 18, false);
+        var right = new ComparisonNode("Age", 16, ComparisonOp.GreaterThan);
+        var node  = new AndNode(left, right);
+
+        DynamoFilterExpression f = DynamoFilterTranslator.Translate(node);
+
+        // Both placeholders must map to "Age"
+        f.ExpressionAttributeNames.Should().ContainKey("#f0");
+        f.ExpressionAttributeNames.Should().ContainKey("#f1");
+        f.ExpressionAttributeNames["#f0"].Should().Be("Age");
+        f.ExpressionAttributeNames["#f1"].Should().Be("Age");
+        f.FilterExpression.Should().Contain("#f0");
+        f.FilterExpression.Should().Contain("#f1");
+    }
+
+    // ── Range con decimal ─────────────────────────────────────────────────────
+
+    [Fact]
+    public void ToDynamoDB_DecimalGreaterThan_ProducesNumericComparison()
+    {
+        var node = new ComparisonNode("Price", 99.99m, ComparisonOp.GreaterThan);
+
+        DynamoFilterExpression f = DynamoFilterTranslator.Translate(node);
+
+        f.FilterExpression.Should().Be("#f0 > :v0");
+        f.ExpressionAttributeNames["#f0"].Should().Be("Price");
+        f.ExpressionAttributeValues[":v0"].N.Should().Be("99.99");
+    }
+
+    private enum DynamoTestStatus { Active = 1 }
 }

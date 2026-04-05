@@ -140,24 +140,6 @@ public sealed class ValiFlowInMemoryEdgeCaseTests
         result!.IsActive.Should().BeFalse();
     }
 
-    [Fact]
-    public void GetFirstFailed_NegateConditionTrue_ReturnsEntityThatPassesFilter()
-    {
-        var products = new List<TestProduct>
-        {
-            new() { Id = 1, Name = "A", IsActive = true,  Price = 10m, Stock = 1, Category = "X" },
-            new() { Id = 2, Name = "B", IsActive = false, Price = 20m, Stock = 2, Category = "X" }
-        };
-        var filter = new ValiFlow<TestProduct>().IsTrue(p => p.IsActive);
-        var ev = new ValiFlowEvaluator<TestProduct, int>(products, filter);
-
-        // negateCondition: true inverts the "failed" logic → returns first PASSING entity
-        var result = ev.GetFirstFailed(products, negateCondition: true);
-
-        result.Should().NotBeNull();
-        result!.IsActive.Should().BeTrue();
-    }
-
     // ── EvaluateAllFailed ─────────────────────────────────────────────────────
 
     [Fact]

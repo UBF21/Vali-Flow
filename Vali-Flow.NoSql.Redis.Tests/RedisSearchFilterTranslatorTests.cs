@@ -359,4 +359,99 @@ public sealed class RedisSearchFilterTranslatorTests
 
         q.Should().Be("@Price:[9.99 9.99]");
     }
+
+    // ── Boolean false ─────────────────────────────────────────────────────────
+
+    [Fact]
+    public void ToRedisSearch_EqualBoolFalse_ProducesNumericRange0()
+    {
+        Expression<Func<TestDocument, bool>> expr = x => x.IsActive == false;
+        string q = expr.ToRedisSearch();
+        q.Should().Be("@IsActive:[0 0]");
+    }
+
+    // ── Escaping en tag values ────────────────────────────────────────────────
+
+    [Fact]
+    public void ToRedisSearch_StringWithBackslash_EscapesCorrectly()
+    {
+        var node = new EqualNode("Name", @"a\b", false);
+        string q = RedisSearchFilterTranslator.Translate(node);
+        // EscapeTagValue escapa backslash → a\\b
+        q.Should().Be(@"@Name:{""a\\b""}");
+    }
+
+    // ── Mixed types in InNode → excepción ────────────────────────────────────
+
+    [Fact]
+    public void ToRedisSearch_InNodeWithMixedNumericAndString_ThrowsInvalidOperationException()
+    {
+        var node = new InNode("Tags", new List<object?> { 1, "dos", 3 });
+        Action act = () => RedisSearchFilterTranslator.Translate(node);
+        act.Should().Throw<InvalidOperationException>()
+           .WithMessage("*mixed*");
+    }
+
+    // ── Type Coverage adicional ───────────────────────────────────────────────
+
+    [Fact]
+    public void ToRedisSearch_EqualLong_ProducesNumericRange()
+    {
+        var node = new EqualNode("Quantity", 100L, false);
+        string q = RedisSearchFilterTranslator.Translate(node);
+        q.Should().Be("@Quantity:[100 100]");
+    }
+
+    [Fact]
+    public void ToRedisSearch_EqualDouble_ProducesNumericRange()
+    {
+        var node = new EqualNode("Score", 9.5, false);
+        string q = RedisSearchFilterTranslator.Translate(node);
+        q.Should().Be("@Score:[9.5 9.5]");
+    }
+
+    [Fact]
+    public void ToRedisSearch_EqualDecimal_ProducesNumericRange()
+    {
+        var node = new EqualNode("Price", 19.99m, false);
+        string q = RedisSearchFilterTranslator.Translate(node);
+        // decimal → double → ToString(InvariantCulture)
+        var expected = $"@Price:[{((double)19.99m).ToString(System.Globalization.CultureInfo.InvariantCulture)} {((double)19.99m).ToString(System.Globalization.CultureInfo.InvariantCulture)}]";
+        q.Should().Be(expected);
+    }
+
+    // ── Lógica anidada ─────────────────────────────────────────────────────────
+
+    [Fact]
+    public void ToRedisSearch_NestedAndOr_ProducesCorrectGrouping()
+    {
+        // x.IsActive && (x.Age > 18 || x.Name == "Admin")
+        Expression<Func<TestDocument, bool>> expr =
+            x => x.IsActive && (x.Age > 18 || x.Name == "Admin");
+
+        string q = expr.ToRedisSearch();
+
+        // outer AND → implicit space; inner OR → pipe inside parens
+        q.Should().Contain("|");   // inner OR
+        q.Should().StartWith("("); // outer group
+    }
+
+    // ── ValiFlow: pipeline ────────────────────────────────────────────────────
+
+    [Fact]
+    public void ToRedisSearch_ValiFlowThreeConditions_ProducesImplicitAnd()
+    {
+        var flow = new ValiFlow<TestDocument>()
+            .EqualTo(x => x.IsActive, true)
+            .GreaterThan(x => x.Age, 18)
+            .EqualTo(x => x.Name, "Admin");
+
+        string q = flow.ToRedisSearch();
+
+        // Three conditions all ANDed → no pipe at top level
+        q.Should().NotBeEmpty();
+        q.Should().Contain("@IsActive");
+        q.Should().Contain("@Age");
+        q.Should().Contain("@Name");
+    }
 }

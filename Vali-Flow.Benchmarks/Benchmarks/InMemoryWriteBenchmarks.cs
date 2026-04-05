@@ -32,14 +32,16 @@ public class InMemoryWriteBenchmarks
         _newBatch = Enumerable.Range(N + 1, 10)
             .Select(i => new BenchmarkOrder { Id = i, Amount = i * 2m, IsActive = true, Name = $"Batch-{i}", Status = "Completed", Quantity = i % 50 })
             .ToList();
+
+        _data = [.._snapshot];
+        var filter = new ValiFlow<BenchmarkOrder>().IsTrue(o => o.IsActive);
+        _evaluator = new ValiFlowEvaluator<BenchmarkOrder, int>(_data, filter, o => o.Id);
     }
 
     [IterationSetup]
     public void ResetData()
     {
         _data = [.._snapshot];
-        var filter = new ValiFlow<BenchmarkOrder>().IsTrue(o => o.IsActive);
-        _evaluator = new ValiFlowEvaluator<BenchmarkOrder, int>(_data, filter, o => o.Id);
     }
 
     // ── Add ──────────────────────────────────────────────────────────────────

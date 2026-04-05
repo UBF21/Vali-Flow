@@ -543,21 +543,6 @@ public sealed class ValiFlowInMemoryUncoveredTests
         result.Should().BeNull();
     }
 
-    [Fact]
-    public void GetLastFailed_WithNegateCondition_ReturnsLastMatchingInstead()
-    {
-        var evaluator = CreateEvaluator();
-        var data = MakeData();
-        // negateCondition=true inverts the Failed logic so it returns last entity matching the condition
-        // Active products ordered by Id asc: 1,2,3 — last is Id=3
-        var filter = new ValiFlow<TestProduct>().IsTrue(p => p.IsActive);
-
-        var result = evaluator.GetLastFailed<int>(data, orderBy: p => p.Id, valiFlow: filter, negateCondition: true);
-
-        result.Should().NotBeNull();
-        result!.Id.Should().Be(3);
-    }
-
     // -----------------------------------------------------------------------
     // DeleteByCondition
     // -----------------------------------------------------------------------

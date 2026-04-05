@@ -9,4 +9,6 @@ public sealed class TestDocument
     public decimal  Price    { get; set; }
     public bool     IsActive { get; set; }
     public string   Category { get; set; } = string.Empty;
+    public long     Quantity { get; set; }
+    public double   Score    { get; set; }
 }

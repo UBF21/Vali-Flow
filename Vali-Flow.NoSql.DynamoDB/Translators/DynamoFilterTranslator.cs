@@ -2,6 +2,7 @@ using System.Globalization;
 using Amazon.DynamoDBv2.Model;
 using Vali_Flow.NoSql.DynamoDB.Models;
 using Vali_Flow.NoSql.IR;
+using Vali_Flow.NoSql.Translators;
 
 namespace Vali_Flow.NoSql.DynamoDB.Translators;
 
@@ -121,15 +122,8 @@ public static class DynamoFilterTranslator
         _ => throw new NotSupportedException($"ComparisonOp.{op} is not mapped.")
     };
 
-    private static AttributeValue ToAttributeValue(object? value, Func<object?, AttributeValue?>? customConverter)
-    {
-        if (customConverter != null)
-        {
-            var custom = customConverter(value);
-            if (custom != null) return custom;
-        }
-
-        return value switch
+    private static AttributeValue ToAttributeValue(object? value, Func<object?, AttributeValue?>? customConverter) =>
+        ConditionValueResolver.Resolve(value, customConverter, v => v switch
         {
             null      => new AttributeValue { NULL = true },
             bool b    => new AttributeValue { BOOL = b },
@@ -141,9 +135,8 @@ public static class DynamoFilterTranslator
             decimal m => new AttributeValue { N = m.ToString(CultureInfo.InvariantCulture) },
             Guid g    => new AttributeValue { S = g.ToString() },
             Enum e    => new AttributeValue { N = Convert.ToInt64(e).ToString(CultureInfo.InvariantCulture) },
-            _         => new AttributeValue { S = value.ToString()! }
-        };
-    }
+            _         => new AttributeValue { S = v!.ToString()! }
+        });
 
     // ── Private translation context (NOT part of public API) ─────────────────
 

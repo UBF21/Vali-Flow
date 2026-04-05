@@ -321,4 +321,89 @@ public sealed class MongoFilterTranslatorTests
 
         doc["CreatedAt"].BsonType.Should().Be(BsonType.DateTime);
     }
+
+    // ── Type Coverage adicional ──────────────────────────────────────────────
+
+    [Fact]
+    public void ToMongo_FloatValue_ProducesBsonDouble()
+    {
+        var node = new EqualNode("Rating", 3.14f, false);
+        BsonDocument doc = MongoFilterTranslator.Translate(node);
+        doc["Rating"].BsonType.Should().Be(BsonType.Double);
+    }
+
+    [Fact]
+    public void ToMongo_DoubleValue_ProducesBsonDouble()
+    {
+        var node = new EqualNode("Score", 99.5, false);
+        BsonDocument doc = MongoFilterTranslator.Translate(node);
+        doc["Score"].BsonType.Should().Be(BsonType.Double);
+        doc["Score"].AsDouble.Should().Be(99.5);
+    }
+
+    [Fact]
+    public void ToMongo_DateTimeOffsetValue_ProducesBsonDateTime()
+    {
+        var dto  = new DateTimeOffset(2024, 6, 15, 0, 0, 0, TimeSpan.Zero);
+        var node = new EqualNode("UpdatedAt", dto, false);
+        BsonDocument doc = MongoFilterTranslator.Translate(node);
+        doc["UpdatedAt"].BsonType.Should().Be(BsonType.DateTime);
+    }
+
+    [Fact]
+    public void ToMongo_EnumValue_ProducesBsonInt32()
+    {
+        var node = new EqualNode("Status", TestStatus.Active, false);
+        BsonDocument doc = MongoFilterTranslator.Translate(node);
+        doc["Status"].BsonType.Should().Be(BsonType.Int32);
+        doc["Status"].AsInt32.Should().Be(1);
+    }
+
+    // ── Null en lista IN ─────────────────────────────────────────────────────
+
+    [Fact]
+    public void ToMongo_InNodeWithNullValue_HandlesNullInBsonArray()
+    {
+        var node = new InNode("Name", new List<object?> { "Alice", null, "Bob" });
+        BsonDocument doc = MongoFilterTranslator.Translate(node);
+        var arr = doc["Name"].AsBsonDocument["$in"].AsBsonArray;
+        arr.Should().HaveCount(3);
+        arr[1].Should().Be(BsonNull.Value);
+    }
+
+    // ── Lógica anidada ────────────────────────────────────────────────────────
+
+    [Fact]
+    public void ToMongo_NestedAndOr_ProducesCorrectNesting()
+    {
+        // (x.IsActive && x.Age > 18) || x.Name == "Admin"
+        Expression<Func<TestDocument, bool>> expr =
+            x => (x.IsActive && x.Age > 18) || x.Name == "Admin";
+
+        BsonDocument doc = expr.ToMongo();
+
+        var orArray = doc["$or"].AsBsonArray;
+        orArray.Should().HaveCount(2);
+        // First element is the AND subtree
+        orArray[0].AsBsonDocument.Contains("$and").Should().BeTrue();
+        orArray[0].AsBsonDocument["$and"].AsBsonArray.Should().HaveCount(2);
+    }
+
+    // ── ValiFlow: pipeline de 3 condiciones ─────────────────────────────────
+
+    [Fact]
+    public void ToMongo_ValiFlowThreeConditions_ProducesNestedAnd()
+    {
+        var flow = new ValiFlow<TestDocument>()
+            .EqualTo(x => x.IsActive, true)
+            .GreaterThan(x => x.Age, 18)
+            .EqualTo(x => x.Category, "A");
+
+        BsonDocument doc = flow.ToMongo();
+
+        doc.Contains("$and").Should().BeTrue();
+        doc["$and"].AsBsonArray.Should().HaveCount(2);
+    }
+
+    private enum TestStatus { Active = 1 }
 }

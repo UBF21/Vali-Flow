@@ -36,7 +36,7 @@ public sealed class ElasticsearchFilterTranslatorTests
         var got = q.TryGet<BoolQuery>(out var bool_);
         got.Should().BeTrue();
         bool_!.MustNot.Should().HaveCount(1);
-        bool_.MustNot!.First().TryGet<TermQuery>(out var inner);
+        bool_.MustNot!.First().TryGet<TermQuery>(out var inner).Should().BeTrue();
         inner!.Field.ToString().Should().Be("Name");
     }
 
@@ -396,4 +396,147 @@ public sealed class ElasticsearchFilterTranslatorTests
         q.TryGet<BoolQuery>(out var bool_);
         bool_!.Must.Should().HaveCount(2);
     }
+
+    // ── Type Coverage adicional ───────────────────────────────────────────────
+
+    [Fact]
+    public void ToElasticsearch_FloatValue_ProducesFieldValueDouble()
+    {
+        var node = new EqualNode("Score", 3.14f, false);
+
+        Query q = ElasticsearchFilterTranslator.Translate(node);
+
+        q.TryGet<TermQuery>(out var term);
+        term.Should().NotBeNull();
+        term!.Field.ToString().Should().Be("Score");
+        term.Value.Should().Be(FieldValue.Double((double)3.14f));
+    }
+
+    [Fact]
+    public void ToElasticsearch_DecimalValue_ConvertsToDouble()
+    {
+        var node = new EqualNode("Price", 9.99m, false);
+
+        Query q = ElasticsearchFilterTranslator.Translate(node);
+
+        q.TryGet<TermQuery>(out var term);
+        term.Should().NotBeNull();
+        term!.Field.ToString().Should().Be("Price");
+        term.Value.Should().Be(FieldValue.Double((double)9.99m));
+    }
+
+    [Fact]
+    public void ToElasticsearch_GuidValue_ProducesStringFieldValue()
+    {
+        var g    = Guid.NewGuid();
+        var node = new EqualNode("Id", g, false);
+
+        Query q = ElasticsearchFilterTranslator.Translate(node);
+
+        q.TryGet<TermQuery>(out var term);
+        term.Should().NotBeNull();
+        term!.Field.ToString().Should().Be("Id");
+        term.Value.Should().Be(FieldValue.String(g.ToString()));
+    }
+
+    [Fact]
+    public void ToElasticsearch_EnumValue_ProducesFieldValueLong()
+    {
+        var node = new EqualNode("Status", TestStatusEnum.Active, false);
+
+        Query q = ElasticsearchFilterTranslator.Translate(node);
+
+        q.TryGet<TermQuery>(out var term);
+        term.Should().NotBeNull();
+        term!.Field.ToString().Should().Be("Status");
+        term.Value.Should().Be(FieldValue.Long(1));
+    }
+
+    // ── Boolean false ─────────────────────────────────────────────────────────
+
+    [Fact]
+    public void ToElasticsearch_EqualBoolFalse_ProducesTermQueryFalse()
+    {
+        Expression<Func<TestDocument, bool>> expr = x => x.IsActive == false;
+
+        Query q = expr.ToElasticsearch();
+
+        q.TryGet<TermQuery>(out var term);
+        term.Should().NotBeNull();
+        term!.Field.ToString().Should().Be("IsActive");
+        term.Value.Should().Be(FieldValue.Boolean(false));
+    }
+
+    // ── Lógica anidada ────────────────────────────────────────────────────────
+
+    [Fact]
+    public void ToElasticsearch_NestedAndOr_ProducesCorrectBoolStructure()
+    {
+        // (x.IsActive && x.Age > 18) || x.Name == "Admin"
+        Expression<Func<TestDocument, bool>> expr = x => (x.IsActive && x.Age > 18) || x.Name == "Admin";
+
+        Query q = expr.ToElasticsearch();
+
+        // Outer must be Should (OR)
+        q.TryGet<BoolQuery>(out var outer);
+        outer.Should().NotBeNull();
+        var shouldClauses = outer!.Should;
+        shouldClauses.Should().HaveCount(2);
+
+        // First should clause must be BoolQuery.Must with 2 elements (AND)
+        shouldClauses!.First().TryGet<BoolQuery>(out var inner);
+        inner.Should().NotBeNull();
+        inner!.Must.Should().HaveCount(2);
+    }
+
+    // ── Wildcard escaping ─────────────────────────────────────────────────────
+
+    [Fact]
+    public void ToElasticsearch_ContainsWithAsterisk_EscapesWildcardChar()
+    {
+        Expression<Func<TestDocument, bool>> expr = x => x.Name.Contains("a*b");
+
+        Query q = expr.ToElasticsearch();
+
+        q.TryGet<WildcardQuery>(out var wq);
+        wq.Should().NotBeNull();
+        wq!.Value.Should().Be(@"*a\*b*");
+    }
+
+    // ── ValiFlow: pipeline de 3 condiciones ──────────────────────────────────
+
+    [Fact]
+    public void ToElasticsearch_ValiFlowThreeConditions_ProducesNestedBoolMust()
+    {
+        var flow = new ValiFlow<TestDocument>()
+            .EqualTo(x => x.IsActive, true)
+            .GreaterThan(x => x.Age, 18)
+            .EqualTo(x => x.Name, "Admin");
+
+        Query q = flow.ToElasticsearch();
+
+        // The pipeline combines with AND → final query must have Must clauses
+        q.TryGet<BoolQuery>(out var bool_);
+        bool_.Should().NotBeNull();
+        bool_!.Must.Should().NotBeNullOrEmpty();
+        bool_.Must!.Count().Should().BeGreaterThanOrEqualTo(2);
+    }
+
+    // ── Terms con null en lista ───────────────────────────────────────────────
+
+    [Fact]
+    public void ToElasticsearch_TermsWithNullValue_IncludesNullFieldValue()
+    {
+        var node = new InNode("Id", new List<object?> { 1, null, 2 });
+
+        Query q = ElasticsearchFilterTranslator.Translate(node);
+
+        // Must produce a TermsQuery (not fall into the empty-list branch)
+        q.TryGet<TermsQuery>(out var terms);
+        terms.Should().NotBeNull();
+        terms!.Field.ToString().Should().Be("Id");
+        terms.Term.Should().NotBeNull();
+    }
+
+    private enum TestStatusEnum { Active = 1 }
 }

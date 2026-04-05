@@ -1,6 +1,7 @@
 using System.Text.RegularExpressions;
 using MongoDB.Bson;
 using Vali_Flow.NoSql.IR;
+using Vali_Flow.NoSql.Translators;
 
 namespace Vali_Flow.NoSql.MongoDB.Translators;
 
@@ -119,15 +120,8 @@ public static class MongoFilterTranslator
         _ => throw new NotSupportedException($"LikeOp.{op} is not mapped.")
     };
 
-    private static BsonValue ToBsonValue(object? value, Func<object?, BsonValue?>? customConverter)
-    {
-        if (customConverter != null)
-        {
-            var custom = customConverter(value);
-            if (custom != null) return custom;
-        }
-
-        return value switch
+    private static BsonValue ToBsonValue(object? value, Func<object?, BsonValue?>? customConverter) =>
+        ConditionValueResolver.Resolve(value, customConverter, v => v switch
         {
             null               => BsonNull.Value,
             bool b             => new BsonBoolean(b),
@@ -141,7 +135,6 @@ public static class MongoFilterTranslator
             DateTimeOffset dto => new BsonDateTime(dto.UtcDateTime),
             Guid g             => new BsonBinaryData(g, GuidRepresentation.Standard),
             Enum e             => BsonValue.Create(Convert.ToInt32(e)),
-            _                  => BsonValue.Create(value)
-        };
-    }
+            _                  => BsonValue.Create(v)
+        });
 }

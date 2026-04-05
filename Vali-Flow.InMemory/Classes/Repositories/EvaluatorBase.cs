@@ -28,29 +28,28 @@ public abstract class EvaluatorBase<T, TProperty> : IInMemoryEvaluatorRead<T>, I
     public bool Evaluate(T entity, ValiFlow<T>? valiFlow = null, bool negateCondition = false) =>
         Evaluator.Evaluate(entity, valiFlow, negateCondition);
 
-    public bool EvaluateAny(IEnumerable<T>? entities, ValiFlow<T>? valiFlow = null, bool negateCondition = false) =>
+    public bool EvaluateAny(IEnumerable<T>? entities = null, ValiFlow<T>? valiFlow = null, bool negateCondition = false) =>
         Evaluator.EvaluateAny(entities, valiFlow, negateCondition);
 
-    public int EvaluateCount(IEnumerable<T>? entities, ValiFlow<T>? valiFlow = null, bool negateCondition = false) =>
+    public int EvaluateCount(IEnumerable<T>? entities = null, ValiFlow<T>? valiFlow = null, bool negateCondition = false) =>
         Evaluator.EvaluateCount(entities, valiFlow, negateCondition);
 
-    public T? GetFirstFailed(IEnumerable<T>? entities, ValiFlow<T>? valiFlow = null, bool negateCondition = false) =>
-        Evaluator.GetFirstFailed(entities, valiFlow, negateCondition);
+    public T? GetFirstFailed(IEnumerable<T>? entities = null, ValiFlow<T>? valiFlow = null) =>
+        Evaluator.GetFirstFailed(entities, valiFlow);
 
-    public T? GetFirst(IEnumerable<T>? entities, ValiFlow<T>? valiFlow = null, bool negateCondition = false) =>
+    public T? GetFirst(IEnumerable<T>? entities = null, ValiFlow<T>? valiFlow = null, bool negateCondition = false) =>
         Evaluator.GetFirst(entities, valiFlow, negateCondition);
 
     public IEnumerable<T> EvaluateAllFailed<TKey>(
-        IEnumerable<T>? entities,
+        IEnumerable<T>? entities = null,
         Func<T, TKey>? orderBy = null,
         bool ascending = true,
         IEnumerable<InMemoryThenBy<T, TKey>>? thenBys = null,
-        ValiFlow<T>? valiFlow = null,
-        bool negateCondition = false
-    ) => Evaluator.EvaluateAllFailed(entities, orderBy, ascending, thenBys, valiFlow, negateCondition);
-    
+        ValiFlow<T>? valiFlow = null
+    ) => Evaluator.EvaluateAllFailed(entities, orderBy, ascending, thenBys, valiFlow);
+
     public IEnumerable<T> EvaluateAll<TKey>(
-        IEnumerable<T>? entities,
+        IEnumerable<T>? entities = null,
         Func<T, TKey>? orderBy = null,
         bool ascending = true,
         IEnumerable<InMemoryThenBy<T, TKey>>? thenBys = null,
@@ -59,9 +58,9 @@ public abstract class EvaluatorBase<T, TProperty> : IInMemoryEvaluatorRead<T>, I
     ) => Evaluator.EvaluateAll(entities, orderBy, ascending, thenBys, valiFlow, negateCondition);
     
     public IEnumerable<T> EvaluatePaged<TKey>(
-        IEnumerable<T>? entities,
-        int page,
-        int pageSize,
+        IEnumerable<T>? entities = null,
+        int page = 1,
+        int pageSize = 10,
         Func<T, TKey>? orderBy = null,
         bool ascending = true,
         IEnumerable<InMemoryThenBy<T, TKey>>? thenBys = null,
@@ -71,8 +70,8 @@ public abstract class EvaluatorBase<T, TProperty> : IInMemoryEvaluatorRead<T>, I
         negateCondition);
     
     public IEnumerable<T> EvaluateTop<TKey>(
-        IEnumerable<T>? entities,
-        int count,
+        IEnumerable<T>? entities = null,
+        int count = 10,
         Func<T, TKey>? orderBy = null,
         bool ascending = true,
         IEnumerable<InMemoryThenBy<T, TKey>>? thenBys = null,
@@ -101,7 +100,7 @@ public abstract class EvaluatorBase<T, TProperty> : IInMemoryEvaluatorRead<T>, I
     ) => Evaluator.EvaluateDuplicates(entities, selector, orderBy, ascending, thenBys, valiFlow, negateCondition);
 
     public int GetFirstMatchIndex<TKey>(
-        IEnumerable<T>? entities,
+        IEnumerable<T>? entities = null,
         Func<T, TKey>? orderBy = null,
         bool ascending = true,
         IEnumerable<InMemoryThenBy<T, TKey>>? thenBys = null,
@@ -110,7 +109,7 @@ public abstract class EvaluatorBase<T, TProperty> : IInMemoryEvaluatorRead<T>, I
     ) => Evaluator.GetFirstMatchIndex(entities, orderBy, ascending, thenBys, valiFlow, negateCondition);
 
     public int GetLastMatchIndex<TKey>(
-        IEnumerable<T>? entities,
+        IEnumerable<T>? entities = null,
         Func<T, TKey>? orderBy = null,
         bool ascending = true,
         IEnumerable<InMemoryThenBy<T, TKey>>? thenBys = null,
@@ -119,16 +118,15 @@ public abstract class EvaluatorBase<T, TProperty> : IInMemoryEvaluatorRead<T>, I
     ) => Evaluator.GetLastMatchIndex(entities, orderBy, ascending, thenBys, valiFlow, negateCondition);
     
     public T? GetLastFailed<TKey>(
-        IEnumerable<T>? entities,
+        IEnumerable<T>? entities = null,
         Func<T, TKey>? orderBy = null,
         bool ascending = true,
         IEnumerable<InMemoryThenBy<T, TKey>>? thenBys = null,
-        ValiFlow<T>? valiFlow = null,
-        bool negateCondition = false
-    ) => Evaluator.GetLastFailed(entities, orderBy, ascending, thenBys, valiFlow, negateCondition);
+        ValiFlow<T>? valiFlow = null
+    ) => Evaluator.GetLastFailed(entities, orderBy, ascending, thenBys, valiFlow);
 
     public T? GetLast<TKey>(
-        IEnumerable<T>? entities,
+        IEnumerable<T>? entities = null,
         Func<T, TKey>? orderBy = null,
         bool ascending = true,
         IEnumerable<InMemoryThenBy<T, TKey>>? thenBys = null,

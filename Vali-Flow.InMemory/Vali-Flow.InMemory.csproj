@@ -5,15 +5,17 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <RootNamespace>Vali_Flow.InMemory</RootNamespace>
-        <PackageProjectUrl>#</PackageProjectUrl>
+        <PackageProjectUrl>https://github.com/UBF21/vali-flow</PackageProjectUrl>
         <RepositoryType>git</RepositoryType>
         <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
         <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
         <Authors>Felipe Rafael Montenegro Morriberon</Authors>
         <Copyright>Copyright © 2025 - FM. Todos los derechos reservados.</Copyright>
         <RepositoryUrl>https://github.com/UBF21/vali-flow</RepositoryUrl>
-        <PackageReleaseNotes>
-        </PackageReleaseNotes>
+        <Title>Vali-Flow.InMemory</Title>
+        <Description>Synchronous in-memory evaluator for Vali-Flow.Core — filter, page, aggregate and write in-memory collections using the same fluent ValiFlow&lt;T&gt; specification API. Ideal for unit testing and caching layers without a database dependency.</Description>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
+        <PackageReleaseNotes>Initial release — synchronous in-memory evaluator supporting read, write, aggregate and grouped operations over IEnumerable&lt;T&gt;.</PackageReleaseNotes>
         <Version>1.0.0</Version>
         <PackageIcon>logo.png</PackageIcon>
         <PackageId>Vali-Flow.InMemory</PackageId>

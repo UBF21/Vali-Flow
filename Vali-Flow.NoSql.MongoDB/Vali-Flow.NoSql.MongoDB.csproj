@@ -8,10 +8,29 @@
     <PackageId>Vali-Flow.NoSql.MongoDB</PackageId>
     <Version>1.0.0</Version>
     <Authors>Felipe Rafael Montenegro Morriberon</Authors>
-    <Description>MongoDB adapter for Vali-Flow.NoSql — translates the provider-agnostic IR tree into MongoDB FilterDefinition&lt;T&gt; using the official MongoDB.Driver.</Description>
+    <Title>Vali-Flow.NoSql.MongoDB</Title>
+    <Description>MongoDB adapter for Vali-Flow.NoSql — translates the provider-agnostic IR tree into BsonDocument filters using the official MongoDB.Bson library. Use .ToMongo() on any ValiFlow&lt;T&gt; or Expression&lt;Func&lt;T, bool&gt;&gt;.</Description>
+    <Copyright>Copyright © 2025 - FM. Todos los derechos reservados.</Copyright>
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/UBF21/vali-flow</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/UBF21/vali-flow</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageIcon>logo.png</PackageIcon>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageReleaseNotes>Initial release — MongoDB BsonDocument filter builder for Vali-Flow.NoSql IR.</PackageReleaseNotes>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="logo.png" Condition="Exists('logo.png')">
+      <Pack>True</Pack>
+      <PackagePath></PackagePath>
+    </None>
+    <None Include="README.md">
+      <Pack>True</Pack>
+      <PackagePath></PackagePath>
+    </None>
+  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Vali-Flow.NoSql\Vali-Flow.NoSql.csproj" />

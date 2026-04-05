@@ -28,7 +28,7 @@ public interface IInMemoryEvaluatorRead<T> : IQueryEvaluator<T> where T : class
     /// <param name="valiFlow">The Vali-Flow condition to apply. If null, evaluates to true for non-empty collections.</param>
     /// <param name="negateCondition">If true, negates the Vali-Flow condition.</param>
     /// <returns>True if at least one entity satisfies the condition; otherwise, false.</returns>
-    bool EvaluateAny(IEnumerable<T>? entities, ValiFlow<T>? valiFlow = null, bool negateCondition = false);
+    bool EvaluateAny(IEnumerable<T>? entities = null, ValiFlow<T>? valiFlow = null, bool negateCondition = false);
     
     /// <summary>
     /// Counts the number of entities in the collection that satisfy the specified Vali-Flow condition.
@@ -37,7 +37,7 @@ public interface IInMemoryEvaluatorRead<T> : IQueryEvaluator<T> where T : class
     /// <param name="valiFlow">The Vali-Flow condition to apply. If null, counts all entities.</param>
     /// <param name="negateCondition">If true, negates the Vali-Flow condition.</param>
     /// <returns>The number of entities that satisfy the condition.</returns>
-    int EvaluateCount(IEnumerable<T>? entities, ValiFlow<T>? valiFlow = null, bool negateCondition = false);
+    int EvaluateCount(IEnumerable<T>? entities = null, ValiFlow<T>? valiFlow = null, bool negateCondition = false);
     
     /// <summary>
     /// Retrieves the first entity that does not satisfy the specified Vali-Flow condition.
@@ -46,7 +46,7 @@ public interface IInMemoryEvaluatorRead<T> : IQueryEvaluator<T> where T : class
     /// <param name="valiFlow">The Vali-Flow condition to apply. If null, returns the first entity.</param>
     /// <param name="negateCondition">If true, negates the Vali-Flow condition.</param>
     /// <returns>The first entity that fails the condition, or null if none fail.</returns>
-    T? GetFirstFailed(IEnumerable<T>? entities, ValiFlow<T>? valiFlow = null, bool negateCondition = false);
+    T? GetFirstFailed(IEnumerable<T>? entities = null, ValiFlow<T>? valiFlow = null);
     
     /// <summary>
     /// Retrieves the first entity that satisfies the specified Vali-Flow condition.
@@ -55,7 +55,7 @@ public interface IInMemoryEvaluatorRead<T> : IQueryEvaluator<T> where T : class
     /// <param name="valiFlow">The ValiFlow condition to apply. If null, returns the first entity.</param>
     /// <param name="negateCondition">If true, negates the Vali-Flow condition.</param>
     /// <returns>The first entity that satisfies the condition, or null if none satisfy.</returns>
-    T? GetFirst(IEnumerable<T>? entities, ValiFlow<T>? valiFlow = null, bool negateCondition = false);
+    T? GetFirst(IEnumerable<T>? entities = null, ValiFlow<T>? valiFlow = null, bool negateCondition = false);
 
     /// <summary>
     /// Retrieves all entities that do not satisfy the specified Vali-Flow condition, with optional ordering.
@@ -69,12 +69,11 @@ public interface IInMemoryEvaluatorRead<T> : IQueryEvaluator<T> where T : class
     /// <param name="negateCondition">If true, negates the Vali-Flow condition.</param>
     /// <returns>An enumerable of entities that fail the condition, ordered as specified.</returns>
     IEnumerable<T> EvaluateAllFailed<TKey>(
-        IEnumerable<T>? entities,
+        IEnumerable<T>? entities = null,
         Func<T, TKey>? orderBy = null,
         bool ascending = true,
         IEnumerable<InMemoryThenBy<T, TKey>>? thenBys = null,
-        ValiFlow<T>? valiFlow = null,
-        bool negateCondition = false
+        ValiFlow<T>? valiFlow = null
     );
 
     /// <summary>
@@ -89,7 +88,7 @@ public interface IInMemoryEvaluatorRead<T> : IQueryEvaluator<T> where T : class
     /// <param name="negateCondition">If true, negates the Vali-Flow condition.</param>
     /// <returns>An enumerable of entities that satisfy the condition, ordered as specified.</returns>
     IEnumerable<T> EvaluateAll<TKey>(
-        IEnumerable<T>? entities,
+        IEnumerable<T>? entities = null,
         Func<T, TKey>? orderBy = null,
         bool ascending = true,
         IEnumerable<InMemoryThenBy<T, TKey>>? thenBys = null,
@@ -111,9 +110,9 @@ public interface IInMemoryEvaluatorRead<T> : IQueryEvaluator<T> where T : class
     /// <param name="negateCondition">If true, negates the Vali-Flow condition.</param>
     /// <returns>An enumerable of entities that satisfy the condition, paginated and ordered as specified.</returns>
     IEnumerable<T> EvaluatePaged<TKey>(
-        IEnumerable<T> entities,
-        int page,
-        int pageSize,
+        IEnumerable<T>? entities = null,
+        int page = 1,
+        int pageSize = 10,
         Func<T, TKey>? orderBy = null,
         bool ascending = true,
         IEnumerable<InMemoryThenBy<T, TKey>>? thenBys = null,
@@ -134,8 +133,8 @@ public interface IInMemoryEvaluatorRead<T> : IQueryEvaluator<T> where T : class
     /// <param name="negateCondition">If true, negates the Vali-Flow condition.</param>
     /// <returns>An enumerable of the top N entities that satisfy the condition, ordered as specified.</returns>
     IEnumerable<T> EvaluateTop<TKey>(
-        IEnumerable<T> entities,
-        int count,
+        IEnumerable<T>? entities = null,
+        int count = 10,
         Func<T, TKey>? orderBy = null,
         bool ascending = true,
         IEnumerable<InMemoryThenBy<T, TKey>>? thenBys = null,
@@ -199,7 +198,7 @@ public interface IInMemoryEvaluatorRead<T> : IQueryEvaluator<T> where T : class
     /// <param name="negateCondition">If true, negates the Vali-Flow condition.</param>
     /// <returns>The index of the first entity that satisfies the condition, or -1 if none satisfy.</returns>
     int GetFirstMatchIndex<TKey>(
-        IEnumerable<T>? entities,
+        IEnumerable<T>? entities = null,
         Func<T, TKey>? orderBy = null,
         bool ascending = true,
         IEnumerable<InMemoryThenBy<T, TKey>>? thenBys = null,
@@ -219,7 +218,7 @@ public interface IInMemoryEvaluatorRead<T> : IQueryEvaluator<T> where T : class
     /// <param name="negateCondition">If true, negates the Vali-Flow condition.</param>
     /// <returns>The index of the last entity that satisfies the condition, or -1 if none satisfy.</returns>
     int GetLastMatchIndex<TKey>(
-        IEnumerable<T>? entities,
+        IEnumerable<T>? entities = null,
         Func<T, TKey>? orderBy = null,
         bool ascending = true,
         IEnumerable<InMemoryThenBy<T, TKey>>? thenBys = null,
@@ -239,12 +238,11 @@ public interface IInMemoryEvaluatorRead<T> : IQueryEvaluator<T> where T : class
     /// <param name="negateCondition">If true, negates the Vali-Flow condition.</param>
     /// <returns>The last entity that fails the condition, or null if none fail.</returns>
     T? GetLastFailed<TKey>(
-        IEnumerable<T>? entities,
+        IEnumerable<T>? entities = null,
         Func<T, TKey>? orderBy = null,
         bool ascending = true,
         IEnumerable<InMemoryThenBy<T, TKey>>? thenBys = null,
-        ValiFlow<T>? valiFlow = null,
-        bool negateCondition = false
+        ValiFlow<T>? valiFlow = null
     );
 
     /// <summary>
@@ -259,7 +257,7 @@ public interface IInMemoryEvaluatorRead<T> : IQueryEvaluator<T> where T : class
     /// <param name="negateCondition">If true, negates the Vali-Flow condition.</param>
     /// <returns>The last entity that satisfies the condition, or null if none satisfy.</returns>
     T? GetLast<TKey>(
-        IEnumerable<T>? entities,
+        IEnumerable<T>? entities = null,
         Func<T, TKey>? orderBy = null,
         bool ascending = true,
         IEnumerable<InMemoryThenBy<T, TKey>>? thenBys = null,
