@@ -5,4 +5,7 @@ namespace Vali_Flow.NoSql.IR;
 /// </summary>
 /// <param name="Field">The document field name.</param>
 /// <param name="Check">Whether the condition checks for null or non-null.</param>
-public sealed record NullNode(string Field, NullCheckOp Check) : IConditionNode;
+public sealed record NullNode(string Field, NullCheckOp Check) : IConditionNode
+{
+    public TResult Accept<TResult>(IConditionNodeVisitor<TResult> visitor) => visitor.VisitNull(this);
+}

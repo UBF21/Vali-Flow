@@ -28,4 +28,6 @@ public sealed record EqualNode : IConditionNode
             "EqualNode.Value cannot be null. Use NullNode for null checks.");
         IsNegated = isNegated;
     }
+
+    public TResult Accept<TResult>(IConditionNodeVisitor<TResult> visitor) => visitor.VisitEqual(this);
 }

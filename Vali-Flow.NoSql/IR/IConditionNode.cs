@@ -5,4 +5,7 @@ namespace Vali_Flow.NoSql.IR;
 /// Each node represents a filter condition that can be translated to any NoSql provider
 /// (MongoDB, Elasticsearch, etc.) without being tied to a specific query language.
 /// </summary>
-public interface IConditionNode { }
+public interface IConditionNode
+{
+    TResult Accept<TResult>(IConditionNodeVisitor<TResult> visitor);
+}

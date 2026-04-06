@@ -5,8 +5,6 @@ using Vali_Flow.NoSql.Translators;
 
 namespace Vali_Flow.NoSql.MongoDB.Translators;
 
-// TODO: Visitor pattern if IR grows beyond 10 node types
-
 /// <summary>
 /// Translates a <see cref="IConditionNode"/> IR tree into a MongoDB <see cref="BsonDocument"/> filter.
 /// </summary>
@@ -43,98 +41,86 @@ public static class MongoFilterTranslator
     {
         if (node == null) throw new ArgumentNullException(nameof(node));
 
-        return TranslateNode(node, customConverter);
+        return node.Accept(new MongoVisitor(customConverter));
     }
 
-    private static BsonDocument TranslateNode(IConditionNode node, Func<object?, BsonValue?>? customConverter) => node switch
+    private sealed class MongoVisitor(Func<object?, BsonValue?>? customConverter) : IConditionNodeVisitor<BsonDocument>
     {
-        // ── Logical combinators ───────────────────────────────────────
-        AndNode and =>
+        public BsonDocument VisitAnd(AndNode node) =>
             new BsonDocument("$and", new BsonArray
             {
-                TranslateNode(and.Left, customConverter),
-                TranslateNode(and.Right, customConverter)
-            }),
+                node.Left.Accept(this),
+                node.Right.Accept(this)
+            });
 
-        OrNode or =>
+        public BsonDocument VisitOr(OrNode node) =>
             new BsonDocument("$or", new BsonArray
             {
-                TranslateNode(or.Left, customConverter),
-                TranslateNode(or.Right, customConverter)
-            }),
+                node.Left.Accept(this),
+                node.Right.Accept(this)
+            });
 
         // $nor with a single element = logical NOT
-        NotNode not =>
-            new BsonDocument("$nor", new BsonArray { TranslateNode(not.Inner, customConverter) }),
+        public BsonDocument VisitNot(NotNode node) =>
+            new BsonDocument("$nor", new BsonArray { node.Inner.Accept(this) });
 
-        // ── Null checks ───────────────────────────────────────────────
-        NullNode { Check: NullCheckOp.IsNull } n =>
-            new BsonDocument(n.Field, BsonNull.Value),
+        public BsonDocument VisitEqual(EqualNode node) =>
+            node.IsNegated
+                ? new BsonDocument(node.Field, new BsonDocument("$ne", ToBsonValue(node.Value)))
+                : new BsonDocument(node.Field, ToBsonValue(node.Value));
 
-        NullNode { Check: NullCheckOp.IsNotNull } n =>
-            new BsonDocument(n.Field, new BsonDocument("$ne", BsonNull.Value)),
-
-        // ── Equality ──────────────────────────────────────────────────
-        EqualNode { IsNegated: false } eq =>
-            new BsonDocument(eq.Field, ToBsonValue(eq.Value, customConverter)),
-
-        EqualNode { IsNegated: true } eq =>
-            new BsonDocument(eq.Field, new BsonDocument("$ne", ToBsonValue(eq.Value, customConverter))),
-
-        // ── Comparison ────────────────────────────────────────────────
-        ComparisonNode cmp =>
-            new BsonDocument(cmp.Field, new BsonDocument(
-                cmp.Op switch
+        public BsonDocument VisitComparison(ComparisonNode node) =>
+            new BsonDocument(node.Field, new BsonDocument(
+                node.Op switch
                 {
                     ComparisonOp.GreaterThan        => "$gt",
                     ComparisonOp.GreaterThanOrEqual => "$gte",
                     ComparisonOp.LessThan           => "$lt",
                     ComparisonOp.LessThanOrEqual    => "$lte",
-                    _ => throw new NotSupportedException($"ComparisonOp.{cmp.Op} is not mapped.")
+                    _ => throw new NotSupportedException($"ComparisonOp.{node.Op} is not mapped.")
                 },
-                ToBsonValue(cmp.Value, customConverter))),
+                ToBsonValue(node.Value)));
 
-        // ── Pattern match (regex) ─────────────────────────────────────
-        LikeNode like =>
-            new BsonDocument(like.Field, new BsonDocument("$regex",
-                new BsonRegularExpression(BuildRegexPattern(like.Pattern, like.Op), "i"))),
+        public BsonDocument VisitLike(LikeNode node) =>
+            new BsonDocument(node.Field, new BsonDocument("$regex",
+                new BsonRegularExpression(BuildRegexPattern(node.Pattern, node.Op), "i")));
 
-        // ── Membership ────────────────────────────────────────────────
-        // {field: {$in: []}} → MongoDB returns zero documents (empty set = always false)
-        InNode inNode =>
-            new BsonDocument(inNode.Field,
+        public BsonDocument VisitIn(InNode node) =>
+            new BsonDocument(node.Field,
                 new BsonDocument("$in",
-                    new BsonArray(inNode.Values.Select(v => ToBsonValue(v, customConverter))))),
+                    new BsonArray(node.Values.Select(v => ToBsonValue(v)))));
 
-        _ => throw new NotSupportedException(
-            $"IR node type '{node.GetType().Name}' is not supported by MongoFilterTranslator.")
-    };
+        public BsonDocument VisitNull(NullNode node) =>
+            node.Check == NullCheckOp.IsNull
+                ? new BsonDocument(node.Field, BsonNull.Value)
+                : new BsonDocument(node.Field, new BsonDocument("$ne", BsonNull.Value));
 
-    // ── Helpers ───────────────────────────────────────────────────────────────
+        // ── Helpers ───────────────────────────────────────────────────────────────
 
-    private static string BuildRegexPattern(string rawPattern, LikeOp op) => op switch
-    {
-        LikeOp.Contains   => Regex.Escape(rawPattern),
-        LikeOp.StartsWith => $"^{Regex.Escape(rawPattern)}",
-        LikeOp.EndsWith   => $"{Regex.Escape(rawPattern)}$",
-        _ => throw new NotSupportedException($"LikeOp.{op} is not mapped.")
-    };
-
-    private static BsonValue ToBsonValue(object? value, Func<object?, BsonValue?>? customConverter) =>
-        ConditionValueResolver.Resolve(value, customConverter, v => v switch
+        private static string BuildRegexPattern(string rawPattern, LikeOp op) => op switch
         {
-            null               => BsonNull.Value,
-            bool b             => new BsonBoolean(b),
-            int i              => new BsonInt32(i),
-            long l             => new BsonInt64(l),
-            double d           => new BsonDouble(d),
-            decimal dec        => new BsonDecimal128(dec),
-            float f            => new BsonDouble(f),
-            string s           => new BsonString(s),
-            DateTime dt        => new BsonDateTime(dt),
-            DateTimeOffset dto => new BsonDateTime(dto.UtcDateTime),
-            Guid g             => new BsonBinaryData(g, GuidRepresentation.Standard),
-            Enum e             => BsonValue.Create(Convert.ToInt32(e)),
-            _                  => BsonValue.Create(v)
-        });
+            LikeOp.Contains   => Regex.Escape(rawPattern),
+            LikeOp.StartsWith => $"^{Regex.Escape(rawPattern)}",
+            LikeOp.EndsWith   => $"{Regex.Escape(rawPattern)}$",
+            _ => throw new NotSupportedException($"LikeOp.{op} is not mapped.")
+        };
+
+        private BsonValue ToBsonValue(object? value) =>
+            ConditionValueResolver.Resolve(value, customConverter, v => v switch
+            {
+                null               => BsonNull.Value,
+                bool b             => new BsonBoolean(b),
+                int i              => new BsonInt32(i),
+                long l             => new BsonInt64(l),
+                double d           => new BsonDouble(d),
+                decimal dec        => new BsonDecimal128(dec),
+                float f            => new BsonDouble(f),
+                string s           => new BsonString(s),
+                DateTime dt        => new BsonDateTime(dt),
+                DateTimeOffset dto => new BsonDateTime(dto.UtcDateTime),
+                Guid g             => new BsonBinaryData(g, GuidRepresentation.Standard),
+                Enum e             => BsonValue.Create(Convert.ToInt32(e)),
+                _                  => BsonValue.Create(v)
+            });
+    }
 }

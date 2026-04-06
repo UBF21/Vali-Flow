@@ -7,4 +7,7 @@ namespace Vali_Flow.NoSql.IR;
 /// </summary>
 /// <param name="Field">The document field name.</param>
 /// <param name="Values">The set of values to match against. May be empty.</param>
-public sealed record InNode(string Field, IReadOnlyList<object?> Values) : IConditionNode;
+public sealed record InNode(string Field, IReadOnlyList<object?> Values) : IConditionNode
+{
+    public TResult Accept<TResult>(IConditionNodeVisitor<TResult> visitor) => visitor.VisitIn(this);
+}

@@ -1222,18 +1222,7 @@ public sealed class SqlQueryBuilder<T> where T : class
         if (orderBy == null) throw new ArgumentNullException(nameof(orderBy));
         var orderCol = _dialect.QuoteIdentifier(ExpressionHelper.GetMemberName(orderBy));
         var direction = ascending ? _dialect.OrderByAscending : _dialect.OrderByDescending;
-
-        string overClause;
-        if (partitionBy != null)
-        {
-            var partitionCol = _dialect.QuoteIdentifier(ExpressionHelper.GetMemberName(partitionBy));
-            overClause = $"OVER (PARTITION BY {partitionCol} ORDER BY {orderCol} {direction})";
-        }
-        else
-        {
-            overClause = $"OVER (ORDER BY {orderCol} {direction})";
-        }
-
+        string overClause = BuildOverClause(partitionBy, orderCol, direction);
         return SelectRaw($"{function}() {overClause} AS {_dialect.QuoteIdentifier(alias)}");
     }
 

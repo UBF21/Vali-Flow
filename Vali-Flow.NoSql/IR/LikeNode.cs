@@ -7,4 +7,7 @@ namespace Vali_Flow.NoSql.IR;
 /// <param name="Field">The document field name.</param>
 /// <param name="Pattern">The raw string value (without wildcards — the translator adds them).</param>
 /// <param name="Op">The pattern-match type.</param>
-public sealed record LikeNode(string Field, string Pattern, LikeOp Op) : IConditionNode;
+public sealed record LikeNode(string Field, string Pattern, LikeOp Op) : IConditionNode
+{
+    public TResult Accept<TResult>(IConditionNodeVisitor<TResult> visitor) => visitor.VisitLike(this);
+}

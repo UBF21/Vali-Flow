@@ -6,8 +6,6 @@ using Vali_Flow.NoSql.Translators;
 
 namespace Vali_Flow.NoSql.DynamoDB.Translators;
 
-// TODO: Visitor pattern if IR grows beyond 10 node types
-
 /// <summary>
 /// Translates a <see cref="IConditionNode"/> IR tree into a DynamoDB <see cref="DynamoFilterExpression"/>.
 /// </summary>
@@ -44,99 +42,90 @@ public static class DynamoFilterTranslator
         if (node == null) throw new ArgumentNullException(nameof(node));
 
         var ctx = new TranslationContext();
-        var expression = TranslateNode(node, ctx, customConverter);
+        var visitor = new DynamoVisitor(ctx, customConverter);
+        var expression = node.Accept(visitor);
         return new DynamoFilterExpression(expression, ctx.Names, ctx.Values);
     }
 
-    private static string TranslateNode(IConditionNode node, TranslationContext ctx, Func<object?, AttributeValue?>? customConverter) => node switch
+    private sealed class DynamoVisitor(TranslationContext ctx, Func<object?, AttributeValue?>? customConverter)
+        : IConditionNodeVisitor<string>
     {
-        // ── Logical combinators ──────────────────────────────────────────────
-        AndNode and =>
-            $"({TranslateNode(and.Left, ctx, customConverter)} AND {TranslateNode(and.Right, ctx, customConverter)})",
+        public string VisitAnd(AndNode node) =>
+            $"({node.Left.Accept(this)} AND {node.Right.Accept(this)})";
 
-        OrNode or =>
-            $"({TranslateNode(or.Left, ctx, customConverter)} OR {TranslateNode(or.Right, ctx, customConverter)})",
+        public string VisitOr(OrNode node) =>
+            $"({node.Left.Accept(this)} OR {node.Right.Accept(this)})";
 
-        NotNode not =>
-            $"NOT ({TranslateNode(not.Inner, ctx, customConverter)})",
+        public string VisitNot(NotNode node) =>
+            $"NOT ({node.Inner.Accept(this)})";
 
-        // ── Null checks ───────────────────────────────────────────────────────
-        NullNode { Check: NullCheckOp.IsNull }    n => $"attribute_not_exists({ctx.AddName(n.Field)})",
-        NullNode { Check: NullCheckOp.IsNotNull } n => $"attribute_exists({ctx.AddName(n.Field)})",
+        public string VisitNull(NullNode node) =>
+            node.Check == NullCheckOp.IsNull
+                ? $"attribute_not_exists({ctx.AddName(node.Field)})"
+                : $"attribute_exists({ctx.AddName(node.Field)})";
 
-        // ── Equality ──────────────────────────────────────────────────────────
-        EqualNode { IsNegated: false } eq =>
-            $"{ctx.AddName(eq.Field)} = {ctx.AddValue(ToAttributeValue(eq.Value, customConverter))}",
+        public string VisitEqual(EqualNode node) =>
+            node.IsNegated
+                ? $"{ctx.AddName(node.Field)} <> {ctx.AddValue(ToAttributeValue(node.Value))}"
+                : $"{ctx.AddName(node.Field)} = {ctx.AddValue(ToAttributeValue(node.Value))}";
 
-        EqualNode { IsNegated: true } eq =>
-            $"{ctx.AddName(eq.Field)} <> {ctx.AddValue(ToAttributeValue(eq.Value, customConverter))}",
+        public string VisitComparison(ComparisonNode node) =>
+            $"{ctx.AddName(node.Field)} {MapComparisonOp(node.Op)} {ctx.AddValue(ToAttributeValue(node.Value))}";
 
-        // ── Range ─────────────────────────────────────────────────────────────
-        ComparisonNode cmp =>
-            $"{ctx.AddName(cmp.Field)} {MapComparisonOp(cmp.Op)} {ctx.AddValue(ToAttributeValue(cmp.Value, customConverter))}",
-
-        // ── Pattern match ─────────────────────────────────────────────────────
-        LikeNode { Op: LikeOp.Contains }   like =>
-            $"contains({ctx.AddName(like.Field)}, {ctx.AddValue(new AttributeValue { S = like.Pattern })})",
-
-        LikeNode { Op: LikeOp.StartsWith } like =>
-            $"begins_with({ctx.AddName(like.Field)}, {ctx.AddValue(new AttributeValue { S = like.Pattern })})",
-
-        LikeNode { Op: LikeOp.EndsWith } =>
-            throw new NotSupportedException(
+        public string VisitLike(LikeNode node) => node.Op switch
+        {
+            LikeOp.Contains   => $"contains({ctx.AddName(node.Field)}, {ctx.AddValue(new AttributeValue { S = node.Pattern })})",
+            LikeOp.StartsWith => $"begins_with({ctx.AddName(node.Field)}, {ctx.AddValue(new AttributeValue { S = node.Pattern })})",
+            LikeOp.EndsWith   => throw new NotSupportedException(
                 "DynamoDB FilterExpression does not support EndsWith (trailing wildcard). " +
                 "Use Contains or StartsWith, or apply the filter client-side."),
+            _ => throw new NotSupportedException($"LikeOp.{node.Op} is not mapped.")
+        };
 
-        // ── Membership ────────────────────────────────────────────────────────
-        // Empty IN → always false: contradictory attribute_exists AND attribute_not_exists
-        InNode { Values.Count: 0 } inN =>
-            $"(attribute_exists({ctx.AddName(inN.Field)}) AND attribute_not_exists({ctx.AddName(inN.Field)}))",
-
-        InNode inNode when inNode.Values.Count > MaxInValues =>
-            throw new InvalidOperationException(
-                $"DynamoDB IN expression supports at most {MaxInValues} values; " +
-                $"received {inNode.Values.Count}. Split the query or batch the values."),
-
-        InNode inNode => BuildInExpression(inNode, ctx, customConverter),
-
-        _ => throw new NotSupportedException(
-            $"IR node type '{node.GetType().Name}' is not supported by DynamoFilterTranslator.")
-    };
-
-    // ── Helpers ──────────────────────────────────────────────────────────────────
-
-    private static string BuildInExpression(InNode inNode, TranslationContext ctx, Func<object?, AttributeValue?>? customConverter)
-    {
-        var field = ctx.AddName(inNode.Field);
-        var valuePlaceholders = inNode.Values
-            .Select(v => ctx.AddValue(ToAttributeValue(v, customConverter)));
-        return $"{field} IN ({string.Join(", ", valuePlaceholders)})";
-    }
-
-    private static string MapComparisonOp(ComparisonOp op) => op switch
-    {
-        ComparisonOp.GreaterThan        => ">",
-        ComparisonOp.GreaterThanOrEqual => ">=",
-        ComparisonOp.LessThan           => "<",
-        ComparisonOp.LessThanOrEqual    => "<=",
-        _ => throw new NotSupportedException($"ComparisonOp.{op} is not mapped.")
-    };
-
-    private static AttributeValue ToAttributeValue(object? value, Func<object?, AttributeValue?>? customConverter) =>
-        ConditionValueResolver.Resolve(value, customConverter, v => v switch
+        public string VisitIn(InNode node)
         {
-            null      => new AttributeValue { NULL = true },
-            bool b    => new AttributeValue { BOOL = b },
-            string s  => new AttributeValue { S = s },
-            int i     => new AttributeValue { N = i.ToString(CultureInfo.InvariantCulture) },
-            long l    => new AttributeValue { N = l.ToString(CultureInfo.InvariantCulture) },
-            double d  => new AttributeValue { N = d.ToString(CultureInfo.InvariantCulture) },
-            float f   => new AttributeValue { N = f.ToString(CultureInfo.InvariantCulture) },
-            decimal m => new AttributeValue { N = m.ToString(CultureInfo.InvariantCulture) },
-            Guid g    => new AttributeValue { S = g.ToString() },
-            Enum e    => new AttributeValue { N = Convert.ToInt64(e).ToString(CultureInfo.InvariantCulture) },
-            _         => new AttributeValue { S = v!.ToString()! }
-        });
+            // Empty IN → always false: contradictory attribute_exists AND attribute_not_exists
+            if (node.Values.Count == 0)
+                return $"(attribute_exists({ctx.AddName(node.Field)}) AND attribute_not_exists({ctx.AddName(node.Field)}))";
+
+            if (node.Values.Count > MaxInValues)
+                throw new InvalidOperationException(
+                    $"DynamoDB IN expression supports at most {MaxInValues} values; " +
+                    $"received {node.Values.Count}. Split the query or batch the values.");
+
+            var field = ctx.AddName(node.Field);
+            var valuePlaceholders = node.Values
+                .Select(v => ctx.AddValue(ToAttributeValue(v)));
+            return $"{field} IN ({string.Join(", ", valuePlaceholders)})";
+        }
+
+        // ── Helpers ──────────────────────────────────────────────────────────────────
+
+        private static string MapComparisonOp(ComparisonOp op) => op switch
+        {
+            ComparisonOp.GreaterThan        => ">",
+            ComparisonOp.GreaterThanOrEqual => ">=",
+            ComparisonOp.LessThan           => "<",
+            ComparisonOp.LessThanOrEqual    => "<=",
+            _ => throw new NotSupportedException($"ComparisonOp.{op} is not mapped.")
+        };
+
+        private AttributeValue ToAttributeValue(object? value) =>
+            ConditionValueResolver.Resolve(value, customConverter, v => v switch
+            {
+                null      => new AttributeValue { NULL = true },
+                bool b    => new AttributeValue { BOOL = b },
+                string s  => new AttributeValue { S = s },
+                int i     => new AttributeValue { N = i.ToString(CultureInfo.InvariantCulture) },
+                long l    => new AttributeValue { N = l.ToString(CultureInfo.InvariantCulture) },
+                double d  => new AttributeValue { N = d.ToString(CultureInfo.InvariantCulture) },
+                float f   => new AttributeValue { N = f.ToString(CultureInfo.InvariantCulture) },
+                decimal m => new AttributeValue { N = m.ToString(CultureInfo.InvariantCulture) },
+                Guid g    => new AttributeValue { S = g.ToString() },
+                Enum e    => new AttributeValue { N = Convert.ToInt64(e).ToString(CultureInfo.InvariantCulture) },
+                _         => new AttributeValue { S = v!.ToString()! }
+            });
+    }
 
     // ── Private translation context (NOT part of public API) ─────────────────
 

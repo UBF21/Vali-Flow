@@ -23,6 +23,11 @@ public abstract class EvaluatorBase<T, TProperty> : IInMemoryEvaluatorRead<T>, I
         Evaluator = new ValiFlowEvaluator<T, TProperty>(initialData, valiFlow, getId);
     }
 
+    protected EvaluatorBase(ValiFlowEvaluator<T, TProperty> evaluator)
+    {
+        Evaluator = evaluator ?? throw new ArgumentNullException(nameof(evaluator));
+    }
+
     public void SetValiFlow(ValiFlow<T> valiFlow) => Evaluator.SetValiFlow(valiFlow);
 
     public bool Evaluate(T entity, ValiFlow<T>? valiFlow = null, bool negateCondition = false) =>

@@ -5,8 +5,6 @@ using Vali_Flow.NoSql.Translators;
 
 namespace Vali_Flow.NoSql.Elasticsearch.Translators;
 
-// TODO: Visitor pattern if IR grows beyond 10 node types
-
 /// <summary>
 /// Translates a <see cref="IConditionNode"/> IR tree into an Elasticsearch <see cref="Query"/>.
 /// </summary>
@@ -41,114 +39,109 @@ public static class ElasticsearchFilterTranslator
     {
         if (node == null) throw new ArgumentNullException(nameof(node));
 
-        return TranslateNode(node, customConverter);
+        return node.Accept(new ElasticsearchVisitor(customConverter));
     }
 
-    private static Query TranslateNode(IConditionNode node, Func<object?, FieldValue?>? customConverter) => node switch
+    private sealed class ElasticsearchVisitor(Func<object?, FieldValue?>? customConverter) : IConditionNodeVisitor<Query>
     {
-        // ── Logical combinators ───────────────────────────────────────────────
-        AndNode and => Query.Bool(new BoolQuery
+        public Query VisitAnd(AndNode node) => Query.Bool(new BoolQuery
         {
-            Must = [TranslateNode(and.Left, customConverter), TranslateNode(and.Right, customConverter)]
-        }),
-
-        OrNode or => Query.Bool(new BoolQuery
-        {
-            Should             = [TranslateNode(or.Left, customConverter), TranslateNode(or.Right, customConverter)],
-            MinimumShouldMatch = 1
-        }),
-
-        NotNode not => Query.Bool(new BoolQuery
-        {
-            MustNot = [TranslateNode(not.Inner, customConverter)]
-        }),
-
-        // ── Null checks ───────────────────────────────────────────────────────
-        // IsNull  → field must not exist (or be explicitly null, treated as missing in ES)
-        NullNode { Check: NullCheckOp.IsNull } n => Query.Bool(new BoolQuery
-        {
-            MustNot = [Query.Exists(new ExistsQuery { Field = n.Field })]
-        }),
-
-        // IsNotNull → field must exist
-        NullNode { Check: NullCheckOp.IsNotNull } n =>
-            Query.Exists(new ExistsQuery { Field = n.Field }),
-
-        // ── Equality ──────────────────────────────────────────────────────────
-        EqualNode { IsNegated: false } eq =>
-            Query.Term(new TermQuery(eq.Field) { Value = ToFieldValue(eq.Value, customConverter) }),
-
-        EqualNode { IsNegated: true } eq => Query.Bool(new BoolQuery
-        {
-            MustNot = [Query.Term(new TermQuery(eq.Field) { Value = ToFieldValue(eq.Value, customConverter) })]
-        }),
-
-        // ── Range ─────────────────────────────────────────────────────────────
-        ComparisonNode cmp => cmp.Op switch
-        {
-            ComparisonOp.GreaterThan        => Query.Range(new NumberRangeQuery(cmp.Field) { Gt  = ToDouble(cmp.Value) }),
-            ComparisonOp.GreaterThanOrEqual => Query.Range(new NumberRangeQuery(cmp.Field) { Gte = ToDouble(cmp.Value) }),
-            ComparisonOp.LessThan           => Query.Range(new NumberRangeQuery(cmp.Field) { Lt  = ToDouble(cmp.Value) }),
-            ComparisonOp.LessThanOrEqual    => Query.Range(new NumberRangeQuery(cmp.Field) { Lte = ToDouble(cmp.Value) }),
-            _ => throw new NotSupportedException($"ComparisonOp.{cmp.Op} is not mapped.")
-        },
-
-        // ── Pattern match (wildcard) ──────────────────────────────────────────
-        LikeNode like => Query.Wildcard(new WildcardQuery(like.Field)
-        {
-            Value           = BuildWildcardPattern(like.Pattern, like.Op),
-            CaseInsensitive = true
-        }),
-
-        // ── Membership ────────────────────────────────────────────────────────
-        // Empty IN → always false (must_not match_all)
-        InNode { Values.Count: 0 } => Query.Bool(new BoolQuery
-        {
-            MustNot = [Query.MatchAll(new MatchAllQuery())]
-        }),
-
-        InNode inNode => Query.Terms(new TermsQuery
-        {
-            Field = inNode.Field,
-            Term  = new TermsQueryField(inNode.Values.Select(v => ToFieldValue(v, customConverter)).ToArray())
-        }),
-
-        _ => throw new NotSupportedException(
-            $"IR node type '{node.GetType().Name}' is not supported by ElasticsearchFilterTranslator.")
-    };
-
-    // ── Helpers ───────────────────────────────────────────────────────────────
-
-    private static string BuildWildcardPattern(string rawPattern, LikeOp op) => op switch
-    {
-        LikeOp.Contains   => $"*{EscapeWildcard(rawPattern)}*",
-        LikeOp.StartsWith => $"{EscapeWildcard(rawPattern)}*",
-        LikeOp.EndsWith   => $"*{EscapeWildcard(rawPattern)}",
-        _ => throw new NotSupportedException($"LikeOp.{op} is not mapped.")
-    };
-
-    // Elasticsearch wildcard special chars: * ? \
-    private static string EscapeWildcard(string pattern)
-        => pattern.Replace(@"\", @"\\").Replace("*", @"\*").Replace("?", @"\?");
-
-    private static double ToDouble(object value)
-    {
-        try { return Convert.ToDouble(value); }
-        catch { throw new NotSupportedException($"Cannot convert '{value?.GetType().Name}' to double for a range query."); }
-    }
-
-    private static FieldValue ToFieldValue(object? value, Func<object?, FieldValue?>? customConverter) =>
-        ConditionValueResolver.Resolve(value, customConverter, v => v switch
-        {
-            null          => FieldValue.Null,
-            bool b        => FieldValue.Boolean(b),
-            int i         => FieldValue.Long(i),
-            long l        => FieldValue.Long(l),
-            double d      => FieldValue.Double(d),
-            float f       => FieldValue.Double(f),
-            decimal dec   => FieldValue.Double((double)dec),
-            string s      => FieldValue.String(s),
-            Enum e        => FieldValue.Long(Convert.ToInt64(e)),
-            _             => FieldValue.String(v!.ToString()!)
+            Must = [node.Left.Accept(this), node.Right.Accept(this)]
         });
+
+        public Query VisitOr(OrNode node) => Query.Bool(new BoolQuery
+        {
+            Should             = [node.Left.Accept(this), node.Right.Accept(this)],
+            MinimumShouldMatch = 1
+        });
+
+        public Query VisitNot(NotNode node) => Query.Bool(new BoolQuery
+        {
+            MustNot = [node.Inner.Accept(this)]
+        });
+
+        public Query VisitEqual(EqualNode node) =>
+            node.IsNegated
+                ? Query.Bool(new BoolQuery
+                {
+                    MustNot = [Query.Term(new TermQuery(node.Field) { Value = ToFieldValue(node.Value) })]
+                })
+                : Query.Term(new TermQuery(node.Field) { Value = ToFieldValue(node.Value) });
+
+        public Query VisitComparison(ComparisonNode node) => node.Op switch
+        {
+            ComparisonOp.GreaterThan        => Query.Range(new NumberRangeQuery(node.Field) { Gt  = ToDouble(node.Value) }),
+            ComparisonOp.GreaterThanOrEqual => Query.Range(new NumberRangeQuery(node.Field) { Gte = ToDouble(node.Value) }),
+            ComparisonOp.LessThan           => Query.Range(new NumberRangeQuery(node.Field) { Lt  = ToDouble(node.Value) }),
+            ComparisonOp.LessThanOrEqual    => Query.Range(new NumberRangeQuery(node.Field) { Lte = ToDouble(node.Value) }),
+            _ => throw new NotSupportedException($"ComparisonOp.{node.Op} is not mapped.")
+        };
+
+        public Query VisitLike(LikeNode node) => Query.Wildcard(new WildcardQuery(node.Field)
+        {
+            Value           = BuildWildcardPattern(node.Pattern, node.Op),
+            CaseInsensitive = true
+        });
+
+        public Query VisitIn(InNode node)
+        {
+            // Empty IN → always false (must_not match_all)
+            if (node.Values.Count == 0)
+                return Query.Bool(new BoolQuery
+                {
+                    MustNot = [Query.MatchAll(new MatchAllQuery())]
+                });
+
+            return Query.Terms(new TermsQuery
+            {
+                Field = node.Field,
+                Term  = new TermsQueryField(node.Values.Select(v => ToFieldValue(v)).ToArray())
+            });
+        }
+
+        public Query VisitNull(NullNode node) =>
+            // IsNull  → field must not exist (or be explicitly null, treated as missing in ES)
+            // IsNotNull → field must exist
+            node.Check == NullCheckOp.IsNull
+                ? Query.Bool(new BoolQuery
+                {
+                    MustNot = [Query.Exists(new ExistsQuery { Field = node.Field })]
+                })
+                : Query.Exists(new ExistsQuery { Field = node.Field });
+
+        // ── Helpers ───────────────────────────────────────────────────────────────
+
+        private static string BuildWildcardPattern(string rawPattern, LikeOp op) => op switch
+        {
+            LikeOp.Contains   => $"*{EscapeWildcard(rawPattern)}*",
+            LikeOp.StartsWith => $"{EscapeWildcard(rawPattern)}*",
+            LikeOp.EndsWith   => $"*{EscapeWildcard(rawPattern)}",
+            _ => throw new NotSupportedException($"LikeOp.{op} is not mapped.")
+        };
+
+        // Elasticsearch wildcard special chars: * ? \
+        private static string EscapeWildcard(string pattern)
+            => pattern.Replace(@"\", @"\\").Replace("*", @"\*").Replace("?", @"\?");
+
+        private static double ToDouble(object value)
+        {
+            try { return Convert.ToDouble(value); }
+            catch { throw new NotSupportedException($"Cannot convert '{value?.GetType().Name}' to double for a range query."); }
+        }
+
+        private FieldValue ToFieldValue(object? value) =>
+            ConditionValueResolver.Resolve(value, customConverter, v => v switch
+            {
+                null          => FieldValue.Null,
+                bool b        => FieldValue.Boolean(b),
+                int i         => FieldValue.Long(i),
+                long l        => FieldValue.Long(l),
+                double d      => FieldValue.Double(d),
+                float f       => FieldValue.Double(f),
+                decimal dec   => FieldValue.Double((double)dec),
+                string s      => FieldValue.String(s),
+                Enum e        => FieldValue.Long(Convert.ToInt64(e)),
+                _             => FieldValue.String(v!.ToString()!)
+            });
+    }
 }

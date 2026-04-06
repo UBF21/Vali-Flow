@@ -3,8 +3,6 @@ using Vali_Flow.NoSql.IR;
 
 namespace Vali_Flow.NoSql.Redis.Translators;
 
-// TODO: Visitor pattern if IR grows beyond 10 node types
-
 /// <summary>
 /// Translates a <see cref="IConditionNode"/> IR tree into a RediSearch query string.
 /// </summary>
@@ -45,152 +43,146 @@ public static class RedisSearchFilterTranslator
     {
         if (node == null) throw new ArgumentNullException(nameof(node));
 
-        return TranslateNode(node, customConverter);
+        return node.Accept(new RedisVisitor(customConverter));
     }
 
-    private static string TranslateNode(IConditionNode node, Func<object?, string?>? customConverter) => node switch
+    private sealed class RedisVisitor(Func<object?, string?>? customConverter) : IConditionNodeVisitor<string>
     {
-        // ── Logical combinators ──────────────────────────────────────────────
-        AndNode and => $"({TranslateNode(and.Left, customConverter)} {TranslateNode(and.Right, customConverter)})",
+        public string VisitAnd(AndNode node) =>
+            $"({node.Left.Accept(this)} {node.Right.Accept(this)})";
 
-        OrNode or => $"({TranslateNode(or.Left, customConverter)} | {TranslateNode(or.Right, customConverter)})",
+        public string VisitOr(OrNode node) =>
+            $"({node.Left.Accept(this)} | {node.Right.Accept(this)})";
 
-        NotNode not => $"-({TranslateNode(not.Inner, customConverter)})",
+        public string VisitNot(NotNode node) =>
+            $"-({node.Inner.Accept(this)})";
 
-        // ── Null checks — not natively supported in RediSearch ───────────────
-        NullNode => throw new NotSupportedException(
-            "RediSearch does not support field-existence / null checks without schema-specific handling. " +
-            "Use a customConverter or handle null checks at the application level before querying."),
+        public string VisitNull(NullNode node) =>
+            throw new NotSupportedException(
+                "RediSearch does not support field-existence / null checks without schema-specific handling. " +
+                "Use a customConverter or handle null checks at the application level before querying.");
 
-        // ── Equality ─────────────────────────────────────────────────────────
-        EqualNode { IsNegated: false } eq => BuildEqualQuery(eq.Field, eq.Value, negated: false, customConverter),
-        EqualNode { IsNegated: true }  eq => BuildEqualQuery(eq.Field, eq.Value, negated: true,  customConverter),
+        public string VisitEqual(EqualNode node) =>
+            BuildEqualQuery(node.Field, node.Value, node.IsNegated);
 
-        // ── Range ─────────────────────────────────────────────────────────────
-        // Exclusive bound uses leading '(' before the number: [(v +inf]
-        ComparisonNode cmp => cmp.Op switch
+        public string VisitComparison(ComparisonNode node) => node.Op switch
         {
-            ComparisonOp.GreaterThan        => $"@{cmp.Field}:[({ToNumericString(cmp.Value)} +inf]",
-            ComparisonOp.GreaterThanOrEqual => $"@{cmp.Field}:[{ToNumericString(cmp.Value)} +inf]",
-            ComparisonOp.LessThan           => $"@{cmp.Field}:[-inf ({ToNumericString(cmp.Value)}]",
-            ComparisonOp.LessThanOrEqual    => $"@{cmp.Field}:[-inf {ToNumericString(cmp.Value)}]",
-            _ => throw new NotSupportedException($"ComparisonOp.{cmp.Op} is not mapped.")
-        },
-
-        // ── Pattern match (wildcard — TEXT field) ─────────────────────────────
-        LikeNode like => like.Op switch
-        {
-            LikeOp.Contains   => $"@{like.Field}:*{like.Pattern}*",
-            LikeOp.StartsWith => $"@{like.Field}:{like.Pattern}*",
-            LikeOp.EndsWith   => $"@{like.Field}:*{like.Pattern}",
-            _ => throw new NotSupportedException($"LikeOp.{like.Op} is not mapped.")
-        },
-
-        // ── Membership ───────────────────────────────────────────────────────
-        // Empty IN → always false (negate match-all)
-        InNode { Values.Count: 0 } => "(-*)",
-
-        InNode inNode => BuildInQuery(inNode, customConverter),
-
-        _ => throw new NotSupportedException(
-            $"IR node type '{node.GetType().Name}' is not supported by RedisSearchFilterTranslator.")
-    };
-
-    // ── Helpers ──────────────────────────────────────────────────────────────────
-
-    private static string BuildEqualQuery(string field, object value, bool negated, Func<object?, string?>? customConverter)
-    {
-        // OCP: custom converter takes priority over built-in type detection
-        if (customConverter != null)
-        {
-            var custom = customConverter(value);
-            if (custom != null)
-            {
-                var customTag = $"\"{EscapeTagValue(custom)}\"";
-                return negated
-                    ? $"-@{field}:{{{customTag}}}"
-                    : $"@{field}:{{{customTag}}}";
-            }
-        }
-
-        if (IsNumericOrBool(value))
-        {
-            var num = ToNumericString(value);
-            return negated
-                ? $"(-@{field}:[{num} {num}])"
-                : $"@{field}:[{num} {num}]";
-        }
-
-        // String / other → quoted tag query (DIALECT 2).
-        // Converter already returned null above — pass null to avoid double-invocation (O1 fix).
-        var tag = BuildTagValue(value, null);
-        return negated
-            ? $"-@{field}:{{{tag}}}"
-            : $"@{field}:{{{tag}}}";
-    }
-
-    private static string BuildInQuery(InNode inNode, Func<object?, string?>? customConverter)
-    {
-        var nonNull = inNode.Values.Where(v => v != null).ToList();
-
-        if (nonNull.Count > 0)
-        {
-            bool allNumeric = nonNull.All(IsNumericOrBool);
-            bool anyNumeric = nonNull.Any(IsNumericOrBool);
-
-            // M3 fix: reject heterogeneous lists before producing a silently wrong query
-            if (anyNumeric && !allNumeric)
-                throw new InvalidOperationException(
-                    $"InNode '{inNode.Field}' contains mixed numeric and non-numeric values. " +
-                    "All non-null values must be of the same kind.");
-
-            if (allNumeric)
-            {
-                // OR'd range queries: (@field:[v1 v1]|@field:[v2 v2]|...)
-                var parts = nonNull.Select(v => $"@{inNode.Field}:[{ToNumericString(v!)} {ToNumericString(v!)}]");
-                return $"({string.Join("|", parts)})";
-            }
-        }
-
-        // Tag OR query: @field:{"v1"|"v2"|"v3"}
-        var tags = inNode.Values.Select(v => BuildTagValue(v, customConverter));
-        return $"@{inNode.Field}:{{{string.Join("|", tags)}}}";
-    }
-
-    private static string BuildTagValue(object? value, Func<object?, string?>? customConverter)
-    {
-        if (customConverter != null)
-        {
-            var custom = customConverter(value);
-            if (custom != null) return $"\"{EscapeTagValue(custom)}\"";
-        }
-
-        var str = value switch
-        {
-            null    => string.Empty,
-            bool b  => b ? "true" : "false",
-            string s => s,
-            Enum e  => e.ToString(),
-            _       => value.ToString() ?? string.Empty
+            // Exclusive bound uses leading '(' before the number: [(v +inf]
+            ComparisonOp.GreaterThan        => $"@{node.Field}:[({ToNumericString(node.Value)} +inf]",
+            ComparisonOp.GreaterThanOrEqual => $"@{node.Field}:[{ToNumericString(node.Value)} +inf]",
+            ComparisonOp.LessThan           => $"@{node.Field}:[-inf ({ToNumericString(node.Value)}]",
+            ComparisonOp.LessThanOrEqual    => $"@{node.Field}:[-inf {ToNumericString(node.Value)}]",
+            _ => throw new NotSupportedException($"ComparisonOp.{node.Op} is not mapped.")
         };
-        return $"\"{EscapeTagValue(str)}\"";
+
+        public string VisitLike(LikeNode node) => node.Op switch
+        {
+            LikeOp.Contains   => $"@{node.Field}:*{node.Pattern}*",
+            LikeOp.StartsWith => $"@{node.Field}:{node.Pattern}*",
+            LikeOp.EndsWith   => $"@{node.Field}:*{node.Pattern}",
+            _ => throw new NotSupportedException($"LikeOp.{node.Op} is not mapped.")
+        };
+
+        public string VisitIn(InNode node)
+        {
+            // Empty IN → always false (negate match-all)
+            if (node.Values.Count == 0) return "(-*)";
+
+            var nonNull = node.Values.Where(v => v != null).ToList();
+
+            if (nonNull.Count > 0)
+            {
+                bool allNumeric = nonNull.All(IsNumericOrBool);
+                bool anyNumeric = nonNull.Any(IsNumericOrBool);
+
+                // M3 fix: reject heterogeneous lists before producing a silently wrong query
+                if (anyNumeric && !allNumeric)
+                    throw new InvalidOperationException(
+                        $"InNode '{node.Field}' contains mixed numeric and non-numeric values. " +
+                        "All non-null values must be of the same kind.");
+
+                if (allNumeric)
+                {
+                    // OR'd range queries: (@field:[v1 v1]|@field:[v2 v2]|...)
+                    var parts = nonNull.Select(v => $"@{node.Field}:[{ToNumericString(v!)} {ToNumericString(v!)}]");
+                    return $"({string.Join("|", parts)})";
+                }
+            }
+
+            // Tag OR query: @field:{"v1"|"v2"|"v3"}
+            var tags = node.Values.Select(v => BuildTagValue(v));
+            return $"@{node.Field}:{{{string.Join("|", tags)}}}";
+        }
+
+        // ── Helpers ──────────────────────────────────────────────────────────────────
+
+        private string BuildEqualQuery(string field, object value, bool negated)
+        {
+            // OCP: custom converter takes priority over built-in type detection
+            if (customConverter != null)
+            {
+                var custom = customConverter(value);
+                if (custom != null)
+                {
+                    var customTag = $"\"{EscapeTagValue(custom)}\"";
+                    return negated
+                        ? $"-@{field}:{{{customTag}}}"
+                        : $"@{field}:{{{customTag}}}";
+                }
+            }
+
+            if (IsNumericOrBool(value))
+            {
+                var num = ToNumericString(value);
+                return negated
+                    ? $"(-@{field}:[{num} {num}])"
+                    : $"@{field}:[{num} {num}]";
+            }
+
+            // String / other → quoted tag query (DIALECT 2).
+            // Converter already returned null above — pass null to avoid double-invocation (O1 fix).
+            var tag = BuildTagValue(value, null);
+            return negated
+                ? $"-@{field}:{{{tag}}}"
+                : $"@{field}:{{{tag}}}";
+        }
+
+        private string BuildTagValue(object? value, Func<object?, string?>? converter = null)
+        {
+            var conv = converter ?? customConverter;
+            if (conv != null)
+            {
+                var custom = conv(value);
+                if (custom != null) return $"\"{EscapeTagValue(custom)}\"";
+            }
+
+            var str = value switch
+            {
+                null    => string.Empty,
+                bool b  => b ? "true" : "false",
+                string s => s,
+                Enum e  => e.ToString(),
+                _       => value.ToString() ?? string.Empty
+            };
+            return $"\"{EscapeTagValue(str)}\"";
+        }
+
+        private static bool IsNumericOrBool(object? value) =>
+            value is int or long or double or float or decimal or bool;
+
+        private static string ToNumericString(object value) => value switch
+        {
+            bool b      => b ? "1" : "0",
+            int i       => i.ToString(CultureInfo.InvariantCulture),
+            long l      => l.ToString(CultureInfo.InvariantCulture),
+            double d    => d.ToString(CultureInfo.InvariantCulture),
+            float f     => f.ToString(CultureInfo.InvariantCulture),
+            decimal dec => ((double)dec).ToString(CultureInfo.InvariantCulture),
+            _           => Convert.ToDouble(value).ToString(CultureInfo.InvariantCulture)
+        };
+
+        // Escape \ and " inside DIALECT 2 quoted tag values
+        private static string EscapeTagValue(string value)
+            => value.Replace("\\", "\\\\").Replace("\"", "\\\"");
     }
-
-    private static bool IsNumericOrBool(object? value) =>
-        value is int or long or double or float or decimal or bool;
-
-    private static string ToNumericString(object value) => value switch
-    {
-        bool b      => b ? "1" : "0",
-        int i       => i.ToString(CultureInfo.InvariantCulture),
-        long l      => l.ToString(CultureInfo.InvariantCulture),
-        double d    => d.ToString(CultureInfo.InvariantCulture),
-        float f     => f.ToString(CultureInfo.InvariantCulture),
-        decimal dec => ((double)dec).ToString(CultureInfo.InvariantCulture),
-        _           => Convert.ToDouble(value).ToString(CultureInfo.InvariantCulture)
-    };
-
-    // Escape \ and " inside DIALECT 2 quoted tag values
-    private static string EscapeTagValue(string value)
-        => value.Replace("\\", "\\\\").Replace("\"", "\\\"");
 }
