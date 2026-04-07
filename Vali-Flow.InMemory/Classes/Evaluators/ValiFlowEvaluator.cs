@@ -17,7 +17,7 @@ public sealed class ValiFlowEvaluator<T, TProperty> : IInMemoryEvaluatorRead<T>,
 {
     private readonly InMemoryWriteStore<T, TProperty> _store;
     private readonly object _stateLock = new();
-    private ValiFlow<T>? _valiFlow;
+    private volatile ValiFlow<T>? _valiFlow;
     private Func<T, bool>? _cachedNegatedCondition;
     private AsyncInMemoryAdapter<T, TProperty>? _asyncAdapter;
     private AsyncInMemoryAdapter<T, TProperty> AsyncAdapter => _asyncAdapter ??= new(this);

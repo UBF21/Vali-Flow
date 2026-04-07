@@ -163,29 +163,14 @@ internal sealed class InMemoryWriteStore<T, TProperty> where T : class where TPr
     private T UpsertCore(T entity, IEnumerable<T>? entities)
     {
         // Must be called within _lock
-        if (entities is List<T> externalList)
-        {
-            var index = externalList.FindIndex(e =>
-                EqualityComparer<TProperty>.Default.Equals(_getId(e), _getId(entity)));
-            if (index >= 0)
-                externalList[index] = entity;
-            else
-                externalList.Add(entity);
-
-            if (index >= 0)
-                _updatedEntities.Add(entity);
-            else
-                _addedEntities.Add(entity);
-        }
+        // Both paths are deferred: mutations are applied in SaveChanges via ApplyPendingChanges.
+        List<T> source = entities is List<T> l ? l : _items;
+        var index = source.FindIndex(e =>
+            EqualityComparer<TProperty>.Default.Equals(_getId(e), _getId(entity)));
+        if (index >= 0)
+            _updatedEntities.Add(entity);
         else
-        {
-            var index = _items.FindIndex(e =>
-                EqualityComparer<TProperty>.Default.Equals(_getId(e), _getId(entity)));
-            if (index >= 0)
-                _updatedEntities.Add(entity);
-            else
-                _addedEntities.Add(entity);
-        }
+            _addedEntities.Add(entity);
 
         return entity;
     }
@@ -277,26 +262,5 @@ internal sealed class InMemoryWriteStore<T, TProperty> where T : class where TPr
             target.RemoveAll(e => deleteIds.Contains(_getId(e)!));
         }
         _deletedEntities.Clear();
-    }
-}
-
-internal class EntityEqualityComparer<T, TProperty> : IEqualityComparer<T> where T : class
-{
-    private readonly Func<T, TProperty>? _getId;
-
-    public EntityEqualityComparer(Func<T, TProperty>? getId)
-    {
-        _getId = getId;
-    }
-
-    public bool Equals(T? x, T? y)
-    {
-        if (x == null || y == null || _getId == null) return false;
-        return EqualityComparer<TProperty>.Default.Equals(_getId(x), _getId(y));
-    }
-
-    public int GetHashCode(T obj)
-    {
-        return _getId?.Invoke(obj)?.GetHashCode() ?? 0;
     }
 }
