@@ -44,11 +44,12 @@ public static class RedisSearchFilterTranslator
     /// which are not supported by RediSearch.
     /// Throws <see cref="NotSupportedException"/> with context if found.
     /// </summary>
-    public static void Validate(IConditionNode node)
-    {
-        var validator = new NullNodeDetectorVisitor();
-        node.Accept(validator);
-    }
+    public static void Validate(IConditionNode node) =>
+        node.Accept(new UnsupportedNodeDetector(
+            isUnsupported: n => n is NullNode,
+            buildMessage:  n => $"RediSearch does not support null/existence checks " +
+                                $"(NullNode on field '{((NullNode)n).Field}'). " +
+                                "Use Validate() before Translate() to detect this early."));
 
     public static string Translate(IConditionNode node, Func<object?, string?>? customConverter = null)
     {
@@ -199,18 +200,4 @@ public static class RedisSearchFilterTranslator
             => value.Replace("\\", "\\\\").Replace("\"", "\\\"");
     }
 
-    private sealed class NullNodeDetectorVisitor : IConditionNodeVisitor<bool>
-    {
-        public bool VisitAnd(AndNode node) { node.Left.Accept(this); node.Right.Accept(this); return true; }
-        public bool VisitOr(OrNode node) { node.Left.Accept(this); node.Right.Accept(this); return true; }
-        public bool VisitNot(NotNode node) { node.Inner.Accept(this); return true; }
-        public bool VisitEqual(EqualNode node) => true;
-        public bool VisitComparison(ComparisonNode node) => true;
-        public bool VisitLike(LikeNode node) => true;
-        public bool VisitIn(InNode node) => true;
-        public bool VisitNull(NullNode node) =>
-            throw new NotSupportedException(
-                $"RediSearch does not support null/existence checks (NullNode on field '{node.Field}'). " +
-                "Use Validate() before Translate() to detect this early.");
-    }
 }

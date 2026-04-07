@@ -4,7 +4,6 @@ public class ConstantHelper
 {
      #region Numbers
 
-    public const int One = 1;
     public const int ZeroInt = 0;
     public const decimal ZeroDecimal = 0.0m;
     public const int Thousand = 1000;
