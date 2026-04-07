@@ -5,7 +5,7 @@ internal sealed class InMemoryWriteStore<T, TProperty> where T : class where TPr
     private readonly object _lock = new();
 
     private readonly List<T> _items;
-    internal readonly Func<T, TProperty> GetId;
+    private readonly Func<T, TProperty> _getId;
 
     private readonly List<T> _addedEntities = new();
     private readonly List<T> _updatedEntities = new();
@@ -16,19 +16,21 @@ internal sealed class InMemoryWriteStore<T, TProperty> where T : class where TPr
         get { lock (_lock) { return _items.ToList(); } }
     }
 
+    internal TProperty GetEntityId(T entity) => _getId(entity);
+
     internal InMemoryWriteStore(IEnumerable<T>? initialData, Func<T, TProperty>? getId)
     {
         _items = initialData?.ToList() ?? new List<T>();
         if (getId != null)
         {
-            GetId = getId;
+            _getId = getId;
         }
         else
         {
             var property = typeof(T).GetProperty("Id")
                 ?? throw new InvalidOperationException(
                     $"Entity '{typeof(T).Name}' has no 'Id' property. Provide a getId function.");
-            GetId = entity => (TProperty)Convert.ChangeType(property.GetValue(entity)!, typeof(TProperty))!;
+            _getId = entity => (TProperty)Convert.ChangeType(property.GetValue(entity)!, typeof(TProperty))!;
         }
     }
 
@@ -53,14 +55,14 @@ internal sealed class InMemoryWriteStore<T, TProperty> where T : class where TPr
         {
             IEnumerable<T> dataSource = entities ?? _items;
             var existing =
-                dataSource.FirstOrDefault(e => EqualityComparer<TProperty>.Default.Equals(GetId(e), GetId(entity)));
+                dataSource.FirstOrDefault(e => EqualityComparer<TProperty>.Default.Equals(_getId(e), _getId(entity)));
             if (existing != null)
             {
                 _updatedEntities.Add(entity);
                 if (entities is List<T> list)
                 {
                     var index = list.FindIndex(e =>
-                        EqualityComparer<TProperty>.Default.Equals(GetId(e), GetId(entity)));
+                        EqualityComparer<TProperty>.Default.Equals(_getId(e), _getId(entity)));
                     if (index >= 0) list[index] = entity;
                 }
 
@@ -77,7 +79,7 @@ internal sealed class InMemoryWriteStore<T, TProperty> where T : class where TPr
         {
             IEnumerable<T> dataSource = entities ?? _items;
             var existing =
-                dataSource.FirstOrDefault(e => EqualityComparer<TProperty>.Default.Equals(GetId(e), GetId(entity)));
+                dataSource.FirstOrDefault(e => EqualityComparer<TProperty>.Default.Equals(_getId(e), _getId(entity)));
             if (existing != null)
             {
                 _deletedEntities.Add(existing);
@@ -113,12 +115,12 @@ internal sealed class InMemoryWriteStore<T, TProperty> where T : class where TPr
             List<T> source = entities is List<T> l ? l : (entities?.ToList() ?? _items);
             var indexById = new Dictionary<TProperty, int>(source.Count);
             for (int i = 0; i < source.Count; i++)
-                indexById[GetId(source[i])!] = i;
+                indexById[_getId(source[i])!] = i;
 
             var updated = new List<T>();
             foreach (T entity in entitiesToUpdate)
             {
-                TProperty id = GetId(entity)!;
+                TProperty id = _getId(entity)!;
                 if (!indexById.TryGetValue(id, out int idx)) continue;
                 _updatedEntities.Add(entity);
                 updated.Add(entity);
@@ -136,13 +138,13 @@ internal sealed class InMemoryWriteStore<T, TProperty> where T : class where TPr
             List<T> source = entities is List<T> l ? l : (entities?.ToList() ?? _items);
             var entityById = new Dictionary<TProperty, T>(source.Count);
             foreach (T item in source)
-                entityById[GetId(item)!] = item;
+                entityById[_getId(item)!] = item;
 
             int count = 0;
             var toRemove = new List<T>();
             foreach (T entity in entitiesToDelete)
             {
-                TProperty id = GetId(entity)!;
+                TProperty id = _getId(entity)!;
                 if (!entityById.TryGetValue(id, out T? existing)) continue;
                 _deletedEntities.Add(existing);
                 toRemove.Add(existing);
@@ -151,8 +153,8 @@ internal sealed class InMemoryWriteStore<T, TProperty> where T : class where TPr
             }
             if (toRemove.Count > 0)
             {
-                var removeSet = new HashSet<TProperty>(toRemove.Select(e => GetId(e)!));
-                source.RemoveAll(e => removeSet.Contains(GetId(e)!));
+                var removeSet = new HashSet<TProperty>(toRemove.Select(e => _getId(e)!));
+                source.RemoveAll(e => removeSet.Contains(_getId(e)!));
             }
             return count;
         }
@@ -161,24 +163,30 @@ internal sealed class InMemoryWriteStore<T, TProperty> where T : class where TPr
     private T UpsertCore(T entity, IEnumerable<T>? entities)
     {
         // Must be called within _lock
-        IEnumerable<T> dataSource = entities ?? _items;
-        var existing = dataSource.FirstOrDefault(e =>
-            EqualityComparer<TProperty>.Default.Equals(GetId(e), GetId(entity)));
-        if (existing != null)
+        if (entities is List<T> externalList)
         {
-            _updatedEntities.Add(entity);
-            if (entities is List<T> list)
-            {
-                var index = list.FindIndex(e =>
-                    EqualityComparer<TProperty>.Default.Equals(GetId(e), GetId(entity)));
-                if (index >= 0) list[index] = entity;
-            }
+            var index = externalList.FindIndex(e =>
+                EqualityComparer<TProperty>.Default.Equals(_getId(e), _getId(entity)));
+            if (index >= 0)
+                externalList[index] = entity;
+            else
+                externalList.Add(entity);
+
+            if (index >= 0)
+                _updatedEntities.Add(entity);
+            else
+                _addedEntities.Add(entity);
         }
         else
         {
-            _addedEntities.Add(entity);
-            (entities as List<T>)?.Add(entity);
+            var index = _items.FindIndex(e =>
+                EqualityComparer<TProperty>.Default.Equals(_getId(e), _getId(entity)));
+            if (index >= 0)
+                _updatedEntities.Add(entity);
+            else
+                _addedEntities.Add(entity);
         }
+
         return entity;
     }
 
@@ -201,7 +209,7 @@ internal sealed class InMemoryWriteStore<T, TProperty> where T : class where TPr
                 "External store must be a List<T> to support mutations. Pass null to use the internal store.",
                 nameof(entities));
         var deduplicated = entitiesToUpsert
-            .GroupBy(e => GetId(e))
+            .GroupBy(e => _getId(e))
             .Select(g => g.Last())
             .ToList();
         var results = new List<T>();
@@ -236,55 +244,39 @@ internal sealed class InMemoryWriteStore<T, TProperty> where T : class where TPr
         {
             if (entities is List<T> externalList)
             {
-                var existingIds = new HashSet<TProperty>(externalList.Select(e => GetId(e)!));
-                foreach (var entity in _addedEntities)
-                    if (existingIds.Add(GetId(entity)!))
-                        externalList.Add(entity);
-
-                var indexMap = new Dictionary<TProperty, int>(externalList.Count);
-                for (int i = 0; i < externalList.Count; i++)
-                    indexMap[GetId(externalList[i])!] = i;
-                foreach (var entity in _updatedEntities)
-                    if (indexMap.TryGetValue(GetId(entity)!, out int idx))
-                        externalList[idx] = entity;
-
-                if (_deletedEntities.Count > 0)
-                {
-                    var deleteIds = new HashSet<TProperty>(_deletedEntities.Select(e => GetId(e)!));
-                    externalList.RemoveAll(e => deleteIds.Contains(GetId(e)!));
-                }
-
-                _addedEntities.Clear();
-                _updatedEntities.Clear();
-                _deletedEntities.Clear();
+                ApplyPendingChanges(externalList);
                 return;
             }
 
-            // Apply to internal store
-            foreach (var entity in _addedEntities)
-            {
-                if (!_items.Contains(entity, new EntityEqualityComparer<T, TProperty>(GetId)))
-                    _items.Add(entity);
-            }
-
-            foreach (var entity in _updatedEntities)
-            {
-                var index = _items.FindIndex(e =>
-                    EqualityComparer<TProperty>.Default.Equals(GetId(e), GetId(entity)));
-                if (index >= 0)
-                    _items[index] = entity;
-            }
-
-            if (_deletedEntities.Count > 0)
-            {
-                var deleteIds = new HashSet<TProperty>(_deletedEntities.Select(e => GetId(e)!));
-                _items.RemoveAll(e => deleteIds.Contains(GetId(e)!));
-            }
-
-            _addedEntities.Clear();
-            _updatedEntities.Clear();
-            _deletedEntities.Clear();
+            ApplyPendingChanges(_items);
         }
+    }
+
+    private void ApplyPendingChanges(List<T> target)
+    {
+        // adds — skip duplicates by ID
+        var existingIds = new HashSet<TProperty>(target.Select(e => _getId(e)!));
+        foreach (var entity in _addedEntities)
+            if (existingIds.Add(_getId(entity)!))
+                target.Add(entity);
+        _addedEntities.Clear();
+
+        // updates
+        var indexMap = new Dictionary<TProperty, int>(target.Count);
+        for (int i = 0; i < target.Count; i++)
+            indexMap[_getId(target[i])!] = i;
+        foreach (var entity in _updatedEntities)
+            if (indexMap.TryGetValue(_getId(entity)!, out int idx))
+                target[idx] = entity;
+        _updatedEntities.Clear();
+
+        // deletes
+        if (_deletedEntities.Count > 0)
+        {
+            var deleteIds = new HashSet<TProperty>(_deletedEntities.Select(e => _getId(e)!));
+            target.RemoveAll(e => deleteIds.Contains(_getId(e)!));
+        }
+        _deletedEntities.Clear();
     }
 }
 

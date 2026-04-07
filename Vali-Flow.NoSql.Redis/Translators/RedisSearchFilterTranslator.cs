@@ -39,6 +39,15 @@ public static class RedisSearchFilterTranslator
     /// var results = db.FT().Search("idx:products", new Query(query));
     /// </code>
     /// </example>
+    public static string Translate(IConditionNode node, Func<object?, string?>? customConverter = null)
+    {
+        if (node == null) throw new ArgumentNullException(nameof(node));
+
+        Validate(node);
+
+        return node.Accept(new RedisVisitor(customConverter));
+    }
+
     /// <summary>
     /// Validates that the node tree contains no NullNode expressions,
     /// which are not supported by RediSearch.
@@ -50,15 +59,6 @@ public static class RedisSearchFilterTranslator
             buildMessage:  n => $"RediSearch does not support null/existence checks " +
                                 $"(NullNode on field '{((NullNode)n).Field}'). " +
                                 "Use Validate() before Translate() to detect this early."));
-
-    public static string Translate(IConditionNode node, Func<object?, string?>? customConverter = null)
-    {
-        if (node == null) throw new ArgumentNullException(nameof(node));
-
-        Validate(node);
-
-        return node.Accept(new RedisVisitor(customConverter));
-    }
 
     private sealed class RedisVisitor(Func<object?, string?>? customConverter) : IConditionNodeVisitor<string>
     {

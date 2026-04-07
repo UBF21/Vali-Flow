@@ -24,7 +24,7 @@ internal sealed class AsyncInMemoryAdapter<T, TProperty>
 
     private static Func<T, TResult> GetOrCompile<TResult>(Expression<Func<T, TResult>> selector) =>
         (Func<T, TResult>)_compiledCache.GetOrAdd(
-            selector.ToString(),
+            $"{typeof(T).FullName}|{selector}",
             _ => selector.Compile());
 
     internal Task<bool> EvaluateAnyAsync(ValiFlow<T>? filter, CancellationToken cancellationToken)

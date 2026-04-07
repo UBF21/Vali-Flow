@@ -43,17 +43,18 @@ public sealed class ValiFlowEvaluator<T, TProperty> : IInMemoryEvaluatorRead<T>,
 
     private Func<T, bool> GetDefaultCondition(ValiFlow<T>? valiFlow = null, bool negated = false)
     {
-        ValiFlow<T> selectedValiFlow = valiFlow ?? _valiFlow ?? new ValiFlow<T>();
-        if (!negated) return selectedValiFlow.BuildCached();
-        // Only cache when using the instance-level _valiFlow
-        if (valiFlow == null)
+        if (!negated)
         {
-            lock (_stateLock)
-            {
-                return _cachedNegatedCondition ??= selectedValiFlow.BuildNegated().Compile();
-            }
+            var flow = valiFlow ?? _valiFlow ?? new ValiFlow<T>();
+            return flow.BuildCached();
         }
-        return selectedValiFlow.BuildNegated().Compile();
+        lock (_stateLock)
+        {
+            var flow = valiFlow ?? _valiFlow ?? new ValiFlow<T>();
+            if (valiFlow == null)
+                return _cachedNegatedCondition ??= flow.BuildNegated().Compile();
+            return flow.BuildNegated().Compile();
+        }
     }
 
     private Expression<Func<T, bool>> Build(ValiFlow<T>? valiFlow = null)
@@ -154,10 +155,10 @@ public sealed class ValiFlowEvaluator<T, TProperty> : IInMemoryEvaluatorRead<T>,
         if (page < 1) throw new ArgumentOutOfRangeException(nameof(page), "Page must be greater than or equal to 1.");
         if (pageSize < 1) throw new ArgumentOutOfRangeException(nameof(pageSize), "Page size must be greater than or equal to 1.");
         IEnumerable<T> dataSource = entities ?? _store.Items;
-        IEnumerable<T> filtered = EvaluateAll(dataSource, orderBy, ascending, thenBys, valiFlow, negateCondition);
-        var list = filtered.ToList();
-        int totalCount = list.Count;
-        IEnumerable<T> pageItems = list.Skip((page - 1) * pageSize).Take(pageSize);
+        var filtered = dataSource.Where(GetDefaultCondition(valiFlow, negateCondition)).ToList();
+        int totalCount = filtered.Count;
+        IEnumerable<T> ordered = ApplyOrdering(filtered, orderBy, ascending, thenBys);
+        IEnumerable<T> pageItems = ordered.Skip((page - 1) * pageSize).Take(pageSize);
         return new PagedResult<T>(pageItems, totalCount, page, pageSize);
     }
 
