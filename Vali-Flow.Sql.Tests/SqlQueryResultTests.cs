@@ -181,17 +181,17 @@ public sealed class SqlQueryResultTests
             return _items.Count - 1;
         }
         public void Clear() => _items.Clear();
-        public bool Contains(object value) => _items.Contains((IDataParameter)value);
+        public bool Contains(object? value) => value is IDataParameter p && _items.Contains(p);
         public void CopyTo(Array array, int index) => throw new NotSupportedException();
         public int Count => _items.Count;
         public bool IsSynchronized => false;
         public object SyncRoot => this;
         public System.Collections.IEnumerator GetEnumerator() => _items.GetEnumerator();
-        public int IndexOf(object value) => _items.IndexOf((IDataParameter)value);
-        public void Insert(int index, object value) => _items.Insert(index, (IDataParameter)value);
+        public int IndexOf(object? value) => value is IDataParameter p ? _items.IndexOf(p) : -1;
+        public void Insert(int index, object? value) => _items.Insert(index, (IDataParameter)value!);
         public bool IsFixedSize => false;
         public bool IsReadOnly => false;
-        public void Remove(object value) => _items.Remove((IDataParameter)value);
+        public void Remove(object? value) { if (value is IDataParameter p) _items.Remove(p); }
         public void RemoveAt(int index) => _items.RemoveAt(index);
     }
 

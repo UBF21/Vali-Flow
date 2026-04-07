@@ -64,20 +64,20 @@ public static class ElasticsearchFilterTranslator
             node.IsNegated
                 ? Query.Bool(new BoolQuery
                 {
-                    MustNot = [Query.Term(new TermQuery(node.Field) { Value = ToFieldValue(node.Value) })]
+                    MustNot = [Query.Term(new TermQuery(node.Field!) { Value = ToFieldValue(node.Value) })]
                 })
-                : Query.Term(new TermQuery(node.Field) { Value = ToFieldValue(node.Value) });
+                : Query.Term(new TermQuery(node.Field!) { Value = ToFieldValue(node.Value) });
 
         public Query VisitComparison(ComparisonNode node) => node.Op switch
         {
-            ComparisonOp.GreaterThan        => Query.Range(new NumberRangeQuery(node.Field) { Gt  = ToDouble(node.Value) }),
-            ComparisonOp.GreaterThanOrEqual => Query.Range(new NumberRangeQuery(node.Field) { Gte = ToDouble(node.Value) }),
-            ComparisonOp.LessThan           => Query.Range(new NumberRangeQuery(node.Field) { Lt  = ToDouble(node.Value) }),
-            ComparisonOp.LessThanOrEqual    => Query.Range(new NumberRangeQuery(node.Field) { Lte = ToDouble(node.Value) }),
+            ComparisonOp.GreaterThan        => Query.Range(new NumberRangeQuery(node.Field!) { Gt  = ToDouble(node.Value) }),
+            ComparisonOp.GreaterThanOrEqual => Query.Range(new NumberRangeQuery(node.Field!) { Gte = ToDouble(node.Value) }),
+            ComparisonOp.LessThan           => Query.Range(new NumberRangeQuery(node.Field!) { Lt  = ToDouble(node.Value) }),
+            ComparisonOp.LessThanOrEqual    => Query.Range(new NumberRangeQuery(node.Field!) { Lte = ToDouble(node.Value) }),
             _ => throw new NotSupportedException($"ComparisonOp.{node.Op} is not mapped.")
         };
 
-        public Query VisitLike(LikeNode node) => Query.Wildcard(new WildcardQuery(node.Field)
+        public Query VisitLike(LikeNode node) => Query.Wildcard(new WildcardQuery(node.Field!)
         {
             Value           = BuildWildcardPattern(node.Pattern, node.Op),
             CaseInsensitive = true
@@ -94,7 +94,7 @@ public static class ElasticsearchFilterTranslator
 
             return Query.Terms(new TermsQuery
             {
-                Field = node.Field,
+                Field = node.Field!,
                 Term  = new TermsQueryField(node.Values.Select(v => ToFieldValue(v)).ToArray())
             });
         }
@@ -105,9 +105,9 @@ public static class ElasticsearchFilterTranslator
             node.Check == NullCheckOp.IsNull
                 ? Query.Bool(new BoolQuery
                 {
-                    MustNot = [Query.Exists(new ExistsQuery { Field = node.Field })]
+                    MustNot = [Query.Exists(new ExistsQuery { Field = node.Field! })]
                 })
-                : Query.Exists(new ExistsQuery { Field = node.Field });
+                : Query.Exists(new ExistsQuery { Field = node.Field! });
 
         // ── Helpers ───────────────────────────────────────────────────────────────
 

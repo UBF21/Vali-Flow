@@ -12,6 +12,7 @@ namespace Vali_Flow.InMemory.Classes.Repositories;
 
 public abstract class EvaluatorBase<T, TProperty> : IInMemoryEvaluatorRead<T>, IInMemoryEvaluatorWrite<T>
     where T : class
+    where TProperty : notnull
 {
     protected readonly ValiFlowEvaluator<T, TProperty> Evaluator;
 
