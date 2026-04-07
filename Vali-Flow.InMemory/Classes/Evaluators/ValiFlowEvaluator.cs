@@ -18,6 +18,8 @@ public sealed class ValiFlowEvaluator<T, TProperty> : IInMemoryEvaluatorRead<T>,
     internal readonly InMemoryWriteStore<T, TProperty> _store;
     private ValiFlow<T>? _valiFlow;
     private Func<T, bool>? _cachedNegatedCondition;
+    private AsyncInMemoryAdapter<T, TProperty>? _asyncAdapter;
+    private AsyncInMemoryAdapter<T, TProperty> AsyncAdapter => _asyncAdapter ??= new(this);
 
     public ValiFlowEvaluator(IEnumerable<T>? initialData = null, ValiFlow<T>? valiFlow = null,
         Func<T, TProperty>? getId = null)
@@ -291,15 +293,7 @@ public sealed class ValiFlowEvaluator<T, TProperty> : IInMemoryEvaluatorRead<T>,
         if (selector == null) throw new ArgumentNullException(nameof(selector));
         IEnumerable<T> dataSource = entities ?? _store.Items;
         Func<T, bool> condition = GetDefaultCondition(valiFlow, negateCondition);
-        TResult sum = TResult.Zero;
-        int count = 0;
-        foreach (T item in dataSource)
-        {
-            if (!condition(item)) continue;
-            sum += selector(item);
-            count++;
-        }
-        return count == 0 ? 0m : decimal.CreateChecked(sum) / count;
+        return ComputeAverage(dataSource.Where(condition).Select(selector));
     }
 
     public TResult EvaluateSum<TResult>(
@@ -430,20 +424,9 @@ public sealed class ValiFlowEvaluator<T, TProperty> : IInMemoryEvaluatorRead<T>,
         if (selector == null) throw new ArgumentNullException(nameof(selector));
         IEnumerable<T> dataSource = entities ?? _store.Items;
         Func<T, bool> condition = GetDefaultCondition(valiFlow, negateCondition);
-        var groups = new Dictionary<TKey, (TResult Sum, int Count)>();
-        foreach (T item in dataSource)
-        {
-            if (!condition(item)) continue;
-            TKey key = keySelector(item);
-            TResult val = selector(item);
-            if (groups.TryGetValue(key, out var acc))
-                groups[key] = (acc.Sum + val, acc.Count + 1);
-            else
-                groups[key] = (val, 1);
-        }
-        return groups.ToDictionary(
-            kv => kv.Key,
-            kv => kv.Value.Count == 0 ? 0m : decimal.CreateChecked(kv.Value.Sum) / kv.Value.Count);
+        return dataSource.Where(condition)
+            .GroupBy(keySelector)
+            .ToDictionary(g => g.Key, g => ComputeAverage(g.Select(selector)));
     }
 
     public Dictionary<TKey, List<T>> EvaluateDuplicatesByGroup<TKey>(
@@ -497,6 +480,19 @@ public sealed class ValiFlowEvaluator<T, TProperty> : IInMemoryEvaluatorRead<T>,
     #endregion
 
     #region Methods Private
+
+    private static decimal ComputeAverage<TResult>(IEnumerable<TResult> values)
+        where TResult : INumber<TResult>
+    {
+        TResult sum = TResult.Zero;
+        int count = 0;
+        foreach (TResult v in values)
+        {
+            sum += v;
+            count++;
+        }
+        return count == 0 ? 0m : decimal.CreateChecked(sum) / count;
+    }
 
     private IEnumerable<T> ApplyOrdering<TKey>(
         IEnumerable<T>? query,
@@ -566,32 +562,32 @@ public sealed class ValiFlowEvaluator<T, TProperty> : IInMemoryEvaluatorRead<T>,
     #region IQueryReader<T> + IQueryAggregator<T> — provider-agnostic methods
 
     Task<bool> IQueryReader<T>.EvaluateAnyAsync(ValiFlow<T>? filter, CancellationToken cancellationToken)
-        => Task.FromResult(EvaluateAny(null, filter));
+        => AsyncAdapter.EvaluateAnyAsync(filter, cancellationToken);
 
     Task<int> IQueryReader<T>.EvaluateCountAsync(ValiFlow<T>? filter, CancellationToken cancellationToken)
-        => Task.FromResult(EvaluateCount(null, filter));
+        => AsyncAdapter.EvaluateCountAsync(filter, cancellationToken);
 
     Task<T?> IQueryReader<T>.EvaluateGetFirstAsync(ValiFlow<T>? filter, CancellationToken cancellationToken)
-        => Task.FromResult(GetFirst(null, filter));
+        => AsyncAdapter.EvaluateGetFirstAsync(filter, cancellationToken);
 
     Task<T?> IQueryReader<T>.EvaluateGetLastAsync(ValiFlow<T>? filter, CancellationToken cancellationToken)
-        => Task.FromResult(GetLast<object>(null, null, true, null, filter));
+        => AsyncAdapter.EvaluateGetLastAsync(filter, cancellationToken);
 
     Task<TResult> IQueryAggregator<T>.EvaluateMinAsync<TResult>(
         Expression<Func<T, TResult>> selector, ValiFlow<T>? filter, CancellationToken cancellationToken)
-        => Task.FromResult(EvaluateMin<TResult>(null, selector.Compile(), filter));
+        => AsyncAdapter.EvaluateMinAsync(selector, filter, cancellationToken);
 
     Task<TResult> IQueryAggregator<T>.EvaluateMaxAsync<TResult>(
         Expression<Func<T, TResult>> selector, ValiFlow<T>? filter, CancellationToken cancellationToken)
-        => Task.FromResult(EvaluateMax<TResult>(null, selector.Compile(), filter));
+        => AsyncAdapter.EvaluateMaxAsync(selector, filter, cancellationToken);
 
     Task<decimal> IQueryAggregator<T>.EvaluateAverageAsync<TResult>(
         Expression<Func<T, TResult>> selector, ValiFlow<T>? filter, CancellationToken cancellationToken)
-        => Task.FromResult(EvaluateAverage<TResult>(null, selector.Compile(), filter));
+        => AsyncAdapter.EvaluateAverageAsync(selector, filter, cancellationToken);
 
     Task<TResult> IQueryAggregator<T>.EvaluateSumAsync<TResult>(
         Expression<Func<T, TResult>> selector, ValiFlow<T>? filter, CancellationToken cancellationToken)
-        => Task.FromResult(EvaluateSum<TResult>(null, selector.Compile(), filter));
+        => AsyncAdapter.EvaluateSumAsync(selector, filter, cancellationToken);
 
     #endregion
 }
