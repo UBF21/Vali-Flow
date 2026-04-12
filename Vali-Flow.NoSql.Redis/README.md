@@ -1,104 +1,43 @@
 # Vali-Flow.NoSql.Redis
 
-Translates a `ValiFlow<T>` fluent filter into a RediSearch query string — ready to pass to `db.FT().Search(indexName, new Query(result))`.
+Redis (RediSearch) query builder that translates `ValiFlow<T>` filters into native RediSearch query syntax.
 
-## Install
+See the [main README](../../README.md) for complete documentation and examples.
+
+## Installation
 
 ```bash
 dotnet add package Vali-Flow.NoSql.Redis
 ```
 
-## Quick Start
+## Quick Example
 
 ```csharp
-using NRedisStack;
-using NRedisStack.Search;
-using StackExchange.Redis;
-using Vali_Flow.Core.Builder;
 using Vali_Flow.NoSql.Redis.Extensions;
 
 var filter = new ValiFlow<Product>()
-    .EqualTo(x => x.IsActive, true)
-    .In(x => x.Category, new[] { "Electronics", "Computers" })
-    .GreaterThanOrEqualTo(x => x.Price, 50m)
-    .StartsWith(x => x.Name, "Pro");
+    .EqualTo(x => x.Category, "Electronics")
+    .GreaterThan(x => x.Price, 100m)
+    .Contains(x => x.Name, "phone");
 
-string query = filter.ToRedisSearch();
+string redisQuery = filter.ToRedisSearch();
 
-IDatabase db = redis.GetDatabase();
-SearchResult results = db.FT().Search("idx:products", new Query(query));
+var results = db.FT().Search("idx:products", new Query(redisQuery));
 ```
 
-## What it supports
+## Features
 
-| Operation | RediSearch output |
-|-----------|------------------|
-| `EqualTo` (numeric/bool) | `@field:[v v]` |
-| `EqualTo` (string) | `@field:{"v"}` |
-| `NotEqualTo` (numeric) | `(-@field:[v v])` |
-| `NotEqualTo` (string) | `-@field:{"v"}` |
-| `GreaterThan` / `GreaterThanOrEqualTo` | `@field:[(v +inf]` / `@field:[v +inf]` |
-| `LessThan` / `LessThanOrEqualTo` | `@field:[-inf (v]` / `@field:[-inf v]` |
-| `Contains` / `StartsWith` / `EndsWith` | `@field:*txt*` / `@field:txt*` / `@field:*txt` |
-| `In` (numeric) | `(@field:[v1 v1]\|@field:[v2 v2]\|…)` |
-| `In` (string) | `@field:{"v1"\|"v2"\|…}` |
-| `And` / `Or` / `Not` | `(a b)` / `(a \| b)` / `-(a)` |
+- Translates `ValiFlow<T>` expressions to RediSearch query syntax
+- Numeric range queries: `@field:[min max]`
+- Tag queries: `@field:{tag1|tag2}`
+- Wildcard pattern matching: `@field:*pattern*`
+- Compatible with NRedisStack
 
 ## Limitations
 
-| Limitation | Detail |
-|-----------|--------|
-| `IsNull` / `IsNotNull` | Throws `NotSupportedException`. RediSearch has no native field-existence query. Handle null checks at the application level. |
-| Empty `In` list | Produces `(-*)` — always false. |
-| Mixed numeric/string `In` | Throws `InvalidOperationException`. All non-null values in a single `In` call must be of the same kind. |
-| DIALECT 2 | Required for quoted tag values. NRedisStack 1.3.0+ appends it automatically. |
-
-## Custom value converter
-
-Pass a `customConverter` delegate to control how domain types appear in the query string:
-
-```csharp
-// Price stored as integer cents in Redis
-record Price(int Cents);
-
-string query = new ValiFlow<Product>()
-    .GreaterThanOrEqualTo(x => x.UnitPrice, new Price(1000))
-    .ToRedisSearch(value =>
-    {
-        if (value is Price p) return p.Cents.ToString(CultureInfo.InvariantCulture);
-        return null;
-    });
-
-// query → "@UnitPrice:[1000 +inf]"
-```
-
-## Expression overload
-
-```csharp
-Expression<Func<Order, bool>> expr = o => o.Status == "Pending" && o.Total >= 200m;
-string query = expr.ToRedisSearch();
-```
-
-## Notes
-
-- Depends on `NRedisStack` for the `Query` type only — no connection or execution logic.
-- Field names mirror .NET property names. Use a naming convention in your RediSearch index definition to map to custom field names.
-- `Contains`, `StartsWith`, and `EndsWith` target TEXT fields in your RediSearch schema.
-
-## Contributing
-
-Contributions, issues, and feature requests are welcome. Feel free to open a pull request or an issue on [GitHub](https://github.com/UBF21/vali-flow).
-
-If this package is useful to you, consider supporting its development:
-
-- **Latin America** — [MercadoPago](https://link.mercadopago.com.pe/felipermm)
-- **International** — [PayPal](https://paypal.me/felipeRMM?country.x=PE&locale.x=es_XC)
+- `IsNull` / `IsNotNull` are not supported (RediSearch has no field-existence syntax)
+- Handle null checks at the application level or use custom value converters
 
 ## License
 
-Licensed under the [MIT License](LICENSE).  
-Copyright &copy; 2025 Felipe Rafael Montenegro Morriberon. All rights reserved.
-
-## Full documentation
-
-[vali-flow-docs.netlify.app/docs/adapters/nosql/redis/overview](https://vali-flow-docs.netlify.app/docs/adapters/nosql/redis/overview)
+MIT

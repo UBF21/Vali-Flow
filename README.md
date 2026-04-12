@@ -1,434 +1,152 @@
 # Vali-Flow
 
-[![NuGet Version](https://img.shields.io/nuget/v/Vali-Flow?label=Vali-Flow&color=blue)](https://www.nuget.org/packages/Vali-Flow)
-[![NuGet Version](https://img.shields.io/nuget/v/Vali-Flow.InMemory?label=Vali-Flow.InMemory&color=blue)](https://www.nuget.org/packages/Vali-Flow.InMemory)
-[![NuGet Version](https://img.shields.io/nuget/v/Vali-Flow.Sql?label=Vali-Flow.Sql&color=blue)](https://www.nuget.org/packages/Vali-Flow.Sql)
-[![NuGet Version](https://img.shields.io/nuget/v/Vali-Flow.NoSql.MongoDB?label=Vali-Flow.NoSql.MongoDB&color=blue)](https://www.nuget.org/packages/Vali-Flow.NoSql.MongoDB)
-[![NuGet Version](https://img.shields.io/nuget/v/Vali-Flow.NoSql.Elasticsearch?label=Vali-Flow.NoSql.Elasticsearch&color=blue)](https://www.nuget.org/packages/Vali-Flow.NoSql.Elasticsearch)
-[![NuGet Version](https://img.shields.io/nuget/v/Vali-Flow.Core?label=Vali-Flow.Core&color=blue)](https://www.nuget.org/packages/Vali-Flow.Core)
-[![.NET](https://img.shields.io/badge/.NET-8%20%7C%209-512BD4)](https://dotnet.microsoft.com)
-[![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+## Overview
 
-A .NET library ecosystem for building reusable, composable query criteria with a fluent API. Translate the same `ValiFlow<T>` filter into EF Core queries, parameterized SQL, MongoDB BSON filters, or Elasticsearch Query DSL — without scattering filter logic across repositories or duplicating predicates per data store.
+Vali-Flow is a comprehensive .NET library ecosystem for building reusable, composable query criteria with a fluent API. It enables you to define filter logic once using a simple, expression-based DSL and translate it into:
 
----
+- **Entity Framework Core** queries (async)
+- **Parameterized SQL** for Dapper / ADO.NET (SQL Server, PostgreSQL, MySQL, SQLite)
+- **MongoDB BSON** filters
+- **Elasticsearch Query DSL**
+- **Redis (RediSearch)** queries
+- **AWS DynamoDB** filter expressions
+- **In-memory** evaluation (LINQ-to-Objects)
 
-## Features
+All built on **Vali-Flow.Core** — a lightweight expression builder with zero additional dependencies.
 
-- Fluent specification classes (`BasicSpecification<T>`, `QuerySpecification<T>`) for encapsulating filter, ordering, and pagination logic
-- `ValiFlowEvaluator<T>` for all read and write operations against an EF Core `DbContext`
-- Ordering with primary `WithOrderBy` and secondary `AddThenBy` expressions
-- Pagination via `WithPagination`, `WithPage`, `WithPageSize`, and `WithTop`
-- Eager loading with strongly-typed `AddInclude`
-- EF Core query hints: `AsNoTracking`, `AsSplitQuery`, `IgnoreQueryFilters`
-- Aggregate queries: `Min`, `Max`, `Average`, `Sum`, grouped variants
-- Distinct and duplicate detection queries
-- Bulk operations via `EFCore.BulkExtensions`: `BulkInsertAsync`, `BulkUpdateAsync`, `BulkDeleteAsync`, `BulkInsertOrUpdateAsync`
-- Upsert support: single entity (`UpsertAsync`) and collection (`UpsertRangeAsync`)
-- Transaction support via `ExecuteTransactionAsync`
-- `Vali-Flow.InMemory` package for in-memory evaluation without a database (unit testing, caching)
-- `Vali-Flow.Sql` package — translates `ValiFlow<T>` into parameterized SQL for Dapper / ADO.NET (SQL Server, PostgreSQL, MySQL, SQLite)
-- `Vali-Flow.NoSql.MongoDB` package — translates `ValiFlow<T>` into a `BsonDocument` filter for MongoDB
-- `Vali-Flow.NoSql.Elasticsearch` package — translates `ValiFlow<T>` into an Elasticsearch `Query` object
-- Built on top of `Vali-Flow.Core` expression builder — zero additional dependencies for filter construction
+**Supported platforms:** .NET 8.0, .NET 9.0
 
 ---
 
-## Installation
+## The Problem It Solves
 
-Install the EF Core package for production data access:
+When working with multiple data stores or ORM patterns, you typically scatter filter logic across repositories, duplicate predicates per store, or couple business logic to data access code:
 
-```bash
-dotnet add package Vali-Flow
+```csharp
+// ❌ Traditional approach: filter logic is scattered
+public async Task<List<Order>> GetActiveOrdersEF(DbContext db, decimal minTotal)
+{
+    return await db.Orders
+        .Where(o => o.Status == "Active" && o.Total > minTotal)
+        .ToListAsync();
+}
+
+public List<Order> GetActiveOrdersMongo(IMongoCollection<Order> coll, decimal minTotal)
+{
+    return coll.Find(Builders<Order>.Filter.And(
+        Builders<Order>.Filter.Eq(o => o.Status, "Active"),
+        Builders<Order>.Filter.Gt(o => o.Total, minTotal)
+    )).ToList();
+}
+
+public DataTable GetActiveOrdersSQL(SqlConnection conn, decimal minTotal)
+{
+    var cmd = new SqlCommand(
+        "SELECT * FROM Orders WHERE Status = @status AND Total > @total", conn);
+    cmd.Parameters.AddWithValue("@status", "Active");
+    cmd.Parameters.AddWithValue("@total", minTotal);
+    // ...
+}
 ```
 
-Install the in-memory package for testing or in-process evaluation:
+**With Vali-Flow:**
 
-```bash
-dotnet add package Vali-Flow.InMemory
+```csharp
+// ✅ Single filter definition
+var filter = new ValiFlow<Order>()
+    .EqualTo(x => x.Status, "Active")
+    .GreaterThan(x => x.Total, minTotal);
+
+// Use the same filter everywhere
+var efOrders = await new ValiFlowEvaluator<Order>(dbContext)
+    .EvaluateQueryAsync(new BasicSpecification<Order>().WithFilter(filter));
+
+var mongoOrders = mongoCollection.Find(filter.ToMongo()).ToList();
+
+var sqlResult = filter.ToSql(new SqlServerDialect());
+var sqlOrders = await connection.QueryAsync<Order>(
+    $"SELECT * FROM Orders WHERE {sqlResult.Sql}",
+    sqlResult.Parameters);
 ```
-
-Install the SQL query builder for Dapper / ADO.NET:
-
-```bash
-dotnet add package Vali-Flow.Sql
-```
-
-Install the MongoDB filter builder:
-
-```bash
-dotnet add package Vali-Flow.NoSql.MongoDB
-```
-
-Install the Elasticsearch query builder:
-
-```bash
-dotnet add package Vali-Flow.NoSql.Elasticsearch
-```
-
-Install the Redis (RediSearch) query builder:
-
-```bash
-dotnet add package Vali-Flow.NoSql.Redis
-```
-
-Install the AWS DynamoDB filter builder:
-
-```bash
-dotnet add package Vali-Flow.NoSql.DynamoDB
-```
-
-`Vali-Flow.Core` is automatically included as a transitive dependency of all packages.
 
 ---
 
 ## Package Ecosystem
 
-| Package | Purpose | Output type |
-|---------|---------|-------------|
-| `Vali-Flow.Core` | Fluent expression builder (`ValiFlow<T>`) | `Expression<Func<T, bool>>` |
-| `Vali-Flow` | EF Core async evaluator + specifications | Executes against `DbContext` |
-| `Vali-Flow.InMemory` | Synchronous in-memory evaluator | Executes against `IEnumerable<T>` |
-| `Vali-Flow.Sql` | SQL query builder | Parameterized SQL string + parameters |
-| `Vali-Flow.NoSql.MongoDB` | MongoDB filter builder | `BsonDocument` |
-| `Vali-Flow.NoSql.Elasticsearch` | Elasticsearch query builder | `Query` (Elastic.Clients.Elasticsearch) |
-| `Vali-Flow.NoSql.Redis` | Redis RediSearch query builder | `string` (RediSearch query) |
-| `Vali-Flow.NoSql.DynamoDB` | AWS DynamoDB filter builder | `DynamoFilterExpression` |
+### Core Package
+
+| Package | Purpose | Version |
+|---------|---------|---------|
+| **Vali-Flow.Core** | Fluent expression builder (`ValiFlow<T>`) - shared by all packages | [2.0.0](https://www.nuget.org/packages/Vali-Flow.Core) |
+
+### Data Access Packages
+
+| Package | Purpose | Target | Version |
+|---------|---------|--------|---------|
+| **Vali-Flow** | EF Core async evaluator + specifications (read/write) | `DbContext` | [1.1.0](https://www.nuget.org/packages/Vali-Flow) |
+| **Vali-Flow.InMemory** | Synchronous in-memory evaluator for testing & caching | `IEnumerable<T>` | [1.0.0](https://www.nuget.org/packages/Vali-Flow.InMemory) |
+| **Vali-Flow.Sql** | SQL query builder for parameterized queries | Dapper / ADO.NET | [1.0.0](https://www.nuget.org/packages/Vali-Flow.Sql) |
+
+### NoSQL Packages
+
+| Package | Database | Output Type | Version |
+|---------|----------|-------------|---------|
+| **Vali-Flow.NoSql.MongoDB** | MongoDB | `BsonDocument` | [1.0.0](https://www.nuget.org/packages/Vali-Flow.NoSql.MongoDB) |
+| **Vali-Flow.NoSql.Elasticsearch** | Elasticsearch | `Query` (Elastic.Clients) | [1.0.0](https://www.nuget.org/packages/Vali-Flow.NoSql.Elasticsearch) |
+| **Vali-Flow.NoSql.Redis** | Redis (RediSearch) | Query string | [1.0.0](https://www.nuget.org/packages/Vali-Flow.NoSql.Redis) |
+| **Vali-Flow.NoSql.DynamoDB** | AWS DynamoDB | `DynamoFilterExpression` | [1.0.0](https://www.nuget.org/packages/Vali-Flow.NoSql.DynamoDB) |
+
+### Architecture
 
 ```
-Vali-Flow.Core  (ValiFlow<T> expression builder)
+Vali-Flow.Core  (expression builder — ValiFlow<T>)
        │
-       ├── Vali-Flow              (EF Core — DbContext)
-       ├── Vali-Flow.InMemory     (In-process — IEnumerable<T>)
-       ├── Vali-Flow.Sql          (SQL — Dapper / ADO.NET)
-       └── Vali-Flow.NoSql
-               ├── Vali-Flow.NoSql.MongoDB        (BsonDocument)
-               ├── Vali-Flow.NoSql.Elasticsearch  (Query DSL)
-               ├── Vali-Flow.NoSql.Redis          (RediSearch string)
-               └── Vali-Flow.NoSql.DynamoDB       (DynamoFilterExpression)
+       ├─── Vali-Flow                    (EF Core async)
+       ├─── Vali-Flow.InMemory           (sync in-memory)
+       ├─── Vali-Flow.Sql                (SQL: SQL Server, PostgreSQL, MySQL, SQLite)
+       │
+       └─── Vali-Flow.NoSql
+               ├─── Vali-Flow.NoSql.MongoDB        (MongoDB BSON)
+               ├─── Vali-Flow.NoSql.Elasticsearch  (Elasticsearch Query DSL)
+               ├─── Vali-Flow.NoSql.Redis          (RediSearch)
+               └─── Vali-Flow.NoSql.DynamoDB       (DynamoDB filter expressions)
 ```
-
-All packages are **query builders only** — they do not manage connections, sessions, or execution. You pass the generated query object to your existing data access infrastructure.
 
 ---
 
 ## Quick Start
 
+### 1. Define a filter once
+
 ```csharp
-// 1. Create the evaluator (one per entity type, or wrap in a service)
+using Vali_Flow.Core;
+
+var filter = new ValiFlow<Order>()
+    .EqualTo(x => x.Status, "Active")
+    .GreaterThan(x => x.Total, 100m)
+    .IsAfter(x => x.CreatedAt, DateTime.UtcNow.AddDays(-30));
+```
+
+### 2. Use it with EF Core
+
+```csharp
+using Vali_Flow;
+
 var evaluator = new ValiFlowEvaluator<Order>(dbContext);
-
-// 2. Define a specification
 var spec = new BasicSpecification<Order>()
-    .WithFilter(new ValiFlow<Order>()
-        .EqualTo(x => x.Status, "Active")
-        .GreaterThan(x => x.Total, 0m))
-    .WithAsNoTracking(true);
-
-// 3. Query
-bool hasOrders   = await evaluator.EvaluateAnyAsync(spec, cancellationToken);
-int  totalOrders = await evaluator.EvaluateCountAsync(spec, cancellationToken);
-Order? first     = await evaluator.EvaluateGetFirstAsync(spec, cancellationToken);
-```
-
----
-
-## Core Concepts
-
-### BasicSpecification\<T\>
-
-Use `BasicSpecification<T>` when you need filtering, eager loading, and EF Core query options, but no ordering or pagination.
-
-```csharp
-var spec = new BasicSpecification<Product>()
-    .WithFilter(new ValiFlow<Product>()
-        .EqualTo(x => x.IsAvailable, true)
-        .GreaterThanOrEqualTo(x => x.Stock, 1))
-    .AddInclude(x => x.Category)
+    .WithFilter(filter)
     .WithAsNoTracking(true)
-    .WithAsSplitQuery(false)
-    .WithIgnoreQueryFilters(false);
+    .AddInclude(x => x.Customer);
+
+var orders = await evaluator.EvaluateQueryAsync(spec, cancellationToken);
 ```
 
-`BasicSpecification<T>` can also be constructed directly:
-
-```csharp
-var spec = new BasicSpecification<Product>(
-    filter: new ValiFlow<Product>().EqualTo(x => x.IsAvailable, true),
-    asNoTracking: true,
-    asSplitQuery: false,
-    ignoreQueryFilters: false
-);
-```
-
-### QuerySpecification\<T\>
-
-Extends `BasicSpecification<T>` with ordering, pagination, and top-N support. Use this for any query that returns a list.
-
-```csharp
-var querySpec = new QuerySpecification<Order>()
-    .WithFilter(new ValiFlow<Order>()
-        .EqualTo(x => x.CustomerId, customerId)
-        .EqualTo(x => x.Status, "Active"))
-    .WithOrderBy(x => x.CreatedAt, ascending: false)
-    .AddThenBy(x => x.Total, ascending: false)
-    .WithPagination(page: 1, pageSize: 20)
-    .WithAsNoTracking(true);
-```
-
----
-
-## Reading Data
-
-All read methods are on `ValiFlowEvaluator<T>` and accept a specification as their first argument.
-
-### Existence and count
-
-```csharp
-bool exists = await evaluator.EvaluateAnyAsync(spec, cancellationToken);
-int  count  = await evaluator.EvaluateCountAsync(spec, cancellationToken);
-```
-
-### Single entity
-
-```csharp
-Order? first = await evaluator.EvaluateGetFirstAsync(spec, cancellationToken);
-Order? last  = await evaluator.EvaluateGetLastAsync(spec, cancellationToken);
-
-// Retrieve the first entity that does NOT match the specification
-Order? firstFailed = await evaluator.EvaluateGetFirstFailedAsync(spec, cancellationToken);
-Order? lastFailed  = await evaluator.EvaluateGetLastFailedAsync(spec, cancellationToken);
-```
-
-### Query (IQueryable)
-
-```csharp
-IQueryable<Order> query       = await evaluator.EvaluateQueryAsync(querySpec);
-IQueryable<Order> failedQuery = await evaluator.EvaluateQueryFailedAsync(querySpec);
-
-// Project or further compose the queryable before materialising
-var totals = await query.Select(o => o.Total).ToListAsync(cancellationToken);
-```
-
-### Distinct and duplicates
-
-```csharp
-// One entity per CustomerId
-IQueryable<Order> distinct = await evaluator.EvaluateDistinctAsync(
-    querySpec,
-    selector: x => x.CustomerId,
-    cancellationToken);
-
-// All orders where the CustomerId appears more than once
-IQueryable<Order> duplicates = await evaluator.EvaluateDuplicatesAsync(
-    querySpec,
-    selector: x => x.CustomerId,
-    cancellationToken);
-```
-
-### Aggregates
-
-```csharp
-decimal minTotal = await evaluator.EvaluateMinAsync(spec, x => x.Total, cancellationToken);
-decimal maxTotal = await evaluator.EvaluateMaxAsync(spec, x => x.Total, cancellationToken);
-decimal avg      = await evaluator.EvaluateAverageAsync(spec, x => x.Total, cancellationToken);
-decimal sum      = await evaluator.EvaluateSumAsync(spec, x => x.Total, cancellationToken);
-```
-
-### Grouped aggregates
-
-```csharp
-Dictionary<string, List<Order>> byStatus =
-    await evaluator.EvaluateGroupedAsync(spec, x => x.Status, cancellationToken);
-
-Dictionary<string, int> countByStatus =
-    await evaluator.EvaluateCountByGroupAsync(spec, x => x.Status, cancellationToken);
-
-Dictionary<string, decimal> sumByStatus =
-    await evaluator.EvaluateSumByGroupAsync(spec, x => x.Status, x => x.Total, cancellationToken);
-```
-
-### Validate a single entity in memory
-
-```csharp
-var filter = new ValiFlow<Order>().GreaterThan(x => x.Total, 100m);
-bool passes = await evaluator.EvaluateAsync(filter, order);
-```
-
----
-
-## Writing Data
-
-### Single entity
-
-```csharp
-Order added   = await evaluator.AddAsync(newOrder, saveChanges: true, cancellationToken);
-Order updated = await evaluator.UpdateAsync(order, saveChanges: true, cancellationToken);
-await evaluator.DeleteAsync(order, saveChanges: true, cancellationToken);
-```
-
-### Collections
-
-```csharp
-IEnumerable<Order> added   = await evaluator.AddRangeAsync(orders, cancellationToken: cancellationToken);
-IEnumerable<Order> updated = await evaluator.UpdateRangeAsync(orders, cancellationToken: cancellationToken);
-await evaluator.DeleteRangeAsync(orders, cancellationToken: cancellationToken);
-```
-
-### Delete by condition
-
-```csharp
-await evaluator.DeleteByConditionAsync(
-    condition: x => x.Status == "Cancelled" && x.CreatedAt < DateTime.UtcNow.AddDays(-30),
-    cancellationToken: cancellationToken);
-```
-
-### Upsert
-
-```csharp
-// Single entity — insert if no match found, update otherwise
-Order upserted = await evaluator.UpsertAsync(
-    entity: order,
-    matchCondition: x => x.Id == order.Id,
-    cancellationToken: cancellationToken);
-
-// Collection — matched by key selector
-IEnumerable<Order> upserted = await evaluator.UpsertRangeAsync(
-    entities: orders,
-    keySelector: x => x.Id,
-    cancellationToken: cancellationToken);
-```
-
-### Deferred saves
-
-Pass `saveChanges: false` to batch multiple operations before committing:
-
-```csharp
-await evaluator.AddAsync(order1, saveChanges: false, cancellationToken);
-await evaluator.UpdateAsync(order2, saveChanges: false, cancellationToken);
-await evaluator.SaveChangesAsync(cancellationToken);
-```
-
-### Transactions
-
-```csharp
-await evaluator.ExecuteTransactionAsync(async () =>
-{
-    await evaluator.AddAsync(newOrder, saveChanges: false, cancellationToken);
-    await evaluator.UpdateAsync(existingOrder, saveChanges: false, cancellationToken);
-    await evaluator.SaveChangesAsync(cancellationToken);
-}, cancellationToken);
-```
-
----
-
-## Bulk Operations
-
-Bulk methods use `EFCore.BulkExtensions` for high-throughput scenarios. Pass an optional `BulkConfig` to control batch size, identity output, and which properties to compare or update.
-
-```csharp
-var bulkConfig = new BulkConfig { BatchSize = 1000, SetOutputIdentity = true };
-
-await evaluator.BulkInsertAsync(orders, bulkConfig, cancellationToken);
-await evaluator.BulkUpdateAsync(orders, bulkConfig, cancellationToken);
-await evaluator.BulkDeleteAsync(orders, bulkConfig, cancellationToken);
-await evaluator.BulkInsertOrUpdateAsync(orders, bulkConfig, cancellationToken);
-```
-
----
-
-## Ordering and Pagination
-
-### Primary and secondary ordering
-
-```csharp
-var spec = new QuerySpecification<Order>()
-    .WithFilter(filter)
-    .WithOrderBy(x => x.CreatedAt, ascending: false)
-    .AddThenBy(x => x.Total, ascending: true)
-    .AddThenBy(x => x.Id, ascending: true);
-```
-
-### Pagination
-
-```csharp
-// Fluent chaining
-var spec = new QuerySpecification<Order>()
-    .WithFilter(filter)
-    .WithOrderBy(x => x.CreatedAt, ascending: false)
-    .WithPagination(page: 2, pageSize: 25);
-
-// Or set page and page size separately
-spec.WithPage(2).WithPageSize(25);
-```
-
-### Top-N
-
-```csharp
-var spec = new QuerySpecification<Order>()
-    .WithFilter(filter)
-    .WithOrderBy(x => x.Total, ascending: false)
-    .WithTop(10); // returns at most 10 records
-```
-
----
-
-## Includes (Eager Loading)
-
-Add navigation properties to be loaded alongside the main entity. `AddInclude` is strongly typed and supports both single entities and collections.
-
-```csharp
-var spec = new BasicSpecification<Order>()
-    .WithFilter(new ValiFlow<Order>().EqualTo(x => x.Status, "Active"))
-    .AddInclude(x => x.Customer)
-    .AddInclude(x => x.OrderLines)
-    .AddInclude(x => x.ShippingAddress);
-```
-
----
-
-## EF Core Query Options
-
-These options can be applied to both `BasicSpecification<T>` and `QuerySpecification<T>`.
-
-| Method | Default | Effect |
-|---|---|---|
-| `WithAsNoTracking(bool)` | `true` | Disables EF Core change tracking for read-only queries |
-| `WithAsSplitQuery(bool)` | `false` | Splits JOIN queries into multiple round-trips to avoid Cartesian explosion |
-| `WithIgnoreQueryFilters(bool)` | `false` | Bypasses global query filters (e.g., soft-delete, multi-tenant) |
-
-```csharp
-// Retrieve soft-deleted records by bypassing the global IsDeleted filter
-var spec = new BasicSpecification<Order>()
-    .WithFilter(new ValiFlow<Order>().EqualTo(x => x.CustomerId, customerId))
-    .WithIgnoreQueryFilters(true)
-    .WithAsNoTracking(true);
-```
-
----
-
-## SQL Query Builder
-
-`Vali-Flow.Sql` translates a `ValiFlow<T>` filter into a parameterized SQL `WHERE` clause ready for Dapper, ADO.NET, or any raw SQL executor. It supports four dialects out of the box.
-
-### Basic usage
+### 3. Or with SQL/Dapper
 
 ```csharp
 using Vali_Flow.Sql.Extensions;
 using Vali_Flow.Sql.Dialects;
 
-var filter = new ValiFlow<Order>()
-    .EqualTo(x => x.Status, "Active")
-    .GreaterThan(x => x.Total, 100m);
-
-SqlResult result = filter.ToSql(new SqlServerDialect());
-// result.Sql        → "([Status] = @p0 AND [Total] > @p1)"
-// result.Parameters → { "@p0": "Active", "@p1": 100m }
-```
-
-### With Dapper
-
-```csharp
 var result = filter.ToSql(new PostgreSqlDialect());
 
 var orders = await connection.QueryAsync<Order>(
@@ -436,57 +154,222 @@ var orders = await connection.QueryAsync<Order>(
     result.Parameters);
 ```
 
-### With ADO.NET
+### 4. Or with MongoDB
 
 ```csharp
-using var cmd = connection.CreateCommand();
-cmd.CommandText = $"SELECT * FROM orders WHERE {result.Sql}";
-result.ApplyTo(cmd); // applies all parameters directly to the command
+using Vali_Flow.NoSql.MongoDB.Extensions;
+
+var bsonFilter = filter.ToMongo();
+var orders = await collection.Find(bsonFilter).ToListAsync();
 ```
 
-### Available dialects
-
-| Class | Quoting | Parameters | Notes |
-|-------|---------|-----------|-------|
-| `SqlServerDialect` | `[col]` | `@p0` | `LOWER()` for case-insensitive |
-| `PostgreSqlDialect` | `"col"` | `@p0` | Native `ILIKE` |
-| `MySqlDialect` | `` `col` `` | `@p0` | Case-insensitive `LIKE` |
-| `SqliteDialect` | `"col"` | `@p0` | `LOWER()` for case-insensitive |
-
-### SqlQueryBuilder — full SELECT statements
-
-For complete queries (SELECT, JOIN, GROUP BY, aggregates), use `SqlQueryBuilder<T>`:
+### 5. Or in-memory (testing)
 
 ```csharp
-var query = new SqlQueryBuilder<Order>(new PostgreSqlDialect())
+using Vali_Flow.InMemory;
+
+var evaluator = new ValiFlowEvaluator<Order, int>(orders, null, x => x.Id);
+var filtered = evaluator.EvaluateAll<DateTime>(
+    orders,
+    orderBy: x => x.CreatedAt,
+    valiFlow: filter);
+```
+
+---
+
+## Installation
+
+**Install the package(s) you need:**
+
+```bash
+# EF Core (production)
+dotnet add package Vali-Flow
+
+# In-memory (testing / caching)
+dotnet add package Vali-Flow.InMemory
+
+# SQL queries (Dapper / ADO.NET)
+dotnet add package Vali-Flow.Sql
+
+# MongoDB
+dotnet add package Vali-Flow.NoSql.MongoDB
+
+# Elasticsearch
+dotnet add package Vali-Flow.NoSql.Elasticsearch
+
+# Redis (RediSearch)
+dotnet add package Vali-Flow.NoSql.Redis
+
+# AWS DynamoDB
+dotnet add package Vali-Flow.NoSql.DynamoDB
+```
+
+All packages automatically include **Vali-Flow.Core** as a transitive dependency.
+
+---
+
+## Core Features
+
+### Fluent Filter DSL (`ValiFlow<T>`)
+
+Build complex filters with a natural, chainable API:
+
+```csharp
+var filter = new ValiFlow<Product>()
+    // Comparison
+    .EqualTo(x => x.Category, "Electronics")
+    .GreaterThanOrEqualTo(x => x.Price, 100m)
+    // String operations
+    .Contains(x => x.Name, "phone")
+    .StartsWith(x => x.Sku, "PROD")
+    // Numeric ranges
+    .Between(x => x.Quantity, 1, 1000)
+    // Dates
+    .IsAfter(x => x.CreatedAt, DateTime.UtcNow.AddDays(-90))
+    // Collection
+    .NotEmpty(x => x.Reviews)
+    // Boolean
+    .IsTrue(x => x.IsActive)
+    // Logical operators
+    .Or()
+    .EqualTo(x => x.Category, "Accessories");
+```
+
+See [Vali-Flow.Core](https://github.com/UBF21/vali-flow-core) for the full list of 50+ predicates.
+
+### Specifications
+
+Encapsulate query criteria, ordering, pagination, and eager loading:
+
+```csharp
+var spec = new QuerySpecification<Order>()
+    .WithFilter(filter)
+    .WithOrderBy(x => x.CreatedAt, ascending: false)
+    .AddThenBy(x => x.Total, ascending: true)
+    .WithPagination(page: 1, pageSize: 20)
+    .AddInclude(x => x.Customer)
+    .AddInclude(x => x.OrderLines)
+    .WithAsNoTracking(true);
+```
+
+### EF Core: Read Operations
+
+```csharp
+var evaluator = new ValiFlowEvaluator<Order>(dbContext);
+
+// Existence and count
+bool exists = await evaluator.EvaluateAnyAsync(spec);
+int count   = await evaluator.EvaluateCountAsync(spec);
+
+// Single entities
+Order? first = await evaluator.EvaluateGetFirstAsync(spec);
+Order? last  = await evaluator.EvaluateGetLastAsync(spec);
+
+// Full query
+IQueryable<Order> query = await evaluator.EvaluateQueryAsync(spec);
+
+// Distinct and duplicates
+IQueryable<Order> distinct   = await evaluator.EvaluateDistinctAsync(spec, x => x.CustomerId);
+IQueryable<Order> duplicates = await evaluator.EvaluateDuplicatesAsync(spec, x => x.CustomerId);
+
+// Aggregates
+decimal minTotal = await evaluator.EvaluateMinAsync(spec, x => x.Total);
+decimal maxTotal = await evaluator.EvaluateMaxAsync(spec, x => x.Total);
+decimal avgTotal = await evaluator.EvaluateAverageAsync(spec, x => x.Total);
+decimal sumTotal = await evaluator.EvaluateSumAsync(spec, x => x.Total);
+
+// Grouped aggregates
+Dictionary<string, int> countByStatus = 
+    await evaluator.EvaluateCountByGroupAsync(spec, x => x.Status);
+
+Dictionary<string, decimal> sumByStatus = 
+    await evaluator.EvaluateSumByGroupAsync(spec, x => x.Status, x => x.Total);
+```
+
+### EF Core: Write Operations
+
+```csharp
+var evaluator = new ValiFlowEvaluator<Order>(dbContext);
+
+// Single entity
+var added   = await evaluator.AddAsync(order, saveChanges: true);
+var updated = await evaluator.UpdateAsync(order, saveChanges: true);
+await evaluator.DeleteAsync(order, saveChanges: true);
+
+// Batch
+await evaluator.AddRangeAsync(orders);
+await evaluator.UpdateRangeAsync(orders);
+await evaluator.DeleteRangeAsync(orders);
+
+// Conditional delete
+await evaluator.DeleteByConditionAsync(
+    condition: x => x.Status == "Expired" && x.CreatedAt < cutoffDate);
+
+// Upsert (insert if not found, update otherwise)
+var upserted = await evaluator.UpsertAsync(
+    entity: order,
+    matchCondition: x => x.Id == order.Id);
+
+// Bulk operations (via EFCore.BulkExtensions)
+await evaluator.BulkInsertAsync(orders, new BulkConfig { BatchSize = 5000 });
+await evaluator.BulkUpdateAsync(orders, new BulkConfig { BatchSize = 5000 });
+await evaluator.BulkInsertOrUpdateAsync(orders);
+
+// Transactions
+await evaluator.ExecuteTransactionAsync(async () =>
+{
+    await evaluator.AddAsync(order1, saveChanges: false);
+    await evaluator.UpdateAsync(order2, saveChanges: false);
+    await evaluator.SaveChangesAsync();
+});
+```
+
+### SQL Query Builder (Dapper / ADO.NET)
+
+Four dialects out of the box: SQL Server, PostgreSQL, MySQL, SQLite.
+
+```csharp
+// Simple WHERE clause
+var result = filter.ToSql(new PostgreSqlDialect());
+var orders = await connection.QueryAsync<Order>(
+    $"SELECT * FROM orders WHERE {result.Sql}",
+    result.Parameters);
+
+// Full SELECT with JOIN, GROUP BY, aggregates
+var query = new SqlQueryBuilder<Order>(new SqlServerDialect())
     .Select(x => x.Id, x => x.Status, x => x.Total)
     .From("orders")
     .Where(w => w.EqualTo(x => x.Status, "Active"))
     .OrderBy(x => x.CreatedAt, ascending: false)
     .Paginate(page: 1, pageSize: 20);
 
-SqlResult result = query.Build();
+var result = query.Build();
 ```
 
-```csharp
-// Aggregates + GROUP BY
-var query = new SqlQueryBuilder<Order>(new SqlServerDialect())
-    .From("orders")
-    .GroupBy(x => x.Status)
-    .Having(h => h.CountGreaterThan(5))
-    .SelectAggregates(b => b
-        .Column(x => x.Status)
-        .Sum(x => x.Total, alias: "TotalRevenue")
-        .Count(alias: "OrderCount"));
+### In-Memory Evaluator (Testing / Caching)
 
-SqlResult result = query.Build();
+Synchronous, dependency-free evaluation against `IEnumerable<T>`:
+
+```csharp
+var evaluator = new ValiFlowEvaluator<Order, int>(orders, null, x => x.Id);
+
+var filter = new ValiFlow<Order>().EqualTo(x => x.Status, "Active");
+
+int count  = evaluator.EvaluateCount(orders, filter);
+Order? first = evaluator.GetFirst(orders, filter);
+
+IEnumerable<Order> filtered = evaluator.EvaluateAll<DateTime>(
+    orders,
+    orderBy: x => x.CreatedAt,
+    valiFlow: filter);
+
+Dictionary<string, int> countByStatus = 
+    evaluator.EvaluateCountByGroup(orders, x => x.Status, filter);
 ```
 
 ---
 
-## NoSql Query Builder
-
-`Vali-Flow.NoSql.MongoDB` and `Vali-Flow.NoSql.Elasticsearch` translate a `ValiFlow<T>` filter into the native query format of each database. Both packages are **query builders only** — they produce the filter object; you pass it to your own client.
+## NoSQL Support
 
 ### MongoDB
 
@@ -498,15 +381,7 @@ var filter = new ValiFlow<User>()
     .GreaterThan(x => x.Age, 18);
 
 BsonDocument bsonFilter = filter.ToMongo();
-
-// Pass directly to the MongoDB driver (BsonDocument → FilterDefinition<T> implicitly)
 var users = await collection.Find(bsonFilter).ToListAsync();
-```
-
-From a raw expression:
-
-```csharp
-BsonDocument bsonFilter = ((Expression<Func<User, bool>>)(x => x.Name == "Alice")).ToMongo();
 ```
 
 ### Elasticsearch
@@ -520,62 +395,22 @@ var filter = new ValiFlow<Product>()
     .Contains(x => x.Name, "phone");
 
 Query esQuery = filter.ToElasticsearch();
-
 var response = await client.SearchAsync<Product>(s => s.Query(esQuery));
 ```
-
-From a raw expression:
-
-```csharp
-Query esQuery = ((Expression<Func<Product, bool>>)(x => x.IsActive)).ToElasticsearch();
-```
-
-### IR node mapping
-
-Both translators share the same provider-agnostic IR (intermediate representation) produced by `ToNoSqlIR()`. The mapping for each provider:
-
-| ValiFlow predicate | MongoDB | Elasticsearch | Redis | DynamoDB |
-|---|---|---|---|---|
-| `EqualTo(x => x.F, v)` | `{ F: v }` | `TermQuery(F, v)` | `@F:[v v]` / `@F:{"v"}` | `#f = :v` |
-| `NotEqualTo(x => x.F, v)` | `{ F: {$ne: v} }` | `BoolQuery.MustNot` | `(-@F:[v v])` / `-@F:{"v"}` | `#f <> :v` |
-| `GreaterThan(x => x.F, v)` | `{ F: {$gt: v} }` | `NumberRangeQuery.Gt` | `@F:[(v +inf]` | `#f > :v` |
-| `Contains(x => x.F, s)` | regex `/s/i` | `WildcardQuery *s*` | `@F:*s*` | `contains(#f, :v)` |
-| `StartsWith(x => x.F, s)` | regex `^s/i` | `WildcardQuery s*` | `@F:s*` | `begins_with(#f, :v)` |
-| `In(x => x.F, list)` | `{ F: {$in: [...]} }` | `TermsQuery` | `@F:{"v1"\|"v2"}` | `#f IN (:v0, :v1)` |
-| `IsNull` | `{ F: null }` | `BoolQuery.MustNot[Exists]` | ❌ not supported | `attribute_not_exists(#f)` |
-| `IsNotNull` | `{ F: {$ne: null} }` | `ExistsQuery` | ❌ not supported | `attribute_exists(#f)` |
-| `And` | `{$and: [...]}` | `BoolQuery.Must` | `(left right)` | `(left AND right)` |
-| `Or` | `{$or: [...]}` | `BoolQuery.Should` | `(left \| right)` | `(left OR right)` |
-| `Not` | `{$nor: [...]}` | `BoolQuery.MustNot` | `-(inner)` | `NOT (inner)` |
 
 ### Redis (RediSearch)
 
 ```csharp
 using Vali_Flow.NoSql.Redis.Extensions;
 
-var filter = new ValiFlow<Product>()
-    .EqualTo(x => x.Category, "Electronics")
-    .GreaterThan(x => x.Price, 100m)
-    .Contains(x => x.Name, "phone");
-
 string redisQuery = filter.ToRedisSearch();
-
-// Pass to NRedisStack
 var results = db.FT().Search("idx:products", new Query(redisQuery));
 ```
-
-Numeric fields use range queries; string fields use quoted tag queries (DIALECT 2). Wildcard patterns map directly to RediSearch's `*pattern*` syntax.
-
-> **Limitation:** `IsNull` / `IsNotNull` are not supported — RediSearch has no field-existence query syntax. Handle null checks at the application level or use `CustomValueConverter`.
 
 ### DynamoDB
 
 ```csharp
 using Vali_Flow.NoSql.DynamoDB.Extensions;
-
-var filter = new ValiFlow<Order>()
-    .EqualTo(x => x.Status, "Active")
-    .GreaterThan(x => x.Total, 100m);
 
 DynamoFilterExpression f = filter.ToDynamoDB();
 
@@ -588,198 +423,33 @@ var request = new ScanRequest
 };
 ```
 
-`DynamoFilterExpression` encapsulates the `FilterExpression` string together with `ExpressionAttributeNames` (`#f0..n`) and `ExpressionAttributeValues` (`:v0..n`). Works identically for `ScanRequest` and `QueryRequest`.
-
-> **Limitations:** `EndsWith` is not supported (DynamoDB has no trailing-wildcard function). `IN` supports at most 100 values (DynamoDB SDK limit).
-
-### Custom value conversion (OCP extension point)
-
-All translators expose a static converter delegate for handling custom CLR types without modifying the library:
-
-```csharp
-// MongoDB
-MongoFilterTranslator.CustomValueConverter = v =>
-    v is Money m ? new BsonDecimal128(m.Amount) : null;
-
-// Elasticsearch
-ElasticsearchFilterTranslator.CustomValueConverter = v =>
-    v is Money m ? FieldValue.Double((double)m.Amount) : null;
-
-// Redis — return raw tag value string
-RedisSearchFilterTranslator.CustomValueConverter = v =>
-    v is Money m ? m.Amount.ToString(CultureInfo.InvariantCulture) : null;
-
-// DynamoDB
-DynamoFilterTranslator.CustomAttributeValueConverter = v =>
-    v is Money m ? new AttributeValue { N = m.Amount.ToString() } : null;
-```
-
-Return `null` to fall through to the built-in type conversion.
-
 ---
 
-## In-Memory Evaluator
+## Documentation
 
-`Vali-Flow.InMemory` provides `ValiFlowEvaluator<T, TProperty>` — a synchronous, dependency-free evaluator that operates on `IEnumerable<T>`. It is ideal for unit tests, in-process caching layers, or scenarios where a database is not available.
-
-### Setup
-
-```csharp
-// TProperty is the type of the entity's identity key
-var evaluator = new ValiFlowEvaluator<Order, Guid>(
-    initialData: orders,
-    valiFlow: null,
-    getId: x => x.Id);
-```
-
-### Reading
-
-```csharp
-var filter = new ValiFlow<Order>().EqualTo(x => x.Status, "Active");
-
-bool any   = evaluator.EvaluateAny(orders, filter);
-int  count = evaluator.EvaluateCount(orders, filter);
-
-Order? first = evaluator.GetFirst(orders, filter);
-Order? last  = evaluator.GetLast(orders, filter);
-
-IEnumerable<Order> all   = evaluator.EvaluateAll<DateTime>(
-    orders,
-    orderBy: x => x.CreatedAt,
-    ascending: false,
-    valiFlow: filter);
-
-IEnumerable<Order> paged = evaluator.EvaluatePaged<DateTime>(
-    orders,
-    page: 1,
-    pageSize: 10,
-    orderBy: x => x.CreatedAt,
-    ascending: false,
-    valiFlow: filter);
-
-IEnumerable<Order> top5 = evaluator.EvaluateTop<decimal>(
-    orders,
-    count: 5,
-    orderBy: x => x.Total,
-    ascending: false,
-    valiFlow: filter);
-```
-
-### Distinct and duplicates
-
-```csharp
-IEnumerable<Order> distinct = evaluator.EvaluateDistinct<Guid>(
-    orders,
-    selector: x => x.CustomerId,
-    orderBy: x => x.CreatedAt,
-    ascending: false,
-    valiFlow: filter);
-
-IEnumerable<Order> duplicates = evaluator.EvaluateDuplicates<Guid>(
-    orders,
-    selector: x => x.CustomerId,
-    valiFlow: filter);
-```
-
-### Aggregates
-
-```csharp
-decimal min = evaluator.EvaluateMin(orders, x => x.Total, filter);
-decimal max = evaluator.EvaluateMax(orders, x => x.Total, filter);
-decimal avg = evaluator.EvaluateAverage(orders, x => x.Total, filter);
-decimal sum = evaluator.EvaluateSum(orders, x => x.Total, filter);
-```
-
-### Grouped operations
-
-```csharp
-Dictionary<string, List<Order>> grouped =
-    evaluator.EvaluateGrouped(orders, x => x.Status, filter);
-
-Dictionary<string, int> countByStatus =
-    evaluator.EvaluateCountByGroup(orders, x => x.Status, filter);
-
-Dictionary<string, decimal> sumByStatus =
-    evaluator.EvaluateSumByGroup(orders, x => x.Status, x => x.Total, filter);
-
-Dictionary<string, decimal> avgByStatus =
-    evaluator.EvaluateAverageByGroup(orders, x => x.Status, x => x.Total, filter);
-
-Dictionary<string, List<Order>> topByStatus =
-    evaluator.EvaluateTopByGroup(orders, x => x.Status, count: 3, orderBy: x => x.Total, filter);
-```
-
-### Writing
-
-```csharp
-evaluator.Add(newOrder, orders);
-evaluator.Update(existingOrder, orders);
-evaluator.Delete(existingOrder, orders);
-
-evaluator.AddRange(newOrders, orders);
-IEnumerable<Order> updated = evaluator.UpdateRange(modifiedOrders, orders);
-int deleted = evaluator.DeleteRange(staleOrders, orders);
-
-evaluator.SaveChanges(orders);
-```
-
-### Negating conditions
-
-Every read method accepts a `negateCondition` parameter. When set to `true`, the filter is inverted — equivalent to a logical NOT of the `ValiFlow<T>` expression.
-
-```csharp
-// All orders that do NOT have Status == "Active"
-IEnumerable<Order> inactive = evaluator.EvaluateAll<DateTime>(
-    orders,
-    orderBy: x => x.CreatedAt,
-    valiFlow: new ValiFlow<Order>().EqualTo(x => x.Status, "Active"),
-    negateCondition: true);
-```
+- **[Full Feature Guide](docs/FEATURES.md)** — Detailed examples for each package
+- **[Architecture Guide](docs/ARCHITECTURE.md)** — Design patterns and decision rationale
+- **[SQL Dialects Reference](Vali-Flow.Sql/README.md)** — SQL Builder capabilities
+- **[Vali-Flow.Core](https://github.com/UBF21/vali-flow-core)** — Expression builder predicates
 
 ---
-
-## Integration with Vali-Flow.Core
-
-Both `Vali-Flow` and `Vali-Flow.InMemory` use `Vali-Flow.Core` to build `Expression<Func<T, bool>>` trees. The `ValiFlow<T>` builder supports a wide range of predicates:
-
-```csharp
-var filter = new ValiFlow<Order>()
-    // Comparison
-    .EqualTo(x => x.Status, "Active")
-    .NotEqualTo(x => x.Status, "Cancelled")
-    .GreaterThan(x => x.Total, 0m)
-    .LessThanOrEqualTo(x => x.Total, 10_000m)
-    // String
-    .Contains(x => x.Reference, "ORD")
-    .StartsWith(x => x.Reference, "2025")
-    .HasMinLength(x => x.Reference, 5)
-    // Numeric range
-    .Between(x => x.Quantity, 1, 100)
-    // Collection
-    .NotEmpty(x => x.OrderLines)
-    // DateTime
-    .IsAfter(x => x.CreatedAt, DateTime.UtcNow.AddDays(-30))
-    // Boolean
-    .IsTrue(x => x.IsConfirmed)
-    // Logical operators
-    .Or()
-    .EqualTo(x => x.Status, "Pending");
-```
-
-Refer to the [Vali-Flow.Core repository](https://github.com/UBF21/vali-flow) for the full list of available predicates.
-
----
-
-## Contributing
-
-Contributions, issues, and feature requests are welcome. Feel free to open a pull request or an issue on [GitHub](https://github.com/UBF21/vali-flow).
-
-If this project is useful to you, consider supporting its development:
-
-- **Latin America** — [MercadoPago](https://link.mercadopago.com.pe/felipermm)
-- **International** — [PayPal](https://paypal.me/felipeRMM?country.x=PE&locale.x=es_XC)
 
 ## License
 
 Licensed under the [MIT License](LICENSE).  
-Copyright &copy; 2025 Felipe Rafael Montenegro Morriberon. All rights reserved.
+Copyright © 2025 Felipe Rafael Montenegro Morriberon. All rights reserved.
+
+---
+
+## Support
+
+- **Issues & Feature Requests:** [GitHub Issues](https://github.com/UBF21/vali-flow/issues)
+- **Discussions:** [GitHub Discussions](https://github.com/UBF21/vali-flow/discussions)
+
+### Contribute
+
+Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+
+If this project helps you, consider supporting its development:
+- **Latin America** — [MercadoPago](https://link.mercadopago.com.pe/felipermm)
+- **International** — [PayPal](https://paypal.me/felipeRMM?country.x=PE&locale.x=es_XC)
