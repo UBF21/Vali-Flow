@@ -34,8 +34,12 @@ public sealed class SqlHavingBuilder<T> : SqlConditionBuilderBase<SqlHavingBuild
     /// <summary>Adds <c>COUNT(*) = @ph{n}</c>.</summary>
     public SqlHavingBuilder<T> CountEquals(int value) => AddCountComparison("=", value);
 
-    /// <summary>Adds <c>COUNT(*) != @ph{n}</c>.</summary>
-    public SqlHavingBuilder<T> CountNotEquals(int value) => AddCountComparison("!=", value);
+    /// <summary>Adds <c>COUNT(*) &lt;&gt; @ph{n}</c>.</summary>
+    public SqlHavingBuilder<T> CountNotEquals(int value)
+    {
+        var param = AddParam(value);
+        return AddCondition(d => $"COUNT(*) {d.NotEqualOperator} {d.ParameterPrefix}{param}");
+    }
 
     /// <summary>Adds <c>COUNT(*) > @ph{n}</c>.</summary>
     public SqlHavingBuilder<T> CountGreaterThan(int value) => AddCountComparison(">", value);
@@ -73,9 +77,9 @@ public sealed class SqlHavingBuilder<T> : SqlConditionBuilderBase<SqlHavingBuild
     public SqlHavingBuilder<T> SumEquals<TValue>(Expression<Func<T, TValue>> selector, TValue value)
         => AddAggregateComparison("SUM", selector, "=", value);
 
-    /// <summary>Adds <c>SUM([col]) != @ph{n}</c>.</summary>
+    /// <summary>Adds <c>SUM([col]) &lt;&gt; @ph{n}</c>.</summary>
     public SqlHavingBuilder<T> SumNotEquals<TValue>(Expression<Func<T, TValue>> selector, TValue value)
-        => AddAggregateComparison("SUM", selector, "!=", value);
+        => AddAggregateNotEqualsComparison("SUM", selector, value);
 
     /// <summary>Adds <c>SUM([col]) > @ph{n}</c>.</summary>
     public SqlHavingBuilder<T> SumGreaterThan<TValue>(Expression<Func<T, TValue>> selector, TValue value)
@@ -107,9 +111,9 @@ public sealed class SqlHavingBuilder<T> : SqlConditionBuilderBase<SqlHavingBuild
     public SqlHavingBuilder<T> AverageEquals<TValue>(Expression<Func<T, TValue>> selector, TValue value)
         => AddAggregateComparison("AVG", selector, "=", value);
 
-    /// <summary>Adds <c>AVG([col]) != @ph{n}</c>.</summary>
+    /// <summary>Adds <c>AVG([col]) &lt;&gt; @ph{n}</c>.</summary>
     public SqlHavingBuilder<T> AverageNotEquals<TValue>(Expression<Func<T, TValue>> selector, TValue value)
-        => AddAggregateComparison("AVG", selector, "!=", value);
+        => AddAggregateNotEqualsComparison("AVG", selector, value);
 
     /// <summary>Adds <c>AVG([col]) > @ph{n}</c>.</summary>
     public SqlHavingBuilder<T> AverageGreaterThan<TValue>(Expression<Func<T, TValue>> selector, TValue value)
@@ -141,9 +145,9 @@ public sealed class SqlHavingBuilder<T> : SqlConditionBuilderBase<SqlHavingBuild
     public SqlHavingBuilder<T> MinEquals<TValue>(Expression<Func<T, TValue>> selector, TValue value)
         => AddAggregateComparison("MIN", selector, "=", value);
 
-    /// <summary>Adds <c>MIN([col]) != @ph{n}</c>.</summary>
+    /// <summary>Adds <c>MIN([col]) &lt;&gt; @ph{n}</c>.</summary>
     public SqlHavingBuilder<T> MinNotEquals<TValue>(Expression<Func<T, TValue>> selector, TValue value)
-        => AddAggregateComparison("MIN", selector, "!=", value);
+        => AddAggregateNotEqualsComparison("MIN", selector, value);
 
     /// <summary>Adds <c>MIN([col]) > @ph{n}</c>.</summary>
     public SqlHavingBuilder<T> MinGreaterThan<TValue>(Expression<Func<T, TValue>> selector, TValue value)
@@ -175,9 +179,9 @@ public sealed class SqlHavingBuilder<T> : SqlConditionBuilderBase<SqlHavingBuild
     public SqlHavingBuilder<T> MaxEquals<TValue>(Expression<Func<T, TValue>> selector, TValue value)
         => AddAggregateComparison("MAX", selector, "=", value);
 
-    /// <summary>Adds <c>MAX([col]) != @ph{n}</c>.</summary>
+    /// <summary>Adds <c>MAX([col]) &lt;&gt; @ph{n}</c>.</summary>
     public SqlHavingBuilder<T> MaxNotEquals<TValue>(Expression<Func<T, TValue>> selector, TValue value)
-        => AddAggregateComparison("MAX", selector, "!=", value);
+        => AddAggregateNotEqualsComparison("MAX", selector, value);
 
     /// <summary>Adds <c>MAX([col]) > @ph{n}</c>.</summary>
     public SqlHavingBuilder<T> MaxGreaterThan<TValue>(Expression<Func<T, TValue>> selector, TValue value)
@@ -277,6 +281,14 @@ public sealed class SqlHavingBuilder<T> : SqlConditionBuilderBase<SqlHavingBuild
         var col = GetName(selector);
         var param = AddParam(value);
         return AddCondition(d => $"{function}({d.QuoteIdentifier(col)}) {op} {d.ParameterPrefix}{param}");
+    }
+
+    private SqlHavingBuilder<T> AddAggregateNotEqualsComparison<TValue>(
+        string function, Expression<Func<T, TValue>> selector, TValue value)
+    {
+        var col = GetName(selector);
+        var param = AddParam(value);
+        return AddCondition(d => $"{function}({d.QuoteIdentifier(col)}) {d.NotEqualOperator} {d.ParameterPrefix}{param}");
     }
 
     private SqlHavingBuilder<T> AddAggregateBetween<TValue>(

@@ -60,13 +60,19 @@ public sealed class ValiFlowInMemoryWriteTests
     }
 
     [Fact]
-    public void Add_ToExplicitList_AddsImmediatelyToList()
+    public void Add_ToExplicitList_AppliedAfterSaveChanges()
     {
         var data = CreateMutableSeed();
         var evaluator = CreateEvaluator(data);
         var newProduct = new TestProduct { Id = 11, Name = "Kiwi", Category = "Fruit", Price = 2.0m, Stock = 70, IsActive = true };
 
         evaluator.Add(newProduct, data);
+
+        // Deferred: list unchanged until SaveChanges
+        data.Should().HaveCount(10);
+        data.Should().NotContain(p => p.Id == 11);
+
+        evaluator.SaveChanges(data);
 
         data.Should().HaveCount(11);
         data.Should().Contain(p => p.Id == 11);
@@ -95,7 +101,7 @@ public sealed class ValiFlowInMemoryWriteTests
     }
 
     [Fact]
-    public void AddRange_ToExplicitList_AddsImmediately()
+    public void AddRange_ToExplicitList_AppliedAfterSaveChanges()
     {
         var data = CreateMutableSeed();
         var evaluator = CreateEvaluator(data);
@@ -106,6 +112,11 @@ public sealed class ValiFlowInMemoryWriteTests
         };
 
         evaluator.AddRange(newProducts, data);
+
+        // Deferred: list unchanged until SaveChanges
+        data.Should().HaveCount(10);
+
+        evaluator.SaveChanges(data);
 
         data.Should().HaveCount(12);
     }
@@ -266,13 +277,18 @@ public sealed class ValiFlowInMemoryWriteTests
     }
 
     [Fact]
-    public void Delete_ToExplicitList_RemovesFromListImmediately()
+    public void Delete_ToExplicitList_RemovesFromListAfterSaveChanges()
     {
         var data = CreateMutableSeed();
         var evaluator = CreateEvaluator(data);
         var target = data.First(p => p.Id == 7); // Grape
 
         evaluator.Delete(target, data);
+
+        // Deferred: list unchanged before SaveChanges
+        data.Should().HaveCount(10);
+
+        evaluator.SaveChanges(data);
 
         data.Should().HaveCount(9);
         data.Should().NotContain(p => p.Id == 7);
@@ -417,13 +433,18 @@ public sealed class ValiFlowInMemoryWriteTests
     }
 
     [Fact]
-    public void DeleteRange_ToExplicitList_RemovesImmediately()
+    public void DeleteRange_ToExplicitList_RemovesAfterSaveChanges()
     {
         var data = CreateMutableSeed();
         var evaluator = CreateEvaluator(data);
         var toDelete = data.Where(p => p.Id <= 3).ToList();
 
         evaluator.DeleteRange(toDelete, data);
+
+        // Deferred: list unchanged before SaveChanges
+        data.Should().HaveCount(10);
+
+        evaluator.SaveChanges(data);
 
         data.Should().HaveCount(7);
     }

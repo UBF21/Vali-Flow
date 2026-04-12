@@ -15,7 +15,7 @@ internal sealed class AsyncInMemoryAdapter<T, TProperty>
     where T : class
     where TProperty : notnull
 {
-    private static readonly ConcurrentDictionary<string, Delegate> _compiledCache = new();
+    private static readonly ConcurrentDictionary<(Type, string), Delegate> _compiledCache = new();
 
     private readonly ValiFlowEvaluator<T, TProperty> _evaluator;
 
@@ -24,38 +24,62 @@ internal sealed class AsyncInMemoryAdapter<T, TProperty>
 
     private static Func<T, TResult> GetOrCompile<TResult>(Expression<Func<T, TResult>> selector) =>
         (Func<T, TResult>)_compiledCache.GetOrAdd(
-            $"{typeof(T).FullName}|{selector}",
+            (typeof(T), selector.ToString()),
             _ => selector.Compile());
 
     internal Task<bool> EvaluateAnyAsync(ValiFlow<T>? filter, CancellationToken cancellationToken)
-        => Task.FromResult(_evaluator.EvaluateAny(null, filter));
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return Task.FromResult(_evaluator.EvaluateAny(null, filter));
+    }
 
     internal Task<int> EvaluateCountAsync(ValiFlow<T>? filter, CancellationToken cancellationToken)
-        => Task.FromResult(_evaluator.EvaluateCount(null, filter));
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return Task.FromResult(_evaluator.EvaluateCount(null, filter));
+    }
 
     internal Task<T?> EvaluateGetFirstAsync(ValiFlow<T>? filter, CancellationToken cancellationToken)
-        => Task.FromResult(_evaluator.GetFirst(null, filter));
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return Task.FromResult(_evaluator.GetFirst(null, filter));
+    }
 
     internal Task<T?> EvaluateGetLastAsync(ValiFlow<T>? filter, CancellationToken cancellationToken)
-        => Task.FromResult(_evaluator.GetLast<object>(null, null, true, null, filter));
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return Task.FromResult(_evaluator.GetLast<object>(null, null, true, null, filter));
+    }
 
     internal Task<TResult> EvaluateMinAsync<TResult>(
         Expression<Func<T, TResult>> selector, ValiFlow<T>? filter, CancellationToken cancellationToken)
         where TResult : INumber<TResult>
-        => Task.FromResult(_evaluator.EvaluateMin<TResult>(null, GetOrCompile(selector), filter));
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return Task.FromResult(_evaluator.EvaluateMin<TResult>(null, GetOrCompile(selector), filter));
+    }
 
     internal Task<TResult> EvaluateMaxAsync<TResult>(
         Expression<Func<T, TResult>> selector, ValiFlow<T>? filter, CancellationToken cancellationToken)
         where TResult : INumber<TResult>
-        => Task.FromResult(_evaluator.EvaluateMax<TResult>(null, GetOrCompile(selector), filter));
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return Task.FromResult(_evaluator.EvaluateMax<TResult>(null, GetOrCompile(selector), filter));
+    }
 
     internal Task<decimal> EvaluateAverageAsync<TResult>(
         Expression<Func<T, TResult>> selector, ValiFlow<T>? filter, CancellationToken cancellationToken)
         where TResult : INumber<TResult>
-        => Task.FromResult(_evaluator.EvaluateAverage<TResult>(null, GetOrCompile(selector), filter));
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return Task.FromResult(_evaluator.EvaluateAverage<TResult>(null, GetOrCompile(selector), filter));
+    }
 
     internal Task<TResult> EvaluateSumAsync<TResult>(
         Expression<Func<T, TResult>> selector, ValiFlow<T>? filter, CancellationToken cancellationToken)
         where TResult : INumber<TResult>
-        => Task.FromResult(_evaluator.EvaluateSum<TResult>(null, GetOrCompile(selector), filter));
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return Task.FromResult(_evaluator.EvaluateSum<TResult>(null, GetOrCompile(selector), filter));
+    }
 }

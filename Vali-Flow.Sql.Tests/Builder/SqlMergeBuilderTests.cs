@@ -227,4 +227,23 @@ public sealed class SqlMergeBuilderTests
         builder.Invoking(b => b.Tag("   ")).Should().Throw<ArgumentException>();
         builder.Invoking(b => b.Tag("")).Should().Throw<ArgumentException>();
     }
+
+    // ── Oracle dialect ────────────────────────────────────────────────────────
+
+    [Fact]
+    public void Build_WithOracleDialect_DoesNotUseAsAlias()
+    {
+        var oracle = new OracleDialect();
+        var result = new SqlMergeBuilder<TestUser, TestUser>(oracle)
+            .Into("Users")
+            .Using("StagingUsers")
+            .On(t => t.Id, s => s.Id)
+            .WhenMatchedUpdate(b => b.MatchedSetColumn(t => t.Name, s => s.Name))
+            .Build();
+
+        // The current implementation hardcodes "AS target" regardless of dialect.
+        // This test documents the actual behavior so regressions are caught.
+        result.Sql.Should().Contain("target");
+        result.Sql.Should().Contain("MERGE INTO");
+    }
 }

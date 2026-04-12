@@ -454,4 +454,155 @@ public sealed class RedisSearchFilterTranslatorTests
         q.Should().Contain("@Age");
         q.Should().Contain("@Name");
     }
+
+    // ── Guid value ────────────────────────────────────────────────────────────
+
+    [Fact]
+    public void ToRedisSearch_GuidValue_ProducesTagQuery()
+    {
+        var g    = new Guid("11111111-1111-1111-1111-111111111111");
+        var node = new EqualNode("ExternalId", g, false);
+
+        string q = RedisSearchFilterTranslator.Translate(node);
+
+        // Guid.ToString() → string → tag query
+        q.Should().Be($"@ExternalId:{{\"{g}\"}}");
+    }
+
+    [Fact]
+    public void ToRedisSearch_GuidNotEqual_ProducesNegatedTagQuery()
+    {
+        var g    = new Guid("22222222-2222-2222-2222-222222222222");
+        var node = new EqualNode("ExternalId", g, true);
+
+        string q = RedisSearchFilterTranslator.Translate(node);
+
+        q.Should().Be($"-@ExternalId:{{\"{g}\"}}");
+    }
+
+    // ── Enum value ────────────────────────────────────────────────────────────
+
+    [Fact]
+    public void ToRedisSearch_EnumValue_ProducesTagQueryWithEnumName()
+    {
+        var node = new EqualNode("Status", RedisTestStatus.Active, false);
+
+        string q = RedisSearchFilterTranslator.Translate(node);
+
+        // Enum falls to ToString() → name → tag query
+        q.Should().Be(@"@Status:{""Active""}");
+    }
+
+    // ── Escaping: quote in tag value ──────────────────────────────────────────
+
+    [Fact]
+    public void ToRedisSearch_StringWithDoubleQuote_EscapesCorrectly()
+    {
+        // value contains " → must be escaped to \"
+        var node = new EqualNode("Name", "O\"Brien", false);
+
+        string q = RedisSearchFilterTranslator.Translate(node);
+
+        q.Should().Contain(@"O\""Brien");
+    }
+
+    // ── Float / decimal ranges ────────────────────────────────────────────────
+
+    [Fact]
+    public void ToRedisSearch_FloatGreaterThan_ProducesExclusiveLowerBound()
+    {
+        var node = new ComparisonNode("Score", 4.5f, ComparisonOp.GreaterThan);
+
+        string q = RedisSearchFilterTranslator.Translate(node);
+
+        // float → converted to double internally
+        q.Should().Contain("@Score:[(");
+        q.Should().Contain("+inf]");
+    }
+
+    [Fact]
+    public void ToRedisSearch_DecimalLessThanOrEqual_ProducesInclusiveUpperBound()
+    {
+        Expression<Func<TestDocument, bool>> expr = x => x.Price <= 999.99m;
+
+        string q = expr.ToRedisSearch();
+
+        q.Should().Contain("@Price:[-inf ");
+        q.Should().NotContain("(");  // inclusive → no opening paren on upper bound
+    }
+
+    // ── Single-item string IN ─────────────────────────────────────────────────
+
+    [Fact]
+    public void ToRedisSearch_SingleStringInList_ProducesSingleTagAlternative()
+    {
+        var cats = new List<string> { "Electronics" };
+        Expression<Func<TestDocument, bool>> expr = x => cats.Contains(x.Category);
+
+        string q = expr.ToRedisSearch();
+
+        q.Should().Be(@"@Category:{""Electronics""}");
+    }
+
+    // ── Constant on left ──────────────────────────────────────────────────────
+
+    [Fact]
+    public void ToRedisSearch_ConstantOnLeftGreaterThan_FlipsToLessThan()
+    {
+        // 65 > x.Age → x.Age < 65
+        Expression<Func<TestDocument, bool>> expr = x => 65 > x.Age;
+
+        string q = expr.ToRedisSearch();
+
+        q.Should().Be("@Age:[-inf (65]");
+    }
+
+    [Fact]
+    public void ToRedisSearch_ConstantOnLeftGreaterThanOrEqual_FlipsToLessThanOrEqual()
+    {
+        // 100 >= x.Age → x.Age <= 100
+        Expression<Func<TestDocument, bool>> expr = x => 100 >= x.Age;
+
+        string q = expr.ToRedisSearch();
+
+        q.Should().Be("@Age:[-inf 100]");
+    }
+
+    // ── ValiFlow pipeline de 4 condiciones ───────────────────────────────────
+
+    [Fact]
+    public void ToRedisSearch_ValiFlowFourConditions_ContainsAllFields()
+    {
+        var flow = new ValiFlow<TestDocument>()
+            .EqualTo(x => x.IsActive, true)
+            .GreaterThan(x => x.Age, 18)
+            .LessThanOrEqualTo(x => x.Price, 500m)
+            .EqualTo(x => x.Category, "Electronics");
+
+        string q = flow.ToRedisSearch();
+
+        q.Should().NotBeEmpty();
+        q.Should().Contain("@IsActive");
+        q.Should().Contain("@Age");
+        q.Should().Contain("@Price");
+        q.Should().Contain("@Category");
+    }
+
+    // ── Lógica anidada profunda ───────────────────────────────────────────────
+
+    [Fact]
+    public void ToRedisSearch_NotOfOrNode_ProducesNegatedOrGroup()
+    {
+        // NOT (A OR B)
+        var a    = new EqualNode("IsActive", true, false);
+        var b    = new ComparisonNode("Age", 18, ComparisonOp.GreaterThan);
+        var node = new NotNode(new OrNode(a, b));
+
+        string q = RedisSearchFilterTranslator.Translate(node);
+
+        q.Should().StartWith("-(");
+        q.Should().Contain("|");
+    }
+
+    private enum RedisTestStatus { Active, Inactive }
 }

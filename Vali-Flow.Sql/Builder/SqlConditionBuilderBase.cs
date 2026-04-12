@@ -20,7 +20,7 @@ public abstract class SqlConditionBuilderBase<TBuilder, T>
     /// </summary>
     protected sealed class SharedState
     {
-        public int ParamIndex;
+        internal int ParamIndex;
         public readonly Dictionary<string, object> Parameters = new();
     }
 
@@ -90,7 +90,13 @@ public abstract class SqlConditionBuilderBase<TBuilder, T>
     /// Groups conditions by OR boundaries: each <c>Or()</c> call starts a new group;
     /// conditions within a group are joined with AND; groups are joined with OR.
     /// </summary>
-    internal string BuildSql(ISqlDialect dialect)
+    /// <param name="dialect">The SQL dialect to use for rendering conditions.</param>
+    /// <param name="wrapMultipleGroups">
+    /// When <c>true</c> (default) wraps the result in parentheses if there are multiple OR groups.
+    /// Pass <c>false</c> when the caller (e.g. <see cref="SqlWhereBuilder{T}.AddSubGroup"/>) will
+    /// add its own outer parentheses, to avoid double-wrapping like <c>((...AND...))</c>.
+    /// </param>
+    internal string BuildSql(ISqlDialect dialect, bool wrapMultipleGroups = true)
     {
         if (_conditions.Count == 0) return string.Empty;
 
@@ -117,6 +123,6 @@ public abstract class SqlConditionBuilderBase<TBuilder, T>
             string.Join(" AND ", g));
 
         string result = string.Join(" OR ", groupSqls);
-        return multipleGroups ? $"({result})" : result;
+        return multipleGroups && wrapMultipleGroups ? $"({result})" : result;
     }
 }

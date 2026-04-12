@@ -1,22 +1,63 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <TargetFrameworks>net8.0;net9.0</TargetFrameworks>
-    <Nullable>enable</Nullable>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <RootNamespace>Vali_Flow.Sql</RootNamespace>
-    <PackageId>Vali-Flow.Sql</PackageId>
-    <Version>1.0.0</Version>
-    <Authors>Felipe Rafael Montenegro Morriberon</Authors>
-    <Description>SQL translator for Vali-Flow.Core — converts expression trees to parameterized SQL for Dapper and ADO.NET. Supports SQL Server, PostgreSQL, MySQL, and SQLite dialects.</Description>
-    <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
-    <PackageReadmeFile>README.md</PackageReadmeFile>
-    <GenerateDocumentationFile>true</GenerateDocumentationFile>
-  </PropertyGroup>
+    <PropertyGroup>
+        <TargetFrameworks>net8.0;net9.0</TargetFrameworks>
+        <Nullable>enable</Nullable>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <RootNamespace>Vali_Flow.Sql</RootNamespace>
 
-  <ItemGroup>
-    <ProjectReference Include="..\..\Vali-Flow.Core\Vali-Flow.Core\Vali-Flow.Core.csproj" />
-    <ProjectReference Include="..\Vali-Flow.Abstractions\Vali-Flow.Abstractions.csproj" />
-  </ItemGroup>
+        <!-- Package identity -->
+        <PackageId>Vali-Flow.Sql</PackageId>
+        <Title>Vali-Flow.Sql</Title>
+        <Product>Vali-Flow.Sql</Product>
+        <Version>1.0.0</Version>
+        <Authors>Felipe Rafael Montenegro Morriberon</Authors>
+        <Copyright>Copyright © 2025 - FM. All rights reserved.</Copyright>
+
+        <!-- Repository -->
+        <RepositoryUrl>https://github.com/UBF21/vali-flow</RepositoryUrl>
+        <RepositoryType>git</RepositoryType>
+        <PackageProjectUrl>https://vali-flow-docs.netlify.app/docs/adapters/sql/overview</PackageProjectUrl>
+
+        <!-- License -->
+        <PackageLicenseExpression>MIT</PackageLicenseExpression>
+        <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
+
+        <!-- Discoverability -->
+        <PackageTags>vali;vali-flow;sql;dapper;adonet;query-builder;expression;filter;sqlserver;postgresql;mysql;sqlite;dotnet</PackageTags>
+        <PackageIcon>VF_logo.png</PackageIcon>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
+
+        <!-- Source Link / Symbols -->
+        <PublishRepositoryUrl>true</PublishRepositoryUrl>
+        <EmbedUntrackedSources>true</EmbedUntrackedSources>
+        <DebugType>embedded</DebugType>
+        <IncludeSymbols>true</IncludeSymbols>
+        <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+
+        <Description>SQL translator for Vali-Flow.Core — converts ValiFlow&lt;T&gt; expression trees to parameterized SQL for Dapper and ADO.NET. Supports SQL Server, PostgreSQL, MySQL, and SQLite dialects.</Description>
+        <PackageReleaseNotes>v1.0.0 — Initial release. Expression-to-SQL translator with dialect support for SQL Server, PostgreSQL, MySQL, and SQLite.</PackageReleaseNotes>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All" />
+        <PackageReference Include="Vali-Flow.Core" Version="2.0.0" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <None Include="VF_logo.png">
+            <Pack>True</Pack>
+            <PackagePath></PackagePath>
+        </None>
+        <None Include="README.md">
+            <Pack>True</Pack>
+            <PackagePath>\</PackagePath>
+        </None>
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Vali-Flow.Abstractions\Vali-Flow.Abstractions.csproj" />
+    </ItemGroup>
 
 </Project>

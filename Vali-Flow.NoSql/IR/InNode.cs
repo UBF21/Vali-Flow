@@ -6,7 +6,13 @@ namespace Vali_Flow.NoSql.IR;
 /// An empty <see cref="Values"/> list always evaluates to false.
 /// </summary>
 /// <param name="Field">The document field name.</param>
-/// <param name="Values">The set of values to match against. May be empty.</param>
+/// <param name="Values">
+/// The set of values to match against. May be empty.
+/// <remarks>
+/// Note: The Redis translator does not support null values in this list
+/// and will throw <see cref="InvalidOperationException"/> if any value is null.
+/// </remarks>
+/// </param>
 public sealed record InNode(string Field, IReadOnlyList<object?> Values) : IConditionNode
 {
     public TResult Accept<TResult>(IConditionNodeVisitor<TResult> visitor) => visitor.VisitIn(this);

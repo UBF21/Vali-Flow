@@ -57,14 +57,15 @@ public sealed class ValiFlowInMemoryUpsertRangeTests
     }
 
     [Fact]
-    public void UpsertRange_WithNonListExternalStore_ThrowsArgumentException()
+    public void UpsertRange_WithNullExternalStore_UsesInternalStore()
     {
         var ev = new ValiFlowEvaluator<TestProduct, int>();
-        IEnumerable<TestProduct> array = new[] { P(1, "A") };
 
-        Action act = () => ev.UpsertRange(new[] { P(1, "A") }, array);
+        var result = ev.UpsertRange(new[] { P(1, "A") }, null);
+        ev.SaveChanges();
 
-        act.Should().Throw<ArgumentException>().WithParameterName("entities");
+        result.Should().ContainSingle(p => p.Id == 1);
+        ev.EvaluateCount(null).Should().Be(1);
     }
 
     [Fact]

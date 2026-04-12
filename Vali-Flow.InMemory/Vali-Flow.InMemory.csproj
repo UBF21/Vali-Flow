@@ -4,34 +4,60 @@
         <TargetFrameworks>net8.0;net9.0</TargetFrameworks>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
         <RootNamespace>Vali_Flow.InMemory</RootNamespace>
-        <PackageProjectUrl>https://github.com/UBF21/vali-flow</PackageProjectUrl>
-        <RepositoryType>git</RepositoryType>
-        <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
-        <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
-        <Authors>Felipe Rafael Montenegro Morriberon</Authors>
-        <Copyright>Copyright © 2025 - FM. Todos los derechos reservados.</Copyright>
-        <RepositoryUrl>https://github.com/UBF21/vali-flow</RepositoryUrl>
-        <Title>Vali-Flow.InMemory</Title>
-        <Description>Synchronous in-memory evaluator for Vali-Flow.Core — filter, page, aggregate and write in-memory collections using the same fluent ValiFlow&lt;T&gt; specification API. Ideal for unit testing and caching layers without a database dependency.</Description>
-        <PackageReadmeFile>README.md</PackageReadmeFile>
-        <PackageReleaseNotes>Initial release — synchronous in-memory evaluator supporting read, write, aggregate and grouped operations over IEnumerable&lt;T&gt;.</PackageReleaseNotes>
-        <Version>1.0.0</Version>
-        <PackageIcon>logo.png</PackageIcon>
+
+        <!-- Package identity -->
         <PackageId>Vali-Flow.InMemory</PackageId>
+        <Title>Vali-Flow.InMemory</Title>
         <Product>Vali-Flow.InMemory</Product>
+        <Version>1.0.0</Version>
+        <Authors>Felipe Rafael Montenegro Morriberon</Authors>
+        <Copyright>Copyright © 2025 - FM. All rights reserved.</Copyright>
+
+        <!-- Repository -->
+        <RepositoryUrl>https://github.com/UBF21/vali-flow</RepositoryUrl>
+        <RepositoryType>git</RepositoryType>
+        <PackageProjectUrl>https://vali-flow-docs.netlify.app/docs/adapters/inmemory</PackageProjectUrl>
+
+        <!-- License -->
+        <PackageLicenseExpression>MIT</PackageLicenseExpression>
+        <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
+
+        <!-- Discoverability -->
+        <PackageTags>vali;vali-flow;inmemory;testing;cache;filter;specification;evaluator;dotnet</PackageTags>
+        <PackageIcon>VF_logo.png</PackageIcon>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
+
+        <!-- Source Link / Symbols -->
+        <PublishRepositoryUrl>true</PublishRepositoryUrl>
+        <EmbedUntrackedSources>true</EmbedUntrackedSources>
+        <DebugType>embedded</DebugType>
+        <IncludeSymbols>true</IncludeSymbols>
+        <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+
+        <Description>Synchronous in-memory evaluator for Vali-Flow.Core — filter, page, aggregate and write in-memory collections using the same fluent ValiFlow&lt;T&gt; specification API. Ideal for unit testing and caching layers without a database dependency.</Description>
+        <PackageReleaseNotes>v1.0.0 — Initial release. Synchronous in-memory evaluator supporting read, write, aggregate and grouped operations over IEnumerable&lt;T&gt;.</PackageReleaseNotes>
     </PropertyGroup>
 
     <ItemGroup>
-      <None Include="logo.png">
-        <Pack>True</Pack>
-        <PackagePath></PackagePath>
-      </None>
+        <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All" />
+        <PackageReference Include="Vali-Flow.Core" Version="2.0.0" />
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\..\Vali-Flow.Core\Vali-Flow.Core\Vali-Flow.Core.csproj" />
-      <ProjectReference Include="..\Vali-Flow.Abstractions\Vali-Flow.Abstractions.csproj" />
+        <None Include="VF_logo.png">
+            <Pack>True</Pack>
+            <PackagePath></PackagePath>
+        </None>
+        <None Include="README.md">
+            <Pack>True</Pack>
+            <PackagePath>\</PackagePath>
+        </None>
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Vali-Flow.Abstractions\Vali-Flow.Abstractions.csproj" />
     </ItemGroup>
 
 </Project>

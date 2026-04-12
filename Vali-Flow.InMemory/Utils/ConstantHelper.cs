@@ -1,6 +1,6 @@
 namespace Vali_Flow.InMemory.Utils;
 
-public class ConstantHelper
+internal static class ConstantHelper
 {
      #region Numbers
 

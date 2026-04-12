@@ -25,6 +25,9 @@ public sealed class SqliteDialect : ISqlDialect
     /// <inheritdoc/>
     public string LikeOperator => "LIKE";
     /// <inheritdoc/>
+    public string LikeEscapeClause() => " ESCAPE '\\'";
+
+    /// <inheritdoc/>
     public string TrueValue => "1";
     /// <inheritdoc/>
     public string FalseValue => "0";
@@ -86,7 +89,7 @@ public sealed class SqliteDialect : ISqlDialect
         "HOUR" => $"strftime('%H', {columnSql})",
         "MINUTE" => $"strftime('%M', {columnSql})",
         "SECOND" => $"strftime('%S', {columnSql})",
-        _ => $"strftime('%Y', {columnSql})"
+        _ => throw new NotSupportedException($"Date part '{part}' is not supported by SQLite.")
     };
 
     /// <summary>SQLite natively supports IS DISTINCT FROM / IS NOT DISTINCT FROM.</summary>

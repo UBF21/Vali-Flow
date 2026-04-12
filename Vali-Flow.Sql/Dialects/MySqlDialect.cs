@@ -13,8 +13,8 @@ public sealed class MySqlDialect : ISqlDialect
     public string FalseValue => "FALSE";
     /// <inheritdoc/>
     public string DialectName => "MySQL";
-    /// <summary>MySQL 8.0.21+ supports RETURNING for INSERT only.</summary>
-    public bool SupportsReturning => true;
+    /// <summary>MySQL does not support RETURNING for UPDATE/DELETE (only MariaDB does). INSERT uses ON DUPLICATE KEY UPDATE instead.</summary>
+    public bool SupportsReturning => false;
     /// <summary>MySQL supports ON DUPLICATE KEY UPDATE syntax.</summary>
     public bool SupportsOnDuplicateKey => true;
     /// <summary>Returns "IGNORE" for INSERT IGNORE INTO syntax.</summary>
@@ -30,6 +30,13 @@ public sealed class MySqlDialect : ISqlDialect
     public string NotNullCheck(string columnSql) => $"{columnSql} IS NOT NULL";
 
     /// <inheritdoc/>
+    /// <remarks>
+    /// MySQL LIKE is case-insensitive for <c>_ci</c> (case-insensitive) collations, which is the default
+    /// for most MySQL installations. For <c>_cs</c> (case-sensitive) collations, an explicit
+    /// <c>COLLATE</c> clause is required to achieve true case-insensitive matching
+    /// (e.g. <c>col LIKE @p COLLATE utf8mb4_general_ci</c>). This builder does not emit COLLATE;
+    /// callers on case-sensitive collations must apply it manually via raw SQL.
+    /// </remarks>
     public string ILikeExpression(string columnSql, string parameterName)
         => $"{columnSql} LIKE {parameterName}";
 
@@ -90,6 +97,10 @@ public sealed class MySqlDialect : ISqlDialect
 
     /// <summary>MySQL uses CEIL().</summary>
     public string CeilingExpression(string column) => $"CEIL({column})";
+
+    /// <inheritdoc/>
+    /// <remarks>Explicit ESCAPE clause ensures MySQL honors backslash escaping regardless of the NO_BACKSLASH_ESCAPES SQL mode.</remarks>
+    public string LikeEscapeClause() => " ESCAPE '\\'";
 
     /// <summary>MySQL uses TRIM() instead of LTRIM(RTRIM()).</summary>
     public string IsNullOrWhitespaceExpression(string column)

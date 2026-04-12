@@ -89,7 +89,7 @@ public sealed class SqlWhereBuilderTests
     public void Contains_ProducesLikeWithWildcards()
     {
         var (sql, p) = Build(Where().Contains(x => x.Name, "alice"));
-        sql.Should().Be("[Name] LIKE @pw0");
+        sql.Should().Be("[Name] LIKE @pw0 ESCAPE '\\'");
         p["pw0"].Should().Be("%alice%");
     }
 
@@ -97,7 +97,7 @@ public sealed class SqlWhereBuilderTests
     public void NotContains_ProducesNotLikeWithWildcards()
     {
         var (sql, p) = Build(Where().NotContains(x => x.Name, "alice"));
-        sql.Should().Be("[Name] NOT LIKE @pw0");
+        sql.Should().Be("[Name] NOT LIKE @pw0 ESCAPE '\\'");
         p["pw0"].Should().Be("%alice%");
     }
 
@@ -105,7 +105,7 @@ public sealed class SqlWhereBuilderTests
     public void StartsWith_ProducesLikeWithTrailingWildcard()
     {
         var (sql, p) = Build(Where().StartsWith(x => x.Name, "alice"));
-        sql.Should().Be("[Name] LIKE @pw0");
+        sql.Should().Be("[Name] LIKE @pw0 ESCAPE '\\'");
         p["pw0"].Should().Be("alice%");
     }
 
@@ -113,7 +113,7 @@ public sealed class SqlWhereBuilderTests
     public void EndsWith_ProducesLikeWithLeadingWildcard()
     {
         var (sql, p) = Build(Where().EndsWith(x => x.Name, "alice"));
-        sql.Should().Be("[Name] LIKE @pw0");
+        sql.Should().Be("[Name] LIKE @pw0 ESCAPE '\\'");
         p["pw0"].Should().Be("%alice");
     }
 
@@ -434,7 +434,7 @@ public sealed class SqlWhereBuilderTests
     public void Contains_WithPercentSign_EscapesPercent()
     {
         var (sql, p) = Build(Where().Contains(x => x.Name, "100%"));
-        sql.Should().Be("[Name] LIKE @pw0");
+        sql.Should().Be("[Name] LIKE @pw0 ESCAPE '\\'");
         p["pw0"].Should().Be("%100\\%%");
     }
 
@@ -442,7 +442,7 @@ public sealed class SqlWhereBuilderTests
     public void Contains_WithUnderscore_EscapesUnderscore()
     {
         var (sql, p) = Build(Where().Contains(x => x.Name, "some_value"));
-        sql.Should().Be("[Name] LIKE @pw0");
+        sql.Should().Be("[Name] LIKE @pw0 ESCAPE '\\'");
         p["pw0"].Should().Be("%some\\_value%");
     }
 
@@ -450,7 +450,7 @@ public sealed class SqlWhereBuilderTests
     public void StartsWith_WithPercentSign_EscapesPercent()
     {
         var (sql, p) = Build(Where().StartsWith(x => x.Name, "50%"));
-        sql.Should().Be("[Name] LIKE @pw0");
+        sql.Should().Be("[Name] LIKE @pw0 ESCAPE '\\'");
         p["pw0"].Should().Be("50\\%%");
     }
 
@@ -458,7 +458,7 @@ public sealed class SqlWhereBuilderTests
     public void EndsWith_WithPercentSign_EscapesPercent()
     {
         var (sql, p) = Build(Where().EndsWith(x => x.Name, "50%"));
-        sql.Should().Be("[Name] LIKE @pw0");
+        sql.Should().Be("[Name] LIKE @pw0 ESCAPE '\\'");
         p["pw0"].Should().Be("%50\\%");
     }
 
@@ -466,7 +466,7 @@ public sealed class SqlWhereBuilderTests
     public void NotContains_WithSpecialChars_EscapesCorrectly()
     {
         var (sql, p) = Build(Where().NotContains(x => x.Name, "a%b_c"));
-        sql.Should().Be("[Name] NOT LIKE @pw0");
+        sql.Should().Be("[Name] NOT LIKE @pw0 ESCAPE '\\'");
         p["pw0"].Should().Be("%a\\%b\\_c%");
     }
 
@@ -501,5 +501,16 @@ public sealed class SqlWhereBuilderTests
     {
         var (_, p) = Where().CoalesceEqualTo(x => x.Department, "'Unknown'", "Unknown").Build(Sql);
         p["pw0"].Should().Be("Unknown");
+    }
+
+    // ── LIKE escape — brackets ────────────────────────────────────────────────
+
+    [Fact]
+    public void Contains_WithSqlServerDialect_EscapesBrackets()
+    {
+        var (_, p) = Where().Contains(x => x.Name, "100%[OFF]").Build(Sql);
+        var paramValue = p["pw0"].ToString()!;
+        paramValue.Should().Contain(@"\[");
+        paramValue.Should().Contain(@"\%");
     }
 }

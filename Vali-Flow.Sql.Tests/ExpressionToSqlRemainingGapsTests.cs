@@ -165,7 +165,7 @@ public sealed class ExpressionToSqlRemainingGapsTests
             SqlServer);
 
         // value="" → pattern "%", matches everything
-        result.Sql.Should().Be("[Name] LIKE @p0");
+        result.Sql.Should().Be(@"[Name] LIKE @p0 ESCAPE '\'");
         result.Parameters["p0"].Should().Be("%");
     }
 
@@ -176,7 +176,7 @@ public sealed class ExpressionToSqlRemainingGapsTests
             x => x.Name.EndsWith(""),
             SqlServer);
 
-        result.Sql.Should().Be("[Name] LIKE @p0");
+        result.Sql.Should().Be(@"[Name] LIKE @p0 ESCAPE '\'");
         result.Parameters["p0"].Should().Be("%");
     }
 
@@ -187,7 +187,7 @@ public sealed class ExpressionToSqlRemainingGapsTests
             x => x.Name.StartsWith("Jo") && x.Age > 18,
             SqlServer);
 
-        result.Sql.Should().Be("([Name] LIKE @p0 AND [Age] > @p1)");
+        result.Sql.Should().Be(@"([Name] LIKE @p0 ESCAPE '\' AND [Age] > @p1)");
         result.Parameters["p0"].Should().Be("Jo%");
         result.Parameters["p1"].Should().Be(18);
     }

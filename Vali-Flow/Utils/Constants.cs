@@ -1,5 +1,8 @@
 namespace Vali_Flow.Utils;
 
+/// <summary>
+/// Numeric constants used internally across the Vali-Flow EF Core package.
+/// </summary>
 public static class Constants
 {
 

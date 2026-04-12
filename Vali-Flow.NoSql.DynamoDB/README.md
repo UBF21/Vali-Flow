@@ -98,6 +98,20 @@ DynamoFilterExpression f = expr.ToDynamoDB();
 - All attribute name placeholders (`#f0`, `#f1`, …) are auto-generated, preventing conflicts with DynamoDB reserved words.
 - Field names mirror .NET property names.
 
+## Contributing
+
+Contributions, issues, and feature requests are welcome. Feel free to open a pull request or an issue on [GitHub](https://github.com/UBF21/vali-flow).
+
+If this package is useful to you, consider supporting its development:
+
+- **Latin America** — [MercadoPago](https://link.mercadopago.com.pe/felipermm)
+- **International** — [PayPal](https://paypal.me/felipeRMM?country.x=PE&locale.x=es_XC)
+
+## License
+
+Licensed under the [MIT License](LICENSE).  
+Copyright &copy; 2025 Felipe Rafael Montenegro Morriberon. All rights reserved.
+
 ## Full documentation
 
-[docs/en/vali-flow-nosql-dynamodb.md](https://github.com/your-org/Vali-Flow/blob/main/docs/en/vali-flow-nosql-dynamodb.md)
+[vali-flow-docs.netlify.app/docs/adapters/nosql/dynamodb/overview](https://vali-flow-docs.netlify.app/docs/adapters/nosql/dynamodb/overview)

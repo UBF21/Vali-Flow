@@ -132,7 +132,7 @@ public sealed class ExpressionToSqlVisitorTests
     public void Contains_GeneratesLikeWithPercentBoth()
     {
         var result = Translate(x => x.Name.Contains("john"));
-        result.Sql.Should().Be("[Name] LIKE @p0");
+        result.Sql.Should().Be(@"[Name] LIKE @p0 ESCAPE '\'");
         result.Parameters["p0"].Should().Be("%john%");
     }
 
@@ -140,7 +140,7 @@ public sealed class ExpressionToSqlVisitorTests
     public void StartsWith_GeneratesLikeWithTrailingPercent()
     {
         var result = Translate(x => x.Name.StartsWith("Jo"));
-        result.Sql.Should().Be("[Name] LIKE @p0");
+        result.Sql.Should().Be(@"[Name] LIKE @p0 ESCAPE '\'");
         result.Parameters["p0"].Should().Be("Jo%");
     }
 
@@ -148,7 +148,7 @@ public sealed class ExpressionToSqlVisitorTests
     public void EndsWith_GeneratesLikeWithLeadingPercent()
     {
         var result = Translate(x => x.Name.EndsWith("son"));
-        result.Sql.Should().Be("[Name] LIKE @p0");
+        result.Sql.Should().Be(@"[Name] LIKE @p0 ESCAPE '\'");
         result.Parameters["p0"].Should().Be("%son");
     }
 

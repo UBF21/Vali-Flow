@@ -46,18 +46,18 @@ public sealed class ValiFlowInMemoryEdgeCaseTests
             .WithMessage("*NoIdEntity*");
     }
 
-    // ── Add — non-List external store ─────────────────────────────────────────
+    // ── Add — explicit List external store ───────────────────────────────────
 
     [Fact]
-    public void Add_WithNonListExternalStore_ThrowsArgumentException()
+    public void Add_WithNullExternalStore_UsesInternalStore()
     {
         var ev = new ValiFlowEvaluator<TestProduct, int>();
         var product = new TestProduct { Id = 1, Name = "X", IsActive = true, Price = 5m, Stock = 1, Category = "A" };
-        IEnumerable<TestProduct> array = new TestProduct[] { product };
 
-        Action act = () => ev.Add(product, array);
+        ev.Add(product, null);
+        ev.SaveChanges();
 
-        act.Should().Throw<ArgumentException>().WithParameterName("entities");
+        ev.EvaluateCount(null).Should().Be(1);
     }
 
     [Fact]
@@ -73,10 +73,10 @@ public sealed class ValiFlowInMemoryEdgeCaseTests
         externalList.Should().ContainSingle(p => p.Id == 1);
     }
 
-    // ── AddRange — non-List external store ───────────────────────────────────
+    // ── AddRange — explicit List external store ──────────────────────────────
 
     [Fact]
-    public void AddRange_WithNonListExternalStore_ThrowsArgumentException()
+    public void AddRange_WithNullExternalStore_UsesInternalStore()
     {
         var ev = new ValiFlowEvaluator<TestProduct, int>();
         var products = new[]
@@ -84,9 +84,10 @@ public sealed class ValiFlowInMemoryEdgeCaseTests
             new TestProduct { Id = 1, Name = "X", IsActive = true, Price = 5m, Stock = 1, Category = "A" }
         };
 
-        Action act = () => ev.AddRange(products, (IEnumerable<TestProduct>)products);
+        ev.AddRange(products, null);
+        ev.SaveChanges();
 
-        act.Should().Throw<ArgumentException>().WithParameterName("entities");
+        ev.EvaluateCount(null).Should().Be(1);
     }
 
     [Fact]
@@ -106,18 +107,18 @@ public sealed class ValiFlowInMemoryEdgeCaseTests
         externalList.Should().HaveCount(2);
     }
 
-    // ── Upsert — non-List external store ─────────────────────────────────────
+    // ── Upsert — explicit List external store ────────────────────────────────
 
     [Fact]
-    public void Upsert_WithNonListExternalStore_ThrowsArgumentException()
+    public void Upsert_WithNullExternalStore_UsesInternalStore()
     {
         var ev = new ValiFlowEvaluator<TestProduct, int>();
         var product = new TestProduct { Id = 1, Name = "X", IsActive = true, Price = 5m, Stock = 1, Category = "A" };
-        IEnumerable<TestProduct> array = new[] { product };
 
-        Action act = () => ev.Upsert(product, array);
+        ev.Upsert(product, null);
+        ev.SaveChanges();
 
-        act.Should().Throw<ArgumentException>().WithParameterName("entities");
+        ev.EvaluateCount(null).Should().Be(1);
     }
 
     // ── GetFirstFailed — always returns first entity that fails the filter ──────

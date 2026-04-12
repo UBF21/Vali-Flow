@@ -27,7 +27,7 @@ public sealed class SqlHavingBuilderTests
     public void CountNotEquals_ProducesNotEqualsCondition()
     {
         var (sql, p) = Build(Having().CountNotEquals(5));
-        sql.Should().Be("COUNT(*) != @ph0");
+        sql.Should().Be("COUNT(*) <> @ph0");
         p["ph0"].Should().Be(5);
     }
 
@@ -257,7 +257,7 @@ public sealed class SqlHavingBuilderTests
     public void SumNotEquals_GeneratesNotEqualCondition()
     {
         var (sql, _) = Build(Having().SumNotEquals(x => x.Salary, 0m));
-        sql.Should().Be("SUM([Salary]) != @ph0");
+        sql.Should().Be("SUM([Salary]) <> @ph0");
     }
 
     [Fact]
@@ -282,7 +282,7 @@ public sealed class SqlHavingBuilderTests
     public void AverageNotEquals_GeneratesNotEqualCondition()
     {
         var (sql, _) = Build(Having().AverageNotEquals(x => x.Salary, 0m));
-        sql.Should().Be("AVG([Salary]) != @ph0");
+        sql.Should().Be("AVG([Salary]) <> @ph0");
     }
 
     [Fact]
@@ -305,7 +305,7 @@ public sealed class SqlHavingBuilderTests
     public void MinNotEquals_GeneratesNotEqualCondition()
     {
         var (sql, _) = Build(Having().MinNotEquals(x => x.Age, 0));
-        sql.Should().Be("MIN([Age]) != @ph0");
+        sql.Should().Be("MIN([Age]) <> @ph0");
     }
 
     [Fact]
@@ -337,7 +337,7 @@ public sealed class SqlHavingBuilderTests
     public void MaxNotEquals_GeneratesNotEqualCondition()
     {
         var (sql, _) = Build(Having().MaxNotEquals(x => x.Age, 0));
-        sql.Should().Be("MAX([Age]) != @ph0");
+        sql.Should().Be("MAX([Age]) <> @ph0");
     }
 
     [Fact]

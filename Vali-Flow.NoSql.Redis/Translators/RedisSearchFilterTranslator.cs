@@ -102,25 +102,25 @@ public static class RedisSearchFilterTranslator
             // Empty IN → always false (negate match-all)
             if (node.Values.Count == 0) return "(-*)";
 
-            var nonNull = node.Values.Where(v => v != null).ToList();
+            if (node.Values.Any(v => v == null))
+                throw new InvalidOperationException(
+                    "IN condition with null values is not supported in Redis Search. Remove null values before building the query.");
 
-            if (nonNull.Count > 0)
+            // Guard above guarantees no nulls — use node.Values directly
+            bool allNumeric = node.Values.All(IsNumericOrBool);
+            bool anyNumeric = node.Values.Any(IsNumericOrBool);
+
+            // M3 fix: reject heterogeneous lists before producing a silently wrong query
+            if (anyNumeric && !allNumeric)
+                throw new InvalidOperationException(
+                    $"InNode '{node.Field}' contains mixed numeric and non-numeric values. " +
+                    "All non-null values must be of the same kind.");
+
+            if (allNumeric)
             {
-                bool allNumeric = nonNull.All(IsNumericOrBool);
-                bool anyNumeric = nonNull.Any(IsNumericOrBool);
-
-                // M3 fix: reject heterogeneous lists before producing a silently wrong query
-                if (anyNumeric && !allNumeric)
-                    throw new InvalidOperationException(
-                        $"InNode '{node.Field}' contains mixed numeric and non-numeric values. " +
-                        "All non-null values must be of the same kind.");
-
-                if (allNumeric)
-                {
-                    // OR'd range queries: (@field:[v1 v1]|@field:[v2 v2]|...)
-                    var parts = nonNull.Select(v => $"@{node.Field}:[{ToNumericString(v!)} {ToNumericString(v!)}]");
-                    return $"({string.Join("|", parts)})";
-                }
+                // OR'd range queries: (@field:[v1 v1]|@field:[v2 v2]|...)
+                var parts = node.Values.Select(v => $"@{node.Field}:[{ToNumericString(v!)} {ToNumericString(v!)}]");
+                return $"({string.Join("|", parts)})";
             }
 
             // Tag OR query: @field:{"v1"|"v2"|"v3"}

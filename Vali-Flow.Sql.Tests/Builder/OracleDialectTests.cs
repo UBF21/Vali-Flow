@@ -55,9 +55,10 @@ public sealed class OracleDialectTests
     }
 
     [Fact]
-    public void SupportsReturning_IsTrue()
+    public void SupportsReturning_IsFalse()
     {
-        Oracle.SupportsReturning.Should().BeTrue();
+        // Oracle uses RETURNING col INTO :var syntax — incompatible with PostgreSQL-style RETURNING
+        Oracle.SupportsReturning.Should().BeFalse();
     }
 
     [Fact]

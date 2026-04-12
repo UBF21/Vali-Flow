@@ -60,6 +60,10 @@ public sealed class SqlServerDialect : ISqlDialect
     public string EscapeLikeValue(string value)
         => value.Replace("%", "\\%").Replace("_", "\\_").Replace("[", "\\[");
 
+    /// <summary>SQL Server requires ESCAPE '\' so it recognizes backslash as the escape character in LIKE.</summary>
+    public string LikeEscapeClause() => @" ESCAPE '\'";
+
+
     /// <inheritdoc/>
     public string CurrentTimestamp => "GETDATE()";
 

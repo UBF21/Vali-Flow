@@ -1,4 +1,6 @@
+using System.Collections.Concurrent;
 using System.Linq.Expressions;
+using System.Text.RegularExpressions;
 using Vali_Flow.Sql.Dialects;
 
 namespace Vali_Flow.Sql.Builder;
@@ -27,6 +29,8 @@ namespace Vali_Flow.Sql.Builder;
 public sealed class SqlWhereBuilder<T> : SqlConditionBuilderBase<SqlWhereBuilder<T>, T>
     where T : class
 {
+    private static readonly ConcurrentDictionary<string, Regex> _regexCache = new();
+
     protected override string ParamPrefix => "pw";
 
     /// <summary>Creates a new root WHERE builder.</summary>
@@ -102,11 +106,14 @@ public sealed class SqlWhereBuilder<T> : SqlConditionBuilderBase<SqlWhereBuilder
         {
             var result = Translators.ExpressionToSqlVisitor.Translate(condition, d);
             string sql = result.Sql;
-            // Remap visitor params (p0, p1...) to pw-prefixed params to avoid key collisions
+            // Remap visitor params (p0, p1...) to pw-prefixed params to avoid key collisions.
+            // Use Regex word-boundary to prevent @p1 from matching inside @p10.
             foreach (var (key, value) in result.Parameters.OrderByDescending(x => x.Key.Length))
             {
                 string newName = $"pw{_state.ParamIndex++}";
-                sql = sql.Replace($"{d.ParameterPrefix}{key}", $"{d.ParameterPrefix}{newName}");
+                string pattern = $@"{Regex.Escape(d.ParameterPrefix)}{Regex.Escape(key)}\b";
+                var regex = _regexCache.GetOrAdd(pattern, p => new Regex(p, RegexOptions.Compiled));
+                sql = regex.Replace(sql, $"{d.ParameterPrefix}{newName}");
                 _state.Parameters[newName] = value;
             }
             return sql;
@@ -124,8 +131,8 @@ public sealed class SqlWhereBuilder<T> : SqlConditionBuilderBase<SqlWhereBuilder
     /// </example>
     public SqlWhereBuilder<T> AddIf(bool when, Expression<Func<T, bool>> condition)
     {
+        ArgumentNullException.ThrowIfNull(condition);
         if (!when) return this;
-        if (condition == null) throw new ArgumentNullException(nameof(condition));
         return Add(condition);
     }
 
@@ -162,8 +169,12 @@ public sealed class SqlWhereBuilder<T> : SqlConditionBuilderBase<SqlWhereBuilder
     {
         if (value == null) throw new ArgumentNullException(nameof(value));
         var col = GetName(selector);
-        var param = AddParam($"%{EscapeLikePattern(value)}%");
-        return AddCondition(d => $"{d.QuoteIdentifier(col)} {d.LikeOperator} {d.ParameterPrefix}{param}");
+        var param = AddLikeParam(value, prefix: "%", suffix: "%");
+        return AddCondition(d =>
+        {
+            ResolveLikeParam(param, d);
+            return $"{d.QuoteIdentifier(col)} {d.LikeOperator} {d.ParameterPrefix}{param}{d.LikeEscapeClause()}";
+        });
     }
 
     /// <summary>Adds <c>[col] NOT LIKE '%value%'</c>.</summary>
@@ -171,8 +182,12 @@ public sealed class SqlWhereBuilder<T> : SqlConditionBuilderBase<SqlWhereBuilder
     {
         if (value == null) throw new ArgumentNullException(nameof(value));
         var col = GetName(selector);
-        var param = AddParam($"%{EscapeLikePattern(value)}%");
-        return AddCondition(d => $"{d.QuoteIdentifier(col)} NOT {d.LikeOperator} {d.ParameterPrefix}{param}");
+        var param = AddLikeParam(value, prefix: "%", suffix: "%");
+        return AddCondition(d =>
+        {
+            ResolveLikeParam(param, d);
+            return $"{d.QuoteIdentifier(col)} NOT {d.LikeOperator} {d.ParameterPrefix}{param}{d.LikeEscapeClause()}";
+        });
     }
 
     /// <summary>Adds <c>[col] LIKE 'value%'</c>.</summary>
@@ -180,8 +195,12 @@ public sealed class SqlWhereBuilder<T> : SqlConditionBuilderBase<SqlWhereBuilder
     {
         if (value == null) throw new ArgumentNullException(nameof(value));
         var col = GetName(selector);
-        var param = AddParam($"{EscapeLikePattern(value)}%");
-        return AddCondition(d => $"{d.QuoteIdentifier(col)} {d.LikeOperator} {d.ParameterPrefix}{param}");
+        var param = AddLikeParam(value, prefix: null, suffix: "%");
+        return AddCondition(d =>
+        {
+            ResolveLikeParam(param, d);
+            return $"{d.QuoteIdentifier(col)} {d.LikeOperator} {d.ParameterPrefix}{param}{d.LikeEscapeClause()}";
+        });
     }
 
     /// <summary>Adds <c>[col] LIKE '%value'</c>.</summary>
@@ -189,8 +208,12 @@ public sealed class SqlWhereBuilder<T> : SqlConditionBuilderBase<SqlWhereBuilder
     {
         if (value == null) throw new ArgumentNullException(nameof(value));
         var col = GetName(selector);
-        var param = AddParam($"%{EscapeLikePattern(value)}");
-        return AddCondition(d => $"{d.QuoteIdentifier(col)} {d.LikeOperator} {d.ParameterPrefix}{param}");
+        var param = AddLikeParam(value, prefix: "%", suffix: null);
+        return AddCondition(d =>
+        {
+            ResolveLikeParam(param, d);
+            return $"{d.QuoteIdentifier(col)} {d.LikeOperator} {d.ParameterPrefix}{param}{d.LikeEscapeClause()}";
+        });
     }
 
     // ── BETWEEN ───────────────────────────────────────────────────────────────
@@ -262,8 +285,12 @@ public sealed class SqlWhereBuilder<T> : SqlConditionBuilderBase<SqlWhereBuilder
     {
         if (value == null) throw new ArgumentNullException(nameof(value));
         var col = GetName(selector);
-        var param = AddParam($"%{EscapeLikePattern(value)}%");
-        return AddCondition(d => d.ILikeExpression(d.QuoteIdentifier(col), $"{d.ParameterPrefix}{param}"));
+        var param = AddLikeParam(value, prefix: "%", suffix: "%");
+        return AddCondition(d =>
+        {
+            ResolveLikeParam(param, d);
+            return d.ILikeExpression(d.QuoteIdentifier(col), $"{d.ParameterPrefix}{param}");
+        });
     }
 
     /// <summary>Case-insensitive <c>LIKE 'value%'</c>.</summary>
@@ -271,8 +298,12 @@ public sealed class SqlWhereBuilder<T> : SqlConditionBuilderBase<SqlWhereBuilder
     {
         if (value == null) throw new ArgumentNullException(nameof(value));
         var col = GetName(selector);
-        var param = AddParam($"{EscapeLikePattern(value)}%");
-        return AddCondition(d => d.ILikeExpression(d.QuoteIdentifier(col), $"{d.ParameterPrefix}{param}"));
+        var param = AddLikeParam(value, prefix: null, suffix: "%");
+        return AddCondition(d =>
+        {
+            ResolveLikeParam(param, d);
+            return d.ILikeExpression(d.QuoteIdentifier(col), $"{d.ParameterPrefix}{param}");
+        });
     }
 
     /// <summary>Case-insensitive <c>LIKE '%value'</c>.</summary>
@@ -280,8 +311,12 @@ public sealed class SqlWhereBuilder<T> : SqlConditionBuilderBase<SqlWhereBuilder
     {
         if (value == null) throw new ArgumentNullException(nameof(value));
         var col = GetName(selector);
-        var param = AddParam($"%{EscapeLikePattern(value)}");
-        return AddCondition(d => d.ILikeExpression(d.QuoteIdentifier(col), $"{d.ParameterPrefix}{param}"));
+        var param = AddLikeParam(value, prefix: "%", suffix: null);
+        return AddCondition(d =>
+        {
+            ResolveLikeParam(param, d);
+            return d.ILikeExpression(d.QuoteIdentifier(col), $"{d.ParameterPrefix}{param}");
+        });
     }
 
     // ── Date part filtering ───────────────────────────────────────────────────
@@ -401,7 +436,7 @@ public sealed class SqlWhereBuilder<T> : SqlConditionBuilderBase<SqlWhereBuilder
         if (configure == null) throw new ArgumentNullException(nameof(configure));
         var sub = new SqlWhereBuilder<T>(_state);
         configure(sub);
-        return AddCondition(d => $"({sub.BuildSql(d)})");
+        return AddCondition(d => $"({sub.BuildSql(d, wrapMultipleGroups: false)})");
     }
 
     // ── Internals ─────────────────────────────────────────────────────────────
@@ -424,9 +459,41 @@ public sealed class SqlWhereBuilder<T> : SqlConditionBuilderBase<SqlWhereBuilder
     }
 
     /// <summary>
-    /// Escapes special LIKE wildcard characters in a raw string value so they are treated as literals.
-    /// Replaces <c>%</c> with <c>\%</c> and <c>_</c> with <c>\_</c>.
+    /// Reserves a parameter slot with a sentinel and returns its name.
+    /// The factory lambda produced by LIKE methods calls this helper, then overwrites the parameter
+    /// value at build time using the dialect's <see cref="ISqlDialect.EscapeLikeValue"/> so that
+    /// dialect-specific characters (e.g. <c>[</c> for SQL Server) are escaped correctly.
     /// </summary>
-    private static string EscapeLikePattern(string value)
-        => value.Replace("%", "\\%").Replace("_", "\\_");
+    /// <param name="rawValue">The unescaped user-supplied search term.</param>
+    /// <param name="prefix">Wildcard prefix to prepend after escaping (e.g. <c>"%"</c>), or null.</param>
+    /// <param name="suffix">Wildcard suffix to append after escaping (e.g. <c>"%"</c>), or null.</param>
+    /// <returns>The reserved parameter name (without prefix).</returns>
+    private string AddLikeParam(string rawValue, string? prefix, string? suffix)
+    {
+        // Reserve a slot; the actual escaped value is written in the factory lambda (build time).
+        string name = $"{ParamPrefix}{_state.ParamIndex++}";
+        // Store a deferred-escape wrapper so the factory can finalize it.
+        _state.Parameters[name] = new LikeParamPlaceholder(rawValue, prefix, suffix);
+        return name;
+    }
+
+    /// <summary>
+    /// Resolves a LIKE parameter: applies the dialect escape and wildcard wrapping, then
+    /// writes the final string back into the shared parameter store.
+    /// </summary>
+    internal void ResolveLikeParam(string paramName, ISqlDialect dialect)
+    {
+        if (_state.Parameters.TryGetValue(paramName, out object? raw) && raw is LikeParamPlaceholder ph)
+        {
+            string escaped = dialect.EscapeLikeValue(ph.RawValue);
+            _state.Parameters[paramName] = $"{ph.Prefix}{escaped}{ph.Suffix}";
+        }
+    }
+
+    /// <summary>Internal placeholder used to defer LIKE escape until dialect is known.</summary>
+    private sealed record LikeParamPlaceholder(string RawValue, string? Prefix, string? Suffix)
+    {
+        // Convenience: exposes the final unresolved pattern string for debugging.
+        public override string ToString() => $"{Prefix}{RawValue}{Suffix}";
+    }
 }

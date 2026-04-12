@@ -91,7 +91,8 @@ public interface IEvaluatorRead<T> : IQueryEvaluator<T> where T : class
     /// </remarks>
     Task<IEnumerable<T>> EvaluateDistinctAsync<TKey>(
         IQuerySpecification<T> specification,
-        Expression<Func<T, TKey>> selector
+        Expression<Func<T, TKey>> selector,
+        CancellationToken cancellationToken = default
     ) where TKey : notnull;
 
     /// <summary>
@@ -118,7 +119,8 @@ public interface IEvaluatorRead<T> : IQueryEvaluator<T> where T : class
     /// </remarks>
     Task<IEnumerable<T>> EvaluateDuplicatesAsync<TKey>(
         IQuerySpecification<T> specification,
-        Expression<Func<T, TKey>> selector
+        Expression<Func<T, TKey>> selector,
+        CancellationToken cancellationToken = default
     ) where TKey : notnull;
 
     /// <summary>
@@ -272,6 +274,7 @@ public interface IEvaluatorRead<T> : IQueryEvaluator<T> where T : class
     /// <param name="keySelector">The expression to select the key for grouping.</param>
     /// <param name="cancellationToken">A token to cancel the asynchronous operation.</param>
     /// <returns>A task that represents the asynchronous operation, returning a dictionary with keys and lists of entities.</returns>
+    /// <remarks>This method loads all matching entities into memory before grouping. Avoid using it on large, unfiltered tables.</remarks>
     Task<Dictionary<TKey, List<T>>> EvaluateGroupedAsync<TKey>(
         IBasicSpecification<T> specification,
         Expression<Func<T, TKey>> keySelector,

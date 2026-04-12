@@ -83,7 +83,7 @@ public static class MongoFilterTranslator
 
         public BsonDocument VisitLike(LikeNode node) =>
             new BsonDocument(node.Field, new BsonDocument("$regex",
-                new BsonRegularExpression(BuildRegexPattern(node.Pattern, node.Op), "i")));
+                new BsonRegularExpression(BuildRegexPattern(node.Pattern, node.Op), node.CaseSensitive ? "" : "i")));
 
         public BsonDocument VisitIn(InNode node) =>
             new BsonDocument(node.Field,

@@ -56,7 +56,11 @@ public sealed class SqlDeleteBuilder<T> where T : class
     /// <summary>Sets the WHERE clause from a <see cref="SqlWhereBuilder{T}"/> instance.</summary>
     public SqlDeleteBuilder<T> Where(SqlWhereBuilder<T> whereBuilder)
     {
-        _whereBuilder = whereBuilder ?? throw new ArgumentNullException(nameof(whereBuilder));
+        if (whereBuilder == null) throw new ArgumentNullException(nameof(whereBuilder));
+        if (_whereBuilder != null)
+            throw new InvalidOperationException(
+                "Where condition already set. Combine conditions within the same SqlWhereBuilder.");
+        _whereBuilder = whereBuilder;
         return this;
     }
 
@@ -70,6 +74,8 @@ public sealed class SqlDeleteBuilder<T> where T : class
     }
 
     /// <summary>Sets the WHERE clause from a raw lambda expression.</summary>
+    /// <remarks>If both <c>Where(Expression)</c> and <c>Where(SqlWhereBuilder)</c> are used,
+    /// both conditions are combined with AND in the final SQL.</remarks>
     public SqlDeleteBuilder<T> Where(Expression<Func<T, bool>> predicate)
     {
         _wherePredicate = predicate ?? throw new ArgumentNullException(nameof(predicate));
@@ -196,7 +202,7 @@ public sealed class SqlDeleteBuilder<T> where T : class
         }
 
         string finalSql = _tag != null ? $"-- {_tag}\n{sqlBuilder}" : sqlBuilder.ToString();
-        return new SqlQueryResult(finalSql, parameters);
+        return new SqlQueryResult(finalSql, parameters, _dialect.ParameterPrefix);
     }
 
     // ── Internals ─────────────────────────────────────────────────────────────

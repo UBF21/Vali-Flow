@@ -3,7 +3,7 @@ namespace Vali_Flow.InMemory.Utils;
 /// <summary>
 /// Provides helper methods for validations.
 /// </summary>
-public class ValidationHelper
+internal static class ValidationHelper
 {
     /// <summary>
     /// Validates that the entity is not null.

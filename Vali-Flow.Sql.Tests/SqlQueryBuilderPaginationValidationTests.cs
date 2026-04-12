@@ -14,35 +14,34 @@ public sealed class SqlQueryBuilderPaginationValidationTests
     private static SqlQueryBuilder<TestUser> MySql() => new(new MySqlDialect());
     private static SqlQueryBuilder<TestUser> Sqlite() => new(new SqliteDialect());
 
-    // ── Take without ORDER BY → should throw ─────────────────────────────────
+    // ── Take without ORDER BY → should NOT throw (TOP/LIMIT without offset is valid) ─────
 
     [Fact]
-    public void Build_TakeWithoutOrderBy_SqlServer_Throws()
+    public void Build_TakeWithoutOrderBy_SqlServer_DoesNotThrow()
     {
         var act = () => Sql().From("Users").Take(10).Build();
-        act.Should().Throw<InvalidOperationException>()
-            .WithMessage("*LIMIT/TOP/OFFSET requires at least one ORDER BY*");
+        act.Should().NotThrow();
     }
 
     [Fact]
-    public void Build_TakeWithoutOrderBy_PostgreSQL_Throws()
+    public void Build_TakeWithoutOrderBy_PostgreSQL_DoesNotThrow()
     {
         var act = () => PgSql().From("users").Take(10).Build();
-        act.Should().Throw<InvalidOperationException>();
+        act.Should().NotThrow();
     }
 
     [Fact]
-    public void Build_TakeWithoutOrderBy_MySQL_Throws()
+    public void Build_TakeWithoutOrderBy_MySQL_DoesNotThrow()
     {
         var act = () => MySql().From("users").Take(10).Build();
-        act.Should().Throw<InvalidOperationException>();
+        act.Should().NotThrow();
     }
 
     [Fact]
-    public void Build_TakeWithoutOrderBy_SQLite_Throws()
+    public void Build_TakeWithoutOrderBy_SQLite_DoesNotThrow()
     {
         var act = () => Sqlite().From("users").Take(10).Build();
-        act.Should().Throw<InvalidOperationException>();
+        act.Should().NotThrow();
     }
 
     // ── Skip without ORDER BY → should throw ─────────────────────────────────

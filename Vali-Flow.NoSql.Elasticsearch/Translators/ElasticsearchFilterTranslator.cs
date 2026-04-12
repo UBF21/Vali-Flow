@@ -68,19 +68,47 @@ public static class ElasticsearchFilterTranslator
                 })
                 : Query.Term(new TermQuery(node.Field!) { Value = ToFieldValue(node.Value) });
 
-        public Query VisitComparison(ComparisonNode node) => node.Op switch
+        public Query VisitComparison(ComparisonNode node) =>
+            BuildRangeQuery(node.Field!, node.Value, node.Op);
+
+        private static Query BuildRangeQuery(string field, object value, ComparisonOp op)
         {
-            ComparisonOp.GreaterThan        => Query.Range(new NumberRangeQuery(node.Field!) { Gt  = ToDouble(node.Value) }),
-            ComparisonOp.GreaterThanOrEqual => Query.Range(new NumberRangeQuery(node.Field!) { Gte = ToDouble(node.Value) }),
-            ComparisonOp.LessThan           => Query.Range(new NumberRangeQuery(node.Field!) { Lt  = ToDouble(node.Value) }),
-            ComparisonOp.LessThanOrEqual    => Query.Range(new NumberRangeQuery(node.Field!) { Lte = ToDouble(node.Value) }),
-            _ => throw new NotSupportedException($"ComparisonOp.{node.Op} is not mapped.")
-        };
+            if (value is DateTime dt)
+                return BuildDateRangeQuery(field, dt.Kind == DateTimeKind.Unspecified
+                    ? DateTime.SpecifyKind(dt, DateTimeKind.Utc)
+                    : dt.ToUniversalTime(), op);
+
+            if (value is DateTimeOffset dto)
+                return BuildDateRangeQuery(field, dto.UtcDateTime, op);
+
+            var d = ToDouble(value);
+            return op switch
+            {
+                ComparisonOp.GreaterThan        => Query.Range(new NumberRangeQuery(field) { Gt  = d }),
+                ComparisonOp.GreaterThanOrEqual => Query.Range(new NumberRangeQuery(field) { Gte = d }),
+                ComparisonOp.LessThan           => Query.Range(new NumberRangeQuery(field) { Lt  = d }),
+                ComparisonOp.LessThanOrEqual    => Query.Range(new NumberRangeQuery(field) { Lte = d }),
+                _ => throw new NotSupportedException($"ComparisonOp.{op} is not mapped.")
+            };
+        }
+
+        private static Query BuildDateRangeQuery(string field, DateTime utcDate, ComparisonOp op)
+        {
+            DateMath dateMath = utcDate.ToString("yyyy-MM-ddTHH:mm:ss.fffZ");
+            return op switch
+            {
+                ComparisonOp.GreaterThan        => Query.Range(new DateRangeQuery(field) { Gt  = dateMath }),
+                ComparisonOp.GreaterThanOrEqual => Query.Range(new DateRangeQuery(field) { Gte = dateMath }),
+                ComparisonOp.LessThan           => Query.Range(new DateRangeQuery(field) { Lt  = dateMath }),
+                ComparisonOp.LessThanOrEqual    => Query.Range(new DateRangeQuery(field) { Lte = dateMath }),
+                _ => throw new NotSupportedException($"ComparisonOp.{op} is not mapped.")
+            };
+        }
 
         public Query VisitLike(LikeNode node) => Query.Wildcard(new WildcardQuery(node.Field!)
         {
             Value           = BuildWildcardPattern(node.Pattern, node.Op),
-            CaseInsensitive = true
+            CaseInsensitive = !node.CaseSensitive
         });
 
         public Query VisitIn(InNode node)

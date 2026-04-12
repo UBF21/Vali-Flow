@@ -240,9 +240,13 @@ public sealed class ValiFlowInMemoryAggregateAndOrderTests
         var updatedEntity = new TestProduct { Id = 1, Name = "A1-Ext", Category = "Electronics", Price = 150m, Stock = 7, IsActive = true };
 
         IEnumerable<TestProduct> returned = ev.UpdateRange(new[] { updatedEntity }, externalList);
-        ev.SaveChanges();
 
-        // The external list should be updated
+        // Deferred: externalList unchanged until SaveChanges(externalList)
+        externalList.Single(p => p.Id == 1).Name.Should().NotBe("A1-Ext");
+
+        ev.SaveChanges(externalList);
+
+        // The external list should be updated after SaveChanges
         var externalItem = externalList.Single(p => p.Id == 1);
         externalItem.Name.Should().Be("A1-Ext");
         externalItem.Price.Should().Be(150m);

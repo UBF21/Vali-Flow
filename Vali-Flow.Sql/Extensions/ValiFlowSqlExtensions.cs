@@ -89,7 +89,7 @@ public static class ValiFlowSqlExtensions
                 parameters[p.Key] = p.Value;
         }
 
-        return new SqlQueryResult($"SELECT COUNT(*) FROM {table}{whereClause}", parameters);
+        return new SqlQueryResult($"SELECT COUNT(*) FROM {table}{whereClause}", parameters, dialect.ParameterPrefix);
     }
 
     /// <summary>
@@ -150,6 +150,6 @@ public static class ValiFlowSqlExtensions
                 parameters[p.Key] = p.Value;
         }
 
-        return new SqlQueryResult($"SELECT COUNT(*) FROM {table}{whereClause}", parameters);
+        return new SqlQueryResult($"SELECT COUNT(*) FROM {table}{whereClause}", parameters, dialect.ParameterPrefix);
     }
 }

@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Linq.Expressions;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -31,6 +32,8 @@ namespace Vali_Flow.Sql.Builder;
 /// </example>
 public sealed class SqlQueryBuilder<T> where T : class
 {
+    private static readonly ConcurrentDictionary<string, Regex> _regexCache = new();
+
     private readonly ISqlDialect _dialect;
     private string? _tableName;
     private string? _schema;
@@ -57,6 +60,9 @@ public sealed class SqlQueryBuilder<T> where T : class
     private string? _tag;
     private Action<string>? _tagLogger;
     private readonly List<string> _rawOrderBys = new();
+    private readonly List<(string Keyword, SqlQueryResult Query)> _setOperations = new();
+    private bool _forUpdate;
+    private bool _forShare;
 
     /// <summary>Creates a new builder using the specified SQL dialect.</summary>
     public SqlQueryBuilder(ISqlDialect dialect)
@@ -379,11 +385,14 @@ public sealed class SqlQueryBuilder<T> where T : class
     /// <see cref="Where(SqlWhereBuilder{T})"/> uses the <c>pw</c> prefix (e.g. <c>@pw0</c>), so
     /// both overloads can be combined safely without parameter-name collisions.
     /// Do NOT call both <c>Where(ValiFlow&lt;T&gt;)</c> and <c>Where(Expression&lt;…&gt;)</c>
-    /// — the second call overwrites the first (only one predicate is stored in <c>_wherePredicate</c>).
+    /// — calling either a second time throws <see cref="InvalidOperationException"/>.
+    /// Use <see cref="WhereRaw"/> or <see cref="Where(SqlWhereBuilder{T})"/> to combine multiple conditions.
     /// </remarks>
     public SqlQueryBuilder<T> Where(ValiFlow<T> filter)
     {
         if (filter == null) throw new ArgumentNullException(nameof(filter));
+        if (_wherePredicate != null)
+            throw new InvalidOperationException("Where predicate already set. Use WhereRaw(string) to append raw SQL conditions or Where(SqlWhereBuilder<T>) to combine typed conditions.");
         _wherePredicate = filter.Build();
         return this;
     }
@@ -396,11 +405,15 @@ public sealed class SqlQueryBuilder<T> where T : class
     /// <see cref="Where(SqlWhereBuilder{T})"/> uses the <c>pw</c> prefix (e.g. <c>@pw0</c>), so
     /// both overloads can be combined safely without parameter-name collisions.
     /// Do NOT call both <c>Where(Expression&lt;…&gt;)</c> and <c>Where(ValiFlow&lt;T&gt;)</c>
-    /// — the second call overwrites the first (only one predicate is stored in <c>_wherePredicate</c>).
+    /// — calling either a second time throws <see cref="InvalidOperationException"/>.
+    /// Use <see cref="WhereRaw"/> or <see cref="Where(SqlWhereBuilder{T})"/> to combine multiple conditions.
     /// </remarks>
     public SqlQueryBuilder<T> Where(Expression<Func<T, bool>> predicate)
     {
-        _wherePredicate = predicate ?? throw new ArgumentNullException(nameof(predicate));
+        if (predicate == null) throw new ArgumentNullException(nameof(predicate));
+        if (_wherePredicate != null)
+            throw new InvalidOperationException("Where predicate already set. Use WhereRaw(string) to append raw SQL conditions or Where(SqlWhereBuilder<T>) to combine typed conditions.");
+        _wherePredicate = predicate;
         return this;
     }
 
@@ -695,10 +708,6 @@ public sealed class SqlQueryBuilder<T> where T : class
 
     // ── EXCEPT / INTERSECT ────────────────────────────────────────────────────
 
-    private readonly List<(string Keyword, SqlQueryResult Query)> _setOperations = new();
-    private bool _forUpdate;
-    private bool _forShare;
-
     /// <summary>Appends EXCEPT (removes rows in common) with a prebuilt query.</summary>
     public SqlQueryBuilder<T> Except(SqlQueryResult other)
     {
@@ -992,42 +1001,49 @@ public sealed class SqlQueryBuilder<T> where T : class
         var sb = new StringBuilder();
         var parameters = new Dictionary<string, object>();
 
-        // 0 — CTEs (WITH clause, including recursive)
-        if (_ctes.Count > 0 || _recursiveCtes.Count > 0)
+        AppendCteClause(sb, parameters);
+        string topFragment = AppendSelectClause(sb);
+        AppendFromClause(sb, parameters);
+        AppendJoinClauses(sb, parameters);
+        AppendWhereClause(sb, parameters);
+        AppendGroupByClause(sb);
+        AppendHavingClause(sb, parameters);
+        AppendOrderByClause(sb);
+        AppendPaginationClause(sb, topFragment);
+        AppendSetOperations(sb, parameters);
+
+        string finalSql = _tag != null ? $"-- {_tag}\n{sb}" : sb.ToString();
+        return new SqlQueryResult(finalSql, parameters, _dialect.ParameterPrefix);
+    }
+
+    private void AppendCteClause(StringBuilder sb, Dictionary<string, object> parameters)
+    {
+        if (_ctes.Count == 0 && _recursiveCtes.Count == 0) return;
+
+        var cteParts = new List<string>();
+
+        foreach (var (name, cteQuery) in _ctes)
         {
-            var cteParts = new List<string>();
-
-            // Regular CTEs
-            foreach (var (name, cteQuery) in _ctes)
-            {
-                var (remappedSql, remappedParams) = RemapParameters(cteQuery.Sql, cteQuery.Parameters, parameters.Count, _dialect.ParameterPrefix);
-                foreach (var p in remappedParams)
-                    parameters[p.Key] = p.Value;
-                cteParts.Add($"{_dialect.QuoteTable(name)} AS ({remappedSql})");
-            }
-
-            // Recursive CTEs
-            foreach (var (cteName, anchor, recursive) in _recursiveCtes)
-            {
-                var (anchorSql, anchorParams) = RemapParameters(anchor.Sql, anchor.Parameters, parameters.Count, _dialect.ParameterPrefix);
-                foreach (var p in anchorParams)
-                    parameters[p.Key] = p.Value;
-
-                var (recursiveSql, recursiveParams) = RemapParameters(recursive.Sql, recursive.Parameters, parameters.Count, _dialect.ParameterPrefix);
-                foreach (var p in recursiveParams)
-                    parameters[p.Key] = p.Value;
-
-                cteParts.Add($"{_dialect.QuoteTable(cteName)} AS ({anchorSql} UNION ALL {recursiveSql})");
-            }
-
-            string recursiveKw = _recursiveCtes.Count > 0 && !string.IsNullOrEmpty(_dialect.RecursiveCteKeyword)
-                ? $" {_dialect.RecursiveCteKeyword}"
-                : string.Empty;
-
-            sb.Append($"WITH{recursiveKw} {string.Join(", ", cteParts)} ");
+            string remappedSql = MergeSubqueryParameters(cteQuery.Sql, cteQuery.Parameters, parameters);
+            cteParts.Add($"{_dialect.QuoteTable(name)} AS ({remappedSql})");
         }
 
-        // 1 — SELECT [DISTINCT] [TOP N] columns
+        foreach (var (cteName, anchor, recursive) in _recursiveCtes)
+        {
+            string anchorSql = MergeSubqueryParameters(anchor.Sql, anchor.Parameters, parameters);
+            string recursiveSql = MergeSubqueryParameters(recursive.Sql, recursive.Parameters, parameters);
+            cteParts.Add($"{_dialect.QuoteTable(cteName)} AS ({anchorSql} UNION ALL {recursiveSql})");
+        }
+
+        string recursiveKw = _recursiveCtes.Count > 0 && !string.IsNullOrEmpty(_dialect.RecursiveCteKeyword)
+            ? $" {_dialect.RecursiveCteKeyword}"
+            : string.Empty;
+
+        sb.Append($"WITH{recursiveKw} {string.Join(", ", cteParts)} ");
+    }
+
+    private string AppendSelectClause(StringBuilder sb)
+    {
         sb.Append("SELECT ");
         if (_distinct) sb.Append("DISTINCT ");
 
@@ -1037,12 +1053,18 @@ public sealed class SqlQueryBuilder<T> where T : class
 
         sb.Append(_columns.Count > 0 ? string.Join(", ", _columns) : "*");
 
-        // 2 — FROM [schema].[table] [WITH (hint)]
+        return topFragment;
+    }
+
+    private void AppendFromClause(StringBuilder sb, Dictionary<string, object> parameters)
+    {
         sb.Append($" FROM {BuildTableSql(parameters)}");
         if (!string.IsNullOrEmpty(_tableHint))
             sb.Append($" WITH ({_tableHint})");
+    }
 
-        // 3 — JOINs
+    private void AppendJoinClauses(StringBuilder sb, Dictionary<string, object> parameters)
+    {
         foreach (var join in _joins)
         {
             sb.Append($" {join.JoinType} {join.TableSql}");
@@ -1050,16 +1072,15 @@ public sealed class SqlQueryBuilder<T> where T : class
                 sb.Append($" ON {join.OnSql}");
         }
 
-        // Subquery JOINs — parameters remapped at build time to avoid collisions
         foreach (var (joinType, subquery, alias, on) in _subqueryJoins)
         {
-            var (remappedSql, remappedParams) = RemapParameters(subquery.Sql, subquery.Parameters, parameters.Count, _dialect.ParameterPrefix);
-            foreach (var kv in remappedParams)
-                parameters[kv.Key] = kv.Value;
+            string remappedSql = MergeSubqueryParameters(subquery.Sql, subquery.Parameters, parameters);
             sb.Append($" {joinType} ({remappedSql}) {_dialect.QuoteIdentifier(alias)} ON {on}");
         }
+    }
 
-        // 4 — WHERE (typed predicate + EXISTS clauses + raw fragments)
+    private void AppendWhereClause(StringBuilder sb, Dictionary<string, object> parameters)
+    {
         var whereFragments = new List<string>();
 
         if (_wherePredicate != null)
@@ -1072,18 +1093,14 @@ public sealed class SqlQueryBuilder<T> where T : class
 
         foreach (var (negate, subquery) in _existsClauses)
         {
-            var (remappedSql, remappedParams) = RemapParameters(subquery.Sql, subquery.Parameters, parameters.Count, _dialect.ParameterPrefix);
-            foreach (var p in remappedParams)
-                parameters[p.Key] = p.Value;
+            string remappedSql = MergeSubqueryParameters(subquery.Sql, subquery.Parameters, parameters);
             string keyword = negate ? "NOT EXISTS" : "EXISTS";
             whereFragments.Add($"{keyword} ({remappedSql})");
         }
 
         foreach (var (negate, col, subquery) in _inSubqueryClauses)
         {
-            var (remappedSql, remappedParams) = RemapParameters(subquery.Sql, subquery.Parameters, parameters.Count, _dialect.ParameterPrefix);
-            foreach (var p in remappedParams)
-                parameters[p.Key] = p.Value;
+            string remappedSql = MergeSubqueryParameters(subquery.Sql, subquery.Parameters, parameters);
             string keyword = negate ? "NOT IN" : "IN";
             whereFragments.Add($"{_dialect.QuoteIdentifier(col)} {keyword} ({remappedSql})");
         }
@@ -1108,12 +1125,16 @@ public sealed class SqlQueryBuilder<T> where T : class
                 : string.Join(" AND ", whereFragments.Select(f => $"({f})"));
             sb.Append($" WHERE {combined}");
         }
+    }
 
-        // 5 — GROUP BY
+    private void AppendGroupByClause(StringBuilder sb)
+    {
         if (_groupBys.Count > 0)
             sb.Append($" GROUP BY {string.Join(", ", _groupBys)}");
+    }
 
-        // 6 — HAVING
+    private void AppendHavingClause(StringBuilder sb, Dictionary<string, object> parameters)
+    {
         string? resolvedHaving = _havingRaw;
 
         if (_havingBuilder != null)
@@ -1131,22 +1152,25 @@ public sealed class SqlQueryBuilder<T> where T : class
 
         if (!string.IsNullOrEmpty(resolvedHaving))
             sb.Append($" HAVING {resolvedHaving}");
+    }
 
-        // 7 — ORDER BY
-        if (_orderBys.Count > 0 || _rawOrderBys.Count > 0)
+    private void AppendOrderByClause(StringBuilder sb)
+    {
+        if (_orderBys.Count == 0 && _rawOrderBys.Count == 0) return;
+
+        var orderParts = _orderBys.Select(o =>
         {
-            var orderParts = _orderBys.Select(o =>
-            {
-                string direction = o.Ascending ? _dialect.OrderByAscending : _dialect.OrderByDescending;
-                string nullsClause = _dialect.NullsOrderClause(o.Nulls);
-                return string.IsNullOrEmpty(nullsClause)
-                    ? $"{o.ColumnSql} {direction}"
-                    : $"{o.ColumnSql} {direction} {nullsClause}";
-            }).Concat(_rawOrderBys);
-            sb.Append($" ORDER BY {string.Join(", ", orderParts)}");
-        }
+            string direction = o.Ascending ? _dialect.OrderByAscending : _dialect.OrderByDescending;
+            string nullsClause = _dialect.NullsOrderClause(o.Nulls);
+            return string.IsNullOrEmpty(nullsClause)
+                ? $"{o.ColumnSql} {direction}"
+                : $"{o.ColumnSql} {direction} {nullsClause}";
+        }).Concat(_rawOrderBys);
+        sb.Append($" ORDER BY {string.Join(", ", orderParts)}");
+    }
 
-        // 8 — LIMIT / OFFSET
+    private void AppendPaginationClause(StringBuilder sb, string topFragment)
+    {
         string limitOffset = string.IsNullOrEmpty(topFragment)
             ? _dialect.LimitOffset(_take, _skip)
             : _dialect.LimitOffset(null, _skip);
@@ -1154,36 +1178,37 @@ public sealed class SqlQueryBuilder<T> where T : class
         if (!string.IsNullOrEmpty(limitOffset))
             sb.Append($" {limitOffset}");
 
-        // 8b — FOR UPDATE / FOR SHARE
+        if (_forUpdate && _forShare)
+            throw new InvalidOperationException("Cannot use ForUpdate and ForShare simultaneously.");
+
         if (_forUpdate && !string.IsNullOrEmpty(_dialect.ForUpdateClause))
             sb.Append($" {_dialect.ForUpdateClause}");
         else if (_forShare && !string.IsNullOrEmpty(_dialect.ForShareClause))
             sb.Append($" {_dialect.ForShareClause}");
+    }
 
-        // 9 — UNION / UNION ALL
+    private void AppendSetOperations(StringBuilder sb, Dictionary<string, object> parameters)
+    {
         foreach (var (all, unionQuery) in _unions)
         {
-            var (remappedSql, remappedParams) = RemapParameters(unionQuery.Sql, unionQuery.Parameters, parameters.Count, _dialect.ParameterPrefix);
-            foreach (var p in remappedParams)
-                parameters[p.Key] = p.Value;
-
+            string remappedSql = MergeSubqueryParameters(unionQuery.Sql, unionQuery.Parameters, parameters);
             sb.Append(all ? " UNION ALL " : " UNION ");
             sb.Append(remappedSql);
         }
 
-        // 10 — EXCEPT / INTERSECT
         foreach (var (keyword, setQuery) in _setOperations)
         {
-            var (remappedSql, remappedParams) = RemapParameters(setQuery.Sql, setQuery.Parameters, parameters.Count, _dialect.ParameterPrefix);
-            foreach (var p in remappedParams)
-                parameters[p.Key] = p.Value;
-
+            string remappedSql = MergeSubqueryParameters(setQuery.Sql, setQuery.Parameters, parameters);
             sb.Append($" {keyword} ");
             sb.Append(remappedSql);
         }
+    }
 
-        string finalSql = _tag != null ? $"-- {_tag}\n{sb}" : sb.ToString();
-        return new SqlQueryResult(finalSql, parameters);
+    private string MergeSubqueryParameters(string sql, IReadOnlyDictionary<string, object> subParams, Dictionary<string, object> parameters)
+    {
+        var (remappedSql, remappedParams) = RemapParameters(sql, subParams, parameters.Count, _dialect.ParameterPrefix);
+        foreach (var p in remappedParams) parameters[p.Key] = p.Value;
+        return remappedSql;
     }
 
     private string BuildTableSql(Dictionary<string, object> parameters)
@@ -1191,9 +1216,7 @@ public sealed class SqlQueryBuilder<T> where T : class
         if (_fromSubquery.HasValue)
         {
             var (subQuery, alias) = _fromSubquery.Value;
-            var (remappedSql, remappedParams) = RemapParameters(subQuery.Sql, subQuery.Parameters, parameters.Count, _dialect.ParameterPrefix);
-            foreach (var p in remappedParams)
-                parameters[p.Key] = p.Value;
+            var remappedSql = MergeSubqueryParameters(subQuery.Sql, subQuery.Parameters, parameters);
             return $"({remappedSql}) {alias}";
         }
 
@@ -1325,11 +1348,19 @@ public sealed class SqlQueryBuilder<T> where T : class
 
     private void ValidatePaginationConstraints()
     {
-        bool needsOrder = (_skip.HasValue && _skip > 0) || _take.HasValue;
+        bool needsOrder = _skip.HasValue || (_take.HasValue && _dialect.RequiresOrderByForTakeOnly);
         if (needsOrder && _orderBys.Count == 0 && _rawOrderBys.Count == 0)
         {
             throw new InvalidOperationException(
                 $"Dialect '{_dialect.DialectName}': LIMIT/TOP/OFFSET requires at least one ORDER BY clause to produce deterministic results.");
+        }
+
+        if (_skip.HasValue && !_take.HasValue)
+        {
+            var testLimitSql = _dialect.LimitOffset(null, _skip);
+            if (string.IsNullOrEmpty(testLimitSql))
+                throw new InvalidOperationException(
+                    $"Dialect '{_dialect.DialectName}' does not support Skip without Take. Provide a Take value.");
         }
     }
 
@@ -1349,19 +1380,31 @@ public sealed class SqlQueryBuilder<T> where T : class
         if (sourceParams.Count == 0)
             return (sql, new Dictionary<string, object>());
 
-        string remappedSql = sql;
         var renamed = new Dictionary<string, object>();
         int i = baseIndex;
 
-        // Sort by descending key length to prevent partial replacements (e.g. @p10 before @p1).
-        // Use regex word-boundary replace to avoid matching @p1 inside @p10.
+        // Build a mapping from old param name → new param name in a single pass.
+        // Sort by descending key length so @p10 is registered before @p1.
+        var oldToNew = new Dictionary<string, string>(sourceParams.Count);
         foreach (var (key, value) in sourceParams.OrderByDescending(x => x.Key.Length))
         {
             string newKey = $"p{i++}";
-            string oldParam = $"{parameterPrefix}{key}";
-            remappedSql = Regex.Replace(remappedSql, Regex.Escape(oldParam) + @"\b", $"{parameterPrefix}{newKey}");
+            oldToNew[key] = newKey;
             renamed[newKey] = value;
         }
+
+        // Build one pattern that matches any of the old param names preceded by the prefix.
+        // Using word boundary \b avoids matching @p1 inside @p10.
+        string escapedPrefix = Regex.Escape(parameterPrefix);
+        string pattern = escapedPrefix + @"(" + string.Join("|", oldToNew.Keys.Select(Regex.Escape)) + @")\b";
+        var paramPattern = _regexCache.GetOrAdd(pattern, p => new Regex(p, RegexOptions.Compiled));
+        string remappedSql = paramPattern.Replace(sql, match =>
+        {
+            string oldKey = match.Groups[1].Value;
+            return oldToNew.TryGetValue(oldKey, out var newKey)
+                ? $"{parameterPrefix}{newKey}"
+                : match.Value;
+        });
 
         return (remappedSql, renamed);
     }

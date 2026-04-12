@@ -193,16 +193,15 @@ public sealed class DynamoFilterTranslatorTests
     }
 
     [Fact]
-    public void ToDynamoDB_EmptyListContains_ProducesAlwaysFalse()
+    public void ToDynamoDB_EmptyListContains_ThrowsInvalidOperationException()
     {
         var ids = new List<int>();
         Expression<Func<TestDocument, bool>> expr = x => ids.Contains(x.Id);
 
-        DynamoFilterExpression f = expr.ToDynamoDB();
+        Action act = () => expr.ToDynamoDB();
 
-        f.FilterExpression.Should().Contain("attribute_exists");
-        f.FilterExpression.Should().Contain("attribute_not_exists");
-        f.FilterExpression.Should().Contain("AND");
+        // DynamoDB does not support empty IN — the translator rejects it early
+        act.Should().Throw<InvalidOperationException>().WithMessage("*empty*");
     }
 
     [Fact]
@@ -237,7 +236,8 @@ public sealed class DynamoFilterTranslatorTests
 
         DynamoFilterExpression f = expr.ToDynamoDB();
 
-        f.FilterExpression.Should().Be("(#f0 = :v0 OR #f1 = :v1)");
+        // "Name" is deduplicated → single placeholder #f0 reused on both sides
+        f.FilterExpression.Should().Be("(#f0 = :v0 OR #f0 = :v1)");
         f.ExpressionAttributeValues[":v0"].S.Should().Be("Alice");
         f.ExpressionAttributeValues[":v1"].S.Should().Be("Bob");
     }
@@ -497,7 +497,7 @@ public sealed class DynamoFilterTranslatorTests
     // ── ExpressionAttributeNames deduplication ────────────────────────────────
 
     [Fact]
-    public void ToDynamoDB_SameFieldTwice_UsesDifferentNamePlaceholders()
+    public void ToDynamoDB_SameFieldTwice_ReusesSingleNamePlaceholder()
     {
         var left  = new EqualNode("Age", 18, false);
         var right = new ComparisonNode("Age", 16, ComparisonOp.GreaterThan);
@@ -505,13 +505,29 @@ public sealed class DynamoFilterTranslatorTests
 
         DynamoFilterExpression f = DynamoFilterTranslator.Translate(node);
 
-        // Both placeholders must map to "Age"
+        // After dedup, exactly 1 entry for "Age" — no duplicate placeholders
+        f.ExpressionAttributeNames.Should().HaveCount(1);
         f.ExpressionAttributeNames.Should().ContainKey("#f0");
-        f.ExpressionAttributeNames.Should().ContainKey("#f1");
         f.ExpressionAttributeNames["#f0"].Should().Be("Age");
-        f.ExpressionAttributeNames["#f1"].Should().Be("Age");
-        f.FilterExpression.Should().Contain("#f0");
-        f.FilterExpression.Should().Contain("#f1");
+        // Both conditions reference the same placeholder
+        f.FilterExpression.Should().Be("(#f0 = :v0 AND #f0 > :v1)");
+    }
+
+    [Fact]
+    public void AddName_SameFieldTwice_ReusesPlaceholder()
+    {
+        // x.Name == "a" AND x.Name != "b" — "Name" used in two conditions
+        var left  = new EqualNode("Name", "a", false);
+        var right = new EqualNode("Name", "b", true);
+        var node  = new AndNode(left, right);
+
+        DynamoFilterExpression f = DynamoFilterTranslator.Translate(node);
+
+        // ExpressionAttributeNames must have exactly 1 entry for "Name"
+        f.ExpressionAttributeNames.Should().HaveCount(1, "the same field must not generate duplicate name placeholders");
+        f.ExpressionAttributeNames.Values.Should().OnlyContain(v => v == "Name");
+        // Both sides of the AND use the same placeholder
+        f.FilterExpression.Should().MatchRegex(@"#f0 = :v0 AND #f0 <> :v1");
     }
 
     // ── Range con decimal ─────────────────────────────────────────────────────
@@ -526,6 +542,120 @@ public sealed class DynamoFilterTranslatorTests
         f.FilterExpression.Should().Be("#f0 > :v0");
         f.ExpressionAttributeNames["#f0"].Should().Be("Price");
         f.ExpressionAttributeValues[":v0"].N.Should().Be("99.99");
+    }
+
+    // ── String IN list ────────────────────────────────────────────────────────
+
+    [Fact]
+    public void ToDynamoDB_StringListContains_ProducesInExpressionWithStringValues()
+    {
+        var categories = new List<string> { "Electronics", "Books", "Tools" };
+        Expression<Func<TestDocument, bool>> expr = x => categories.Contains(x.Category);
+
+        DynamoFilterExpression f = expr.ToDynamoDB();
+
+        f.FilterExpression.Should().Be("#f0 IN (:v0, :v1, :v2)");
+        f.ExpressionAttributeNames["#f0"].Should().Be("Category");
+        f.ExpressionAttributeValues[":v0"].S.Should().Be("Electronics");
+        f.ExpressionAttributeValues[":v1"].S.Should().Be("Books");
+        f.ExpressionAttributeValues[":v2"].S.Should().Be("Tools");
+    }
+
+    [Fact]
+    public void ToDynamoDB_SingleItemStringList_ProducesInExpressionWithOneValue()
+    {
+        var cats = new List<string> { "Electronics" };
+        Expression<Func<TestDocument, bool>> expr = x => cats.Contains(x.Category);
+
+        DynamoFilterExpression f = expr.ToDynamoDB();
+
+        f.FilterExpression.Should().Be("#f0 IN (:v0)");
+        f.ExpressionAttributeValues[":v0"].S.Should().Be("Electronics");
+    }
+
+    // ── Constant on left ──────────────────────────────────────────────────────
+
+    [Fact]
+    public void ToDynamoDB_ConstantOnLeftLessThan_FlipsToGreaterThan()
+    {
+        // 18 < x.Age → x.Age > 18
+        Expression<Func<TestDocument, bool>> expr = x => 18 < x.Age;
+
+        DynamoFilterExpression f = expr.ToDynamoDB();
+
+        f.FilterExpression.Should().Be("#f0 > :v0");
+        f.ExpressionAttributeValues[":v0"].N.Should().Be("18");
+    }
+
+    [Fact]
+    public void ToDynamoDB_ConstantOnLeftGreaterThan_FlipsToLessThan()
+    {
+        // 65 > x.Age → x.Age < 65
+        Expression<Func<TestDocument, bool>> expr = x => 65 > x.Age;
+
+        DynamoFilterExpression f = expr.ToDynamoDB();
+
+        f.FilterExpression.Should().Be("#f0 < :v0");
+        f.ExpressionAttributeValues[":v0"].N.Should().Be("65");
+    }
+
+    [Fact]
+    public void ToDynamoDB_ConstantOnLeftGreaterThanOrEqual_FlipsToLessThanOrEqual()
+    {
+        // 100 >= x.Age → x.Age <= 100
+        Expression<Func<TestDocument, bool>> expr = x => 100 >= x.Age;
+
+        DynamoFilterExpression f = expr.ToDynamoDB();
+
+        f.FilterExpression.Should().Be("#f0 <= :v0");
+        f.ExpressionAttributeValues[":v0"].N.Should().Be("100");
+    }
+
+    // ── ValiFlow pipeline de 3 condiciones ───────────────────────────────────
+
+    [Fact]
+    public void ToDynamoDB_ValiFlowThreeConditions_ProducesNestedAndExpression()
+    {
+        var flow = new ValiFlow<TestDocument>()
+            .EqualTo(x => x.IsActive, true)
+            .GreaterThan(x => x.Age, 18)
+            .EqualTo(x => x.Category, "Electronics");
+
+        DynamoFilterExpression f = flow.ToDynamoDB();
+
+        f.FilterExpression.Should().Contain("AND");
+        f.ExpressionAttributeNames.Should().ContainKey("#f0");
+        f.ExpressionAttributeValues.Should().HaveCount(3);
+    }
+
+    // ── Fallback type → S attribute ──────────────────────────────────────────
+
+    [Fact]
+    public void ToDynamoDB_FallbackTypeObject_ProducesStringAttribute()
+    {
+        // An unknown type falls back to { S = value.ToString() }
+        var node = new EqualNode("Misc", new Uri("https://example.com"), false);
+
+        DynamoFilterExpression f = DynamoFilterTranslator.Translate(node);
+
+        f.FilterExpression.Should().Be("#f0 = :v0");
+        f.ExpressionAttributeValues[":v0"].S.Should().Be("https://example.com/");
+    }
+
+    // ── Guid in IN list ───────────────────────────────────────────────────────
+
+    [Fact]
+    public void ToDynamoDB_GuidListContains_ProducesInExpressionWithStringValues()
+    {
+        var g1 = new Guid("11111111-1111-1111-1111-111111111111");
+        var g2 = new Guid("22222222-2222-2222-2222-222222222222");
+        var node = new InNode("ExternalId", new List<object?> { g1, g2 });
+
+        DynamoFilterExpression f = DynamoFilterTranslator.Translate(node);
+
+        f.FilterExpression.Should().Be("#f0 IN (:v0, :v1)");
+        f.ExpressionAttributeValues[":v0"].S.Should().Be(g1.ToString());
+        f.ExpressionAttributeValues[":v1"].S.Should().Be(g2.ToString());
     }
 
     private enum DynamoTestStatus { Active = 1 }

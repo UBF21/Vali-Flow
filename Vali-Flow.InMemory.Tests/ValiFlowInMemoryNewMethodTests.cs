@@ -59,7 +59,7 @@ public sealed class ValiFlowInMemoryNewMethodTests
     }
 
     [Fact]
-    public void Upsert_ToExplicitList_ImmediatelyUpdatesNewEntities()
+    public void Upsert_ToExplicitList_NewEntityAppliedAfterSaveChanges()
     {
         var data = CreateMutableSeed();
         var evaluator = CreateEvaluator(data);
@@ -67,12 +67,18 @@ public sealed class ValiFlowInMemoryNewMethodTests
 
         evaluator.Upsert(newProduct, data);
 
+        // Deferred: list unchanged until SaveChanges
+        data.Should().HaveCount(10);
+        data.Should().NotContain(p => p.Id == 50);
+
+        evaluator.SaveChanges(data);
+
         data.Should().HaveCount(11);
         data.Should().Contain(p => p.Id == 50);
     }
 
     [Fact]
-    public void Upsert_ToExplicitList_ExistingIsUpdatedInList()
+    public void Upsert_ToExplicitList_ExistingIsUpdatedAfterSaveChanges()
     {
         var data = CreateMutableSeed();
         var evaluator = CreateEvaluator(data);
@@ -80,8 +86,60 @@ public sealed class ValiFlowInMemoryNewMethodTests
 
         evaluator.Upsert(updated, data);
 
-        var inList = data.First(p => p.Id == 3);
-        inList.Name.Should().Be("Carrot XL");
+        // Deferred: list unchanged until SaveChanges
+        data.First(p => p.Id == 3).Name.Should().NotBe("Carrot XL");
+
+        evaluator.SaveChanges(data);
+
+        data.First(p => p.Id == 3).Name.Should().Be("Carrot XL");
+    }
+
+    [Fact]
+    public void UpsertRange_ToExplicitList_NewEntitiesAppliedAfterSaveChanges()
+    {
+        var data = CreateMutableSeed();
+        var evaluator = CreateEvaluator(data);
+        var newItems = new List<TestProduct>
+        {
+            new() { Id = 51, Name = "Mango",  Category = "Fruit", Price = 3.0m, Stock = 40, IsActive = true },
+            new() { Id = 52, Name = "Papaya", Category = "Fruit", Price = 2.5m, Stock = 25, IsActive = true },
+        };
+
+        evaluator.UpsertRange(newItems, data);
+
+        // Deferred: list unchanged until SaveChanges
+        data.Should().HaveCount(10);
+        data.Should().NotContain(p => p.Id == 51);
+        data.Should().NotContain(p => p.Id == 52);
+
+        evaluator.SaveChanges(data);
+
+        data.Should().HaveCount(12);
+        data.Should().Contain(p => p.Id == 51);
+        data.Should().Contain(p => p.Id == 52);
+    }
+
+    [Fact]
+    public void UpsertRange_ToExplicitList_ExistingEntitiesUpdatedAfterSaveChanges()
+    {
+        var data = CreateMutableSeed();
+        var evaluator = CreateEvaluator(data);
+        var toUpdate = new List<TestProduct>
+        {
+            new() { Id = 1, Name = "Apple XL",  Category = "Fruit", Price = 9.0m, Stock = 110, IsActive = true },
+            new() { Id = 2, Name = "Banana XL", Category = "Fruit", Price = 8.0m, Stock = 160, IsActive = true },
+        };
+
+        evaluator.UpsertRange(toUpdate, data);
+
+        // Deferred: list unchanged until SaveChanges
+        data.First(p => p.Id == 1).Name.Should().NotBe("Apple XL");
+        data.First(p => p.Id == 2).Name.Should().NotBe("Banana XL");
+
+        evaluator.SaveChanges(data);
+
+        data.First(p => p.Id == 1).Name.Should().Be("Apple XL");
+        data.First(p => p.Id == 2).Name.Should().Be("Banana XL");
     }
 
     // ── UpsertRange ───────────────────────────────────────────────────────────
@@ -197,7 +255,7 @@ public sealed class ValiFlowInMemoryNewMethodTests
     }
 
     [Fact]
-    public void DeleteByCondition_ToExplicitList_RemovesImmediately()
+    public void DeleteByCondition_ToExplicitList_RemovesAfterSaveChanges()
     {
         var data = CreateMutableSeed();
         var evaluator = CreateEvaluator(data);
@@ -206,8 +264,50 @@ public sealed class ValiFlowInMemoryNewMethodTests
 
         // Sweet: Donut(4), Honey(8), Jam(10) = 3
         deleted.Should().Be(3);
+
+        // Deferred: list unchanged before SaveChanges
+        data.Should().HaveCount(10);
+
+        evaluator.SaveChanges(data);
+
+        // Applied exactly once
         data.Should().HaveCount(7);
         data.Should().NotContain(p => p.Category == "Sweet");
+    }
+
+    [Fact]
+    public void DeleteByCondition_ThenSaveChanges_RemovesOnce()
+    {
+        var data = CreateMutableSeed();
+        var evaluator = CreateEvaluator(data);
+
+        evaluator.DeleteByCondition(p => p.Id == 1, data);
+
+        // Deferred: list unchanged before SaveChanges
+        data.Should().HaveCount(10);
+
+        evaluator.SaveChanges(data);
+
+        // Applied exactly once
+        data.Should().HaveCount(9);
+        data.Should().NotContain(p => p.Id == 1);
+    }
+
+    [Fact]
+    public void Upsert_SameEntityTwiceBeforeSaveChanges_ProducesOneEntry()
+    {
+        var data = CreateMutableSeed();
+        var evaluator = CreateEvaluator(data);
+        var entity = new TestProduct { Id = 99, Name = "First", Category = "Fruit", Price = 1.0m, Stock = 10, IsActive = true };
+        var updated = new TestProduct { Id = 99, Name = "Second", Category = "Fruit", Price = 2.0m, Stock = 20, IsActive = true };
+
+        evaluator.Upsert(entity);
+        evaluator.Upsert(updated); // same ID
+        evaluator.SaveChanges();
+
+        // Exactly one entry with Id=99
+        evaluator.EvaluateCount(null).Should().Be(11);
+        evaluator.GetFirst(null, new ValiFlow<TestProduct>().EqualTo(p => p.Id, 99))!.Name.Should().Be("Second");
     }
 
     // ── EvaluatePagedResult ───────────────────────────────────────────────────
@@ -264,7 +364,7 @@ public sealed class ValiFlowInMemoryNewMethodTests
 
         Action act = () => evaluator.EvaluatePagedResult<int>(data, page: 0, pageSize: 5);
 
-        act.Should().Throw<ArgumentException>();
+        act.Should().Throw<ArgumentOutOfRangeException>();
     }
 
     // ── EvaluateDuplicates ────────────────────────────────────────────────────
@@ -306,6 +406,23 @@ public sealed class ValiFlowInMemoryNewMethodTests
         var result = evaluator.EvaluateDuplicates<string>(data, p => p.Category, valiFlow: filter).ToList();
 
         result.Should().OnlyContain(p => p.IsActive);
+    }
+
+    // ── SaveChanges ───────────────────────────────────────────────────────────
+
+    [Fact]
+    public void SaveChanges_WithNullEntities_AppliesChangesToInternalStore()
+    {
+        var evaluator = CreateEvaluator(CreateMutableSeed());
+        var newProduct = new TestProduct { Id = 99, Name = "Test", Category = "Fruit", Price = 1.0m, Stock = 10, IsActive = true };
+        evaluator.Add(newProduct);
+
+        // SaveChanges sin parámetro → aplica sobre _items interno
+        evaluator.SaveChanges();
+
+        var result = evaluator.GetFirst(null, new ValiFlow<TestProduct>().EqualTo(p => p.Id, 99));
+        result.Should().NotBeNull();
+        result!.Name.Should().Be("Test");
     }
 
     [Fact]

@@ -38,6 +38,9 @@ public interface ISqlDialect
     /// <summary>SQL literal for boolean false.</summary>
     string FalseValue { get; }
 
+    /// <summary>The not-equal operator. ANSI SQL standard is "&lt;&gt;". Default: "&lt;&gt;".</summary>
+    string NotEqualOperator => "<>";
+
     /// <summary>ORDER BY ascending keyword. Default: "ASC".</summary>
     string OrderByAscending => "ASC";
 
@@ -76,6 +79,21 @@ public interface ISqlDialect
     /// Only SQL Server returns true.
     /// </summary>
     bool SupportsMerge => false;
+
+    /// <summary>
+    /// True when the dialect supports <c>WHEN NOT MATCHED BY TARGET</c> in MERGE statements.
+    /// SQL Server supports both <c>WHEN NOT MATCHED</c> and <c>WHEN NOT MATCHED BY TARGET</c>.
+    /// Oracle only supports <c>WHEN NOT MATCHED</c> — <c>BY TARGET</c> is not valid syntax.
+    /// Default: true.
+    /// </summary>
+    bool SupportsMergeNotMatchedByTarget => true;
+
+    /// <summary>
+    /// Returns the alias fragment for the MERGE target table.
+    /// Default (SQL Server / most dialects): <c>AS {alias}</c>.
+    /// Oracle overrides to return just <c>{alias}</c> — Oracle does not allow AS in this position.
+    /// </summary>
+    string MergeTargetAlias(string alias) => $"AS {alias}";
 
     // ── DML output / returning ────────────────────────────────────────────────
 
@@ -196,6 +214,13 @@ public interface ISqlDialect
     string EscapeLikeValue(string value)
         => value.Replace("%", "\\%").Replace("_", "\\_");
 
+    /// <summary>
+    /// Returns the ESCAPE clause to append after a LIKE expression (e.g. <c> ESCAPE '\'</c>).
+    /// Required when <see cref="EscapeLikeValue"/> uses backslash as the escape character.
+    /// Most dialects return an empty string; SQL Server requires this clause.
+    /// </summary>
+    string LikeEscapeClause() => string.Empty;
+
     /// <summary>SQL expression for the current timestamp. GETDATE() vs NOW() vs CURRENT_TIMESTAMP.</summary>
     string CurrentTimestamp { get; }
 
@@ -235,6 +260,13 @@ public interface ISqlDialect
     /// </summary>
     string IsNotDistinctFromExpression(string colSql, string paramSql)
         => $"({colSql} = {paramSql} OR ({colSql} IS NULL AND {paramSql} IS NULL))";
+
+    /// <summary>
+    /// True when the dialect requires an ORDER BY clause even when only TAKE (no SKIP) is specified.
+    /// Oracle's OFFSET/FETCH syntax requires ORDER BY in all cases.
+    /// Default: false.
+    /// </summary>
+    bool RequiresOrderByForTakeOnly => false;
 
     // ── Recursive CTE ────────────────────────────────────────────────────────
 

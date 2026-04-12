@@ -108,7 +108,7 @@ public sealed class SqlQueryResultTests
         result.ApplyTo(cmd);
 
         captured.Should().HaveCount(1);
-        captured[0].Name.Should().Be("p0");
+        captured[0].Name.Should().Be("@p0");
         captured[0].Value.Should().Be(18);
     }
 

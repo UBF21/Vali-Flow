@@ -19,6 +19,10 @@ public static class ServiceCollectionExtensions
     /// <typeparam name="TContext">The <see cref="DbContext"/> type registered in the container.</typeparam>
     /// <param name="services">The service collection to add the evaluator to.</param>
     /// <returns>The same <see cref="IServiceCollection"/> for chaining.</returns>
+    /// <remarks>
+    /// This method is NOT idempotent for the same <typeparamref name="T"/>.
+    /// Calling it twice for the same entity type will register duplicate services.
+    /// </remarks>
     /// <example>
     /// <code>
     /// builder.Services

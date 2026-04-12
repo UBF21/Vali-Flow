@@ -48,7 +48,7 @@ internal sealed class ExpressionToSqlVisitor : ExpressionVisitor
 
         var visitor = new ExpressionToSqlVisitor(dialect);
         visitor.Visit(expression.Body);
-        return new SqlResult(visitor._sql.ToString(), visitor._parameters);
+        return new SqlResult(visitor._sql.ToString(), visitor._parameters, dialect.ParameterPrefix);
     }
 
     protected override Expression VisitBinary(BinaryExpression node)
@@ -208,15 +208,16 @@ internal sealed class ExpressionToSqlVisitor : ExpressionVisitor
 
     protected override Expression VisitMethodCall(MethodCallExpression node)
     {
-        // Math.Abs(x.Value) → ABS([Value])
-        if (node.Method.Name == nameof(Math.Abs) && node.Method.DeclaringType == typeof(Math) &&
-            node.Arguments.Count == 1)
-        {
-            var inner = GetColumnSql(node.Arguments[0]);
-            _sql.Append($"ABS({inner})");
-            return node;
-        }
+        if (TryVisitStringMethod(node)) return node;
+        if (TryVisitMathMethod(node)) return node;
+        if (TryVisitDateTimeMethod(node)) return node;
+        if (TryVisitCollectionMethod(node)) return node;
+        if (TryVisitEnumMethod(node)) return node;
+        throw new NotSupportedException($"Method call '{node.Method.DeclaringType?.Name}.{node.Method.Name}' is not supported by the SQL translator.");
+    }
 
+    private bool TryVisitStringMethod(MethodCallExpression node)
+    {
         // string.ToLower() / string.ToUpper() on a column — x.Name.ToLower() → LOWER([Name])
         if (node.Object != null && node.Object.Type == typeof(string) &&
             node.Arguments.Count == 0)
@@ -225,44 +226,69 @@ internal sealed class ExpressionToSqlVisitor : ExpressionVisitor
             {
                 var col = GetColumnSql(node.Object);
                 _sql.Append($"LOWER({col})");
-                return node;
+                return true;
             }
 
             if (node.Method.Name == nameof(string.ToUpper))
             {
                 var col = GetColumnSql(node.Object);
                 _sql.Append($"UPPER({col})");
-                return node;
+                return true;
+            }
+
+            // string zero-arg methods: Trim / TrimStart / TrimEnd
+            if (node.Method.Name == nameof(string.Trim))
+            {
+                var col = GetColumnSql(node.Object);
+                _sql.Append(_dialect.TrimExpression(col));
+                return true;
+            }
+
+            if (node.Method.Name == nameof(string.TrimStart))
+            {
+                var col = GetColumnSql(node.Object);
+                _sql.Append($"LTRIM({col})");
+                return true;
+            }
+
+            if (node.Method.Name == nameof(string.TrimEnd))
+            {
+                var col = GetColumnSql(node.Object);
+                _sql.Append($"RTRIM({col})");
+                return true;
             }
         }
 
-        // string.Contains / StartsWith / EndsWith / Substring / Trim / Replace / IndexOf
+        // string instance methods with arguments: Contains / StartsWith / EndsWith / Substring / Replace / IndexOf
         if (node.Object != null && node.Object.Type == typeof(string))
         {
             var col = GetColumnSql(node.Object);
 
             if (node.Method.Name == nameof(string.Contains) && node.Arguments.Count >= 1)
             {
-                var value = EvaluateExpression(node.Arguments[0])?.ToString() ?? string.Empty;
-                var paramName = AddParameter($"%{value}%");
-                _sql.Append($"{col} {_dialect.LikeOperator} {_dialect.ParameterPrefix}{paramName}");
-                return node;
+                var raw = EvaluateExpression(node.Arguments[0])?.ToString() ?? string.Empty;
+                var escaped = _dialect.EscapeLikeValue(raw);
+                var paramName = AddParameter($"%{escaped}%");
+                _sql.Append($"{col} {_dialect.LikeOperator} {_dialect.ParameterPrefix}{paramName}{_dialect.LikeEscapeClause()}");
+                return true;
             }
 
             if (node.Method.Name == nameof(string.StartsWith) && node.Arguments.Count >= 1)
             {
-                var value = EvaluateExpression(node.Arguments[0])?.ToString() ?? string.Empty;
-                var paramName = AddParameter($"{value}%");
-                _sql.Append($"{col} {_dialect.LikeOperator} {_dialect.ParameterPrefix}{paramName}");
-                return node;
+                var raw = EvaluateExpression(node.Arguments[0])?.ToString() ?? string.Empty;
+                var escaped = _dialect.EscapeLikeValue(raw);
+                var paramName = AddParameter($"{escaped}%");
+                _sql.Append($"{col} {_dialect.LikeOperator} {_dialect.ParameterPrefix}{paramName}{_dialect.LikeEscapeClause()}");
+                return true;
             }
 
             if (node.Method.Name == nameof(string.EndsWith) && node.Arguments.Count >= 1)
             {
-                var value = EvaluateExpression(node.Arguments[0])?.ToString() ?? string.Empty;
-                var paramName = AddParameter($"%{value}");
-                _sql.Append($"{col} {_dialect.LikeOperator} {_dialect.ParameterPrefix}{paramName}");
-                return node;
+                var raw = EvaluateExpression(node.Arguments[0])?.ToString() ?? string.Empty;
+                var escaped = _dialect.EscapeLikeValue(raw);
+                var paramName = AddParameter($"%{escaped}");
+                _sql.Append($"{col} {_dialect.LikeOperator} {_dialect.ParameterPrefix}{paramName}{_dialect.LikeEscapeClause()}");
+                return true;
             }
 
             // x.Name.Substring(start) or x.Name.Substring(start, length) — 0-indexed → 1-indexed
@@ -278,7 +304,7 @@ internal sealed class ExpressionToSqlVisitor : ExpressionVisitor
                 {
                     _sql.Append(_dialect.SubstringExpression(col, start.ToString()));
                 }
-                return node;
+                return true;
             }
 
             // x.Name.Replace(old, new)
@@ -289,7 +315,7 @@ internal sealed class ExpressionToSqlVisitor : ExpressionVisitor
                 var oldParam = AddParameter(oldVal);
                 var newParam = AddParameter(newVal);
                 _sql.Append($"REPLACE({col}, {_dialect.ParameterPrefix}{oldParam}, {_dialect.ParameterPrefix}{newParam})");
-                return node;
+                return true;
             }
 
             // x.Name.IndexOf(value) → 0-based index
@@ -298,35 +324,120 @@ internal sealed class ExpressionToSqlVisitor : ExpressionVisitor
                 var searchVal = EvaluateExpression(node.Arguments[0])?.ToString() ?? string.Empty;
                 var searchParam = AddParameter(searchVal);
                 _sql.Append(_dialect.IndexOfExpression($"{_dialect.ParameterPrefix}{searchParam}", col));
-                return node;
+                return true;
             }
         }
 
-        // string zero-arg methods: Trim / TrimStart / TrimEnd (already handled ToLower/ToUpper above)
-        if (node.Object != null && node.Object.Type == typeof(string) && node.Arguments.Count == 0)
+        // ── string static methods: IsNullOrEmpty / IsNullOrWhiteSpace ───────────
+        if (node.Method.DeclaringType == typeof(string))
         {
-            if (node.Method.Name == nameof(string.Trim))
+            if (node.Method.Name == nameof(string.IsNullOrEmpty))
             {
-                var col = GetColumnSql(node.Object);
-                _sql.Append(_dialect.TrimExpression(col));
-                return node;
+                var col = GetColumnSql(node.Arguments[0]);
+                _sql.Append($"({col} IS NULL OR {col} = '')");
+                return true;
             }
 
-            if (node.Method.Name == nameof(string.TrimStart))
+            if (node.Method.Name == nameof(string.IsNullOrWhiteSpace))
             {
-                var col = GetColumnSql(node.Object);
-                _sql.Append($"LTRIM({col})");
-                return node;
-            }
-
-            if (node.Method.Name == nameof(string.TrimEnd))
-            {
-                var col = GetColumnSql(node.Object);
-                _sql.Append($"RTRIM({col})");
-                return node;
+                var col = GetColumnSql(node.Arguments[0]);
+                _sql.Append(_dialect.IsNullOrWhitespaceExpression(col));
+                return true;
             }
         }
 
+        return false;
+    }
+
+    private bool TryVisitMathMethod(MethodCallExpression node)
+    {
+        // Math.Abs(x.Value) → ABS([Value])
+        if (node.Method.Name == nameof(Math.Abs) && node.Method.DeclaringType == typeof(Math) &&
+            node.Arguments.Count == 1)
+        {
+            var inner = GetColumnSql(node.Arguments[0]);
+            _sql.Append($"ABS({inner})");
+            return true;
+        }
+
+        if (node.Method.DeclaringType != typeof(Math)) return false;
+
+        // Math.Round(x.Salary, 2) or Math.Round(x.Salary)
+        if (node.Method.Name == nameof(Math.Round) && node.Arguments.Count >= 1)
+        {
+            var col = GetColumnSql(node.Arguments[0]);
+            if (node.Arguments.Count >= 2)
+            {
+                int decimals = Convert.ToInt32(EvaluateExpression(node.Arguments[1]));
+                _sql.Append($"ROUND({col}, {decimals})");
+            }
+            else
+            {
+                _sql.Append($"ROUND({col}, 0)");
+            }
+            return true;
+        }
+
+        // Math.Ceiling(x.Salary) → CEILING or CEIL per dialect
+        if (node.Method.Name == nameof(Math.Ceiling) && node.Arguments.Count == 1)
+        {
+            var col = GetColumnSql(node.Arguments[0]);
+            _sql.Append(_dialect.CeilingExpression(col));
+            return true;
+        }
+
+        // Math.Floor(x.Salary) → FLOOR(col)
+        if (node.Method.Name == nameof(Math.Floor) && node.Arguments.Count == 1)
+        {
+            var col = GetColumnSql(node.Arguments[0]);
+            _sql.Append($"FLOOR({col})");
+            return true;
+        }
+
+        // Math.Sqrt(x.Salary) → SQRT(col)
+        if (node.Method.Name == nameof(Math.Sqrt) && node.Arguments.Count == 1)
+        {
+            var col = GetColumnSql(node.Arguments[0]);
+            _sql.Append($"SQRT({col})");
+            return true;
+        }
+
+        // Math.Pow(x.Salary, 2) → POWER(col, exp)
+        if (node.Method.Name == nameof(Math.Pow) && node.Arguments.Count == 2)
+        {
+            var col = GetColumnSql(node.Arguments[0]);
+            int exp = Convert.ToInt32(EvaluateExpression(node.Arguments[1]));
+            _sql.Append($"POWER({col}, {exp})");
+            return true;
+        }
+
+        return false;
+    }
+
+    private bool TryVisitDateTimeMethod(MethodCallExpression node)
+    {
+        // DateTime.AddDays / AddMonths / AddYears — x.CreatedAt.AddDays(5)
+        if (node.Object != null && IsDateTimeType(node.Object.Type) && node.Arguments.Count == 1 &&
+            (node.Method.Name == "AddDays" || node.Method.Name == "AddMonths" || node.Method.Name == "AddYears"))
+        {
+            var col = GetColumnSql(node.Object);
+            var amount = Convert.ToInt32(EvaluateExpression(node.Arguments[0]));
+            string datePart = node.Method.Name switch
+            {
+                "AddDays"   => "DAY",
+                "AddMonths" => "MONTH",
+                "AddYears"  => "YEAR",
+                _           => "DAY"
+            };
+            _sql.Append(_dialect.DateAddExpression(datePart, amount.ToString(), col));
+            return true;
+        }
+
+        return false;
+    }
+
+    private bool TryVisitCollectionMethod(MethodCallExpression node)
+    {
         // Enumerable.Contains(collection, item) — translates to IN (...)
         if (node.Method.Name == "Contains" && node.Method.DeclaringType == typeof(Enumerable))
         {
@@ -350,7 +461,7 @@ internal sealed class ExpressionToSqlVisitor : ExpressionVisitor
                 {
                     _sql.Append($"{col} IN ({string.Join(", ", paramNames)})");
                 }
-                return node;
+                return true;
             }
         }
 
@@ -377,80 +488,15 @@ internal sealed class ExpressionToSqlVisitor : ExpressionVisitor
                     _sql.Append($"{col} IN ({string.Join(", ", paramNames)})");
                 }
 
-                return node;
+                return true;
             }
         }
 
-        // DateTime.AddDays / AddMonths / AddYears — x.CreatedAt.AddDays(5)
-        if (node.Object != null && IsDateTimeType(node.Object.Type) && node.Arguments.Count == 1 &&
-            (node.Method.Name == "AddDays" || node.Method.Name == "AddMonths" || node.Method.Name == "AddYears"))
-        {
-            var col = GetColumnSql(node.Object);
-            var amount = Convert.ToInt32(EvaluateExpression(node.Arguments[0]));
-            string datePart = node.Method.Name switch
-            {
-                "AddDays"   => "DAY",
-                "AddMonths" => "MONTH",
-                "AddYears"  => "YEAR",
-                _           => "DAY"
-            };
-            _sql.Append(_dialect.DateAddExpression(datePart, amount.ToString(), col));
-            return node;
-        }
+        return false;
+    }
 
-        // Math functions
-        if (node.Method.DeclaringType == typeof(Math))
-        {
-            // Math.Round(x.Salary, 2) or Math.Round(x.Salary)
-            if (node.Method.Name == nameof(Math.Round) && node.Arguments.Count >= 1)
-            {
-                var col = GetColumnSql(node.Arguments[0]);
-                if (node.Arguments.Count >= 2)
-                {
-                    int decimals = Convert.ToInt32(EvaluateExpression(node.Arguments[1]));
-                    _sql.Append($"ROUND({col}, {decimals})");
-                }
-                else
-                {
-                    _sql.Append($"ROUND({col}, 0)");
-                }
-                return node;
-            }
-
-            // Math.Ceiling(x.Salary) → CEILING or CEIL per dialect
-            if (node.Method.Name == nameof(Math.Ceiling) && node.Arguments.Count == 1)
-            {
-                var col = GetColumnSql(node.Arguments[0]);
-                _sql.Append(_dialect.CeilingExpression(col));
-                return node;
-            }
-
-            // Math.Floor(x.Salary) → FLOOR(col)
-            if (node.Method.Name == nameof(Math.Floor) && node.Arguments.Count == 1)
-            {
-                var col = GetColumnSql(node.Arguments[0]);
-                _sql.Append($"FLOOR({col})");
-                return node;
-            }
-
-            // Math.Sqrt(x.Salary) → SQRT(col)
-            if (node.Method.Name == nameof(Math.Sqrt) && node.Arguments.Count == 1)
-            {
-                var col = GetColumnSql(node.Arguments[0]);
-                _sql.Append($"SQRT({col})");
-                return node;
-            }
-
-            // Math.Pow(x.Salary, 2) → POWER(col, exp)
-            if (node.Method.Name == nameof(Math.Pow) && node.Arguments.Count == 2)
-            {
-                var col = GetColumnSql(node.Arguments[0]);
-                int exp = Convert.ToInt32(EvaluateExpression(node.Arguments[1]));
-                _sql.Append($"POWER({col}, {exp})");
-                return node;
-            }
-        }
-
+    private bool TryVisitEnumMethod(MethodCallExpression node)
+    {
         // ── Enum.HasFlag ──────────────────────────────────────────────────────────
         if (node.Method.Name == nameof(Enum.HasFlag) &&
             node.Object is MemberExpression flagMember &&
@@ -459,28 +505,10 @@ internal sealed class ExpressionToSqlVisitor : ExpressionVisitor
             var col = _dialect.QuoteIdentifier(flagMember.Member.Name);
             var flagValue = Convert.ToInt64(EvaluateExpression(node.Arguments[0]));
             _sql.Append($"({col} & {flagValue}) = {flagValue}");
-            return node;
+            return true;
         }
 
-        // ── string.IsNullOrEmpty / IsNullOrWhiteSpace (static methods) ───────────
-        if (node.Method.DeclaringType == typeof(string))
-        {
-            if (node.Method.Name == nameof(string.IsNullOrEmpty))
-            {
-                var col = GetColumnSql(node.Arguments[0]);
-                _sql.Append($"({col} IS NULL OR {col} = '')");
-                return node;
-            }
-
-            if (node.Method.Name == nameof(string.IsNullOrWhiteSpace))
-            {
-                var col = GetColumnSql(node.Arguments[0]);
-                _sql.Append(_dialect.IsNullOrWhitespaceExpression(col));
-                return node;
-            }
-        }
-
-        throw new NotSupportedException($"Method call '{node.Method.DeclaringType?.Name}.{node.Method.Name}' is not supported by the SQL translator.");
+        return false;
     }
 
     protected override Expression VisitMember(MemberExpression node)
@@ -542,21 +570,28 @@ internal sealed class ExpressionToSqlVisitor : ExpressionVisitor
             try
             {
                 var value = EvaluateExpression(node);
-                var paramName = AddParameter(value!);
+                var paramName = AddParameter(value);
                 _sql.Append($"{_dialect.ParameterPrefix}{paramName}");
                 return node;
             }
-            catch
+            catch (InvalidOperationException)
             {
                 // Fall through to column name
                 _sql.Append(_dialect.QuoteIdentifier(node.Member.Name));
                 return node;
             }
+            catch (NotSupportedException)
+            {
+                // Fall through to column name
+                _sql.Append(_dialect.QuoteIdentifier(node.Member.Name));
+                return node;
+            }
+            // All other exceptions propagate — do not silence real bugs
         }
 
         // Closed-over variable (captured in lambda) — treat as constant value
         var constValue = EvaluateExpression(node);
-        var pName = AddParameter(constValue!);
+        var pName = AddParameter(constValue);
         _sql.Append($"{_dialect.ParameterPrefix}{pName}");
         return node;
     }

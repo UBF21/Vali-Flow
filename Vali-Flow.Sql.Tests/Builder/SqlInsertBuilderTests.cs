@@ -320,8 +320,8 @@ public sealed class SqlInsertBuilderTests
             .Build();
 
         result.Sql.Should().Contain("ON CONFLICT (\"Id\") DO UPDATE SET");
-        result.Sql.Should().Contain("\"Name\" = @pu0");
-        result.Parameters["pu0"].Should().Be("Alice Updated");
+        result.Sql.Should().Contain("\"Name\" = @pu2");
+        result.Parameters["pu2"].Should().Be("Alice Updated");
     }
 
     [Fact]
@@ -349,10 +349,10 @@ public sealed class SqlInsertBuilderTests
             .Build();
 
         result.Sql.Should().Contain("ON DUPLICATE KEY UPDATE");
-        result.Sql.Should().Contain("`Name` = @pu0");
-        result.Sql.Should().Contain("`Age` = @pu1");
-        result.Parameters["pu0"].Should().Be("Alice Updated");
-        result.Parameters["pu1"].Should().Be(26);
+        result.Sql.Should().Contain("`Name` = @pu2");
+        result.Sql.Should().Contain("`Age` = @pu3");
+        result.Parameters["pu2"].Should().Be("Alice Updated");
+        result.Parameters["pu3"].Should().Be(26);
     }
 
     [Fact]

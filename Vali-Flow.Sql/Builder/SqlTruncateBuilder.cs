@@ -26,7 +26,9 @@ public sealed class SqlTruncateBuilder<T>
     /// <param name="schema">Optional schema qualifier (e.g. "dbo").</param>
     public SqlTruncateBuilder<T> Table(string tableName, string? schema = null)
     {
-        _tableName = tableName ?? throw new ArgumentNullException(nameof(tableName));
+        if (string.IsNullOrWhiteSpace(tableName))
+            throw new ArgumentException("Table name cannot be null or whitespace.", nameof(tableName));
+        _tableName = tableName;
         _schema = schema;
         return this;
     }
@@ -57,6 +59,6 @@ public sealed class SqlTruncateBuilder<T>
         string sql = $"TRUNCATE TABLE {tableSql}";
         string finalSql = _tag != null ? $"-- {_tag}\n{sql}" : sql;
 
-        return new SqlQueryResult(finalSql, new Dictionary<string, object>());
+        return new SqlQueryResult(finalSql, new Dictionary<string, object>(), _dialect.ParameterPrefix);
     }
 }

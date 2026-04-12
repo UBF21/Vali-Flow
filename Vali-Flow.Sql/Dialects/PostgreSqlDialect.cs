@@ -10,6 +10,9 @@ public sealed class PostgreSqlDialect : ISqlDialect
     /// <inheritdoc/>
     public string LikeOperator => "LIKE";
     /// <inheritdoc/>
+    public string LikeEscapeClause() => " ESCAPE '\\'";
+
+    /// <inheritdoc/>
     public string TrueValue => "TRUE";
     /// <inheritdoc/>
     public string FalseValue => "FALSE";

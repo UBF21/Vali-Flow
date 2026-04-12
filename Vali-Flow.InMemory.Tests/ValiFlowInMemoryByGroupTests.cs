@@ -223,7 +223,12 @@ public sealed class ValiFlowInMemoryByGroupTests
 
         var result = ev.UpdateRange(updates, data);
 
+        // Deferred: data unchanged until SaveChanges
         result.Should().HaveCount(1000);
+        data.Should().AllSatisfy(p => p.Name.Should().NotStartWith("Updated"));
+
+        ev.SaveChanges(data);
+
         data.Should().AllSatisfy(p => p.Name.Should().StartWith("Updated"));
     }
 
@@ -242,6 +247,11 @@ public sealed class ValiFlowInMemoryByGroupTests
         var result = ev.UpdateRange(updates, data);
 
         result.Should().HaveCount(1); // only Id=1 found
+        // Deferred: data unchanged until SaveChanges
+        data.First(p => p.Id == 1).Name.Should().NotBe("Apple v2");
+
+        ev.SaveChanges(data);
+
         data.First(p => p.Id == 1).Name.Should().Be("Apple v2");
         data.Should().NotContain(p => p.Id == 99);
     }
@@ -261,6 +271,12 @@ public sealed class ValiFlowInMemoryByGroupTests
         int deleted = ev.DeleteRange(toDelete, data);
 
         deleted.Should().Be(500);
+
+        // Deferred: list unchanged before SaveChanges
+        data.Should().HaveCount(1000);
+
+        ev.SaveChanges(data);
+
         data.Should().HaveCount(500);
     }
 

@@ -5,7 +5,7 @@ namespace Vali_Flow.Utils;
 /// <summary>
 /// Provides helper methods for validations.
 /// </summary>
-public static class Validation
+internal static class Validation
 {
     /// <summary>
     /// Validates that the entity is not null.

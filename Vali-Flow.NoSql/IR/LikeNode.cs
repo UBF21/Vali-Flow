@@ -7,7 +7,11 @@ namespace Vali_Flow.NoSql.IR;
 /// <param name="Field">The document field name.</param>
 /// <param name="Pattern">The raw string value (without wildcards — the translator adds them).</param>
 /// <param name="Op">The pattern-match type.</param>
-public sealed record LikeNode(string Field, string Pattern, LikeOp Op) : IConditionNode
+/// <param name="CaseSensitive">
+/// When <c>false</c> (default), the MongoDB translator emits the <c>"i"</c> flag for case-insensitive matching.
+/// Set to <c>true</c> to produce a case-sensitive regex.
+/// </param>
+public sealed record LikeNode(string Field, string Pattern, LikeOp Op, bool CaseSensitive = false) : IConditionNode
 {
     public TResult Accept<TResult>(IConditionNodeVisitor<TResult> visitor) => visitor.VisitLike(this);
 }

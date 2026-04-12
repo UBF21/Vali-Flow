@@ -340,9 +340,19 @@ public sealed class SqlInsertBuilder<T> where T : class
     /// <summary>Assembles and returns the final <see cref="SqlQueryResult"/>.</summary>
     public SqlQueryResult Build()
     {
+        _paramIndex = 0;
+
         // INSERT … SELECT mode — bypass VALUES logic entirely
         if (_selectQuery != null)
             return BuildInsertSelect();
+
+        if (_onConflictDoNothing && _conflictUpdateAssignments.Count > 0)
+            throw new InvalidOperationException(
+                "OnConflictDoNothing and OnConflictDoUpdate are mutually exclusive.");
+
+        if (_conflictUpdateAssignments.Count > 0 && _onDuplicateKeyUpdate)
+            throw new InvalidOperationException(
+                "OnConflictDoUpdate and OnDuplicateKeyUpdate are mutually exclusive. Use only one.");
 
         var firstRow = _rows[0];
         if (firstRow.Count == 0)
@@ -402,7 +412,7 @@ public sealed class SqlInsertBuilder<T> where T : class
         // ON CONFLICT (...) DO UPDATE SET ...
         if (_conflictUpdateAssignments.Count > 0)
         {
-            int puIdx = 0;
+            int puIdx = parameters.Count;
             var setClauses = new List<string>();
             foreach (var (col, value) in _conflictUpdateAssignments)
             {
@@ -422,7 +432,7 @@ public sealed class SqlInsertBuilder<T> where T : class
         // ON DUPLICATE KEY UPDATE ...
         if (_onDuplicateKeyUpdate && _duplicateKeyAssignments.Count > 0)
         {
-            int puIdx = 0;
+            int puIdx = parameters.Count;
             var setClauses = new List<string>();
             foreach (var (col, value) in _duplicateKeyAssignments)
             {
@@ -442,7 +452,7 @@ public sealed class SqlInsertBuilder<T> where T : class
         }
 
         string finalSql = _tag != null ? $"-- {_tag}\n{sb}" : sb.ToString();
-        return new SqlQueryResult(finalSql, parameters);
+        return new SqlQueryResult(finalSql, parameters, _dialect.ParameterPrefix);
     }
 
     // ── Internals ─────────────────────────────────────────────────────────────
@@ -497,7 +507,7 @@ public sealed class SqlInsertBuilder<T> where T : class
 
         string sql = $"{insertKeyword}{tableSql}{colList} {remappedSql}";
         string finalSql = _tag != null ? $"-- {_tag}\n{sql}" : sql;
-        return new SqlQueryResult(finalSql, parameters);
+        return new SqlQueryResult(finalSql, parameters, _dialect.ParameterPrefix);
     }
 
     /// <summary>

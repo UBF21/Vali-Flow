@@ -7,7 +7,7 @@
 [![NuGet Version](https://img.shields.io/nuget/v/Vali-Flow.NoSql.Elasticsearch?label=Vali-Flow.NoSql.Elasticsearch&color=blue)](https://www.nuget.org/packages/Vali-Flow.NoSql.Elasticsearch)
 [![NuGet Version](https://img.shields.io/nuget/v/Vali-Flow.Core?label=Vali-Flow.Core&color=blue)](https://www.nuget.org/packages/Vali-Flow.Core)
 [![.NET](https://img.shields.io/badge/.NET-8%20%7C%209-512BD4)](https://dotnet.microsoft.com)
-[![License](https://img.shields.io/badge/license-Apache--2.0-green)](LICENSE)
+[![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
 A .NET library ecosystem for building reusable, composable query criteria with a fluent API. Translate the same `ValiFlow<T>` filter into EF Core queries, parameterized SQL, MongoDB BSON filters, or Elasticsearch Query DSL — without scattering filter logic across repositories or duplicating predicates per data store.
 
@@ -770,7 +770,16 @@ Refer to the [Vali-Flow.Core repository](https://github.com/UBF21/vali-flow) for
 
 ---
 
+## Contributing
+
+Contributions, issues, and feature requests are welcome. Feel free to open a pull request or an issue on [GitHub](https://github.com/UBF21/vali-flow).
+
+If this project is useful to you, consider supporting its development:
+
+- **Latin America** — [MercadoPago](https://link.mercadopago.com.pe/felipermm)
+- **International** — [PayPal](https://paypal.me/felipeRMM?country.x=PE&locale.x=es_XC)
+
 ## License
 
-Licensed under the [Apache 2.0 License](LICENSE).
-Copyright &copy; 2025 Felipe Rafael Montenegro Morriberon.
+Licensed under the [MIT License](LICENSE).  
+Copyright &copy; 2025 Felipe Rafael Montenegro Morriberon. All rights reserved.

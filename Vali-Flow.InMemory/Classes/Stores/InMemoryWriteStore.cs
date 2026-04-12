@@ -34,25 +34,30 @@ internal sealed class InMemoryWriteStore<T, TProperty> where T : class where TPr
         }
     }
 
-    internal bool Add(T entity, IEnumerable<T>? entities = null)
+    internal bool Add(T entity, List<T>? entities = null)
     {
         if (entity == null) throw new ArgumentNullException(nameof(entity));
-        if (entities != null && entities is not List<T>)
-            throw new ArgumentException(
-                "External store must be a List<T> to support mutations. Pass null to use the internal store.",
-                nameof(entities));
+        _ = entities; // Add always queues to the deferred add list; entities is unused (see AddRange)
         lock (_lock)
         {
             _addedEntities.Add(entity);
-            (entities as List<T>)?.Add(entity);
         }
         return true;
     }
 
-    internal T? Update(T entity, IEnumerable<T>? entities = null)
+    internal T? Update(T entity, List<T>? entities = null)
     {
         lock (_lock)
         {
+            // Check if entity is pending as add (not yet saved)
+            var pendingIdx = _addedEntities.FindIndex(e =>
+                EqualityComparer<TProperty>.Default.Equals(_getId(e), _getId(entity)));
+            if (pendingIdx >= 0)
+            {
+                _addedEntities[pendingIdx] = entity; // replace pending add with updated version
+                return entity;
+            }
+
             IEnumerable<T> dataSource = entities ?? _items;
             var existing =
                 dataSource.FirstOrDefault(e => EqualityComparer<TProperty>.Default.Equals(_getId(e), _getId(entity)));
@@ -73,17 +78,25 @@ internal sealed class InMemoryWriteStore<T, TProperty> where T : class where TPr
         }
     }
 
-    internal bool Delete(T entity, IEnumerable<T>? entities = null)
+    internal bool Delete(T entity, List<T>? entities = null)
     {
         lock (_lock)
         {
+            // Cancel pending add if entity was added but not yet saved
+            var pendingIdx = _addedEntities.FindIndex(e =>
+                EqualityComparer<TProperty>.Default.Equals(_getId(e), _getId(entity)));
+            if (pendingIdx >= 0)
+            {
+                _addedEntities.RemoveAt(pendingIdx);
+                return true;
+            }
+
             IEnumerable<T> dataSource = entities ?? _items;
             var existing =
                 dataSource.FirstOrDefault(e => EqualityComparer<TProperty>.Default.Equals(_getId(e), _getId(entity)));
             if (existing != null)
             {
                 _deletedEntities.Add(existing);
-                if (entities is List<T> list) list.Remove(existing);
                 return true;
             }
 
@@ -91,28 +104,21 @@ internal sealed class InMemoryWriteStore<T, TProperty> where T : class where TPr
         }
     }
 
-    internal void AddRange(IEnumerable<T> entitiesToAdd, IEnumerable<T>? entities = null)
+    internal void AddRange(IEnumerable<T> entitiesToAdd, List<T>? entities = null)
     {
-        if (entities != null && entities is not List<T>)
-            throw new ArgumentException(
-                "External store must be a List<T> to support mutations. Pass null to use the internal store.",
-                nameof(entities));
-        var list = entities as List<T>;
+        _ = entities; // AddRange always queues to the deferred add list; entities is intentionally unused
         lock (_lock)
         {
             foreach (T entity in entitiesToAdd)
-            {
                 _addedEntities.Add(entity);
-                list?.Add(entity);
-            }
         }
     }
 
-    internal IEnumerable<T> UpdateRange(IEnumerable<T> entitiesToUpdate, IEnumerable<T>? entities = null)
+    internal IEnumerable<T> UpdateRange(IEnumerable<T> entitiesToUpdate, List<T>? entities = null)
     {
         lock (_lock)
         {
-            List<T> source = entities is List<T> l ? l : (entities?.ToList() ?? _items);
+            List<T> source = entities ?? _items;
             var indexById = new Dictionary<TProperty, int>(source.Count);
             for (int i = 0; i < source.Count; i++)
                 indexById[_getId(source[i])!] = i;
@@ -121,50 +127,85 @@ internal sealed class InMemoryWriteStore<T, TProperty> where T : class where TPr
             foreach (T entity in entitiesToUpdate)
             {
                 TProperty id = _getId(entity)!;
-                if (!indexById.TryGetValue(id, out int idx)) continue;
+
+                // Check if entity is pending as add (not yet saved)
+                var pendingIdx = _addedEntities.FindIndex(e =>
+                    EqualityComparer<TProperty>.Default.Equals(_getId(e), id));
+                if (pendingIdx >= 0)
+                {
+                    _addedEntities[pendingIdx] = entity; // replace pending add with updated version
+                    updated.Add(entity);
+                    continue;
+                }
+
+                if (!indexById.TryGetValue(id, out _)) continue;
                 _updatedEntities.Add(entity);
                 updated.Add(entity);
-                source[idx] = entity;
-                indexById[id] = idx;
             }
             return updated;
         }
     }
 
-    internal int DeleteRange(IEnumerable<T> entitiesToDelete, IEnumerable<T>? entities = null)
+    /// <returns>
+    /// The number of entities queued for deletion.
+    /// Changes are applied to the store when <see cref="SaveChanges"/> is called.
+    /// </returns>
+    internal int DeleteRange(IEnumerable<T> entitiesToDelete, List<T>? entities = null)
     {
         lock (_lock)
         {
-            List<T> source = entities is List<T> l ? l : (entities?.ToList() ?? _items);
-            var entityById = new Dictionary<TProperty, T>(source.Count);
-            foreach (T item in source)
-                entityById[_getId(item)!] = item;
-
-            int count = 0;
-            var toRemove = new List<T>();
+            // Cancel pending adds first (mirrors single-entity Delete behaviour)
+            var remainingToDelete = new List<T>();
+            int cancelledCount = 0;
             foreach (T entity in entitiesToDelete)
             {
                 TProperty id = _getId(entity)!;
-                if (!entityById.TryGetValue(id, out T? existing)) continue;
-                _deletedEntities.Add(existing);
-                toRemove.Add(existing);
-                entityById.Remove(id);
-                count++;
+                var pendingIdx = _addedEntities.FindIndex(e =>
+                    EqualityComparer<TProperty>.Default.Equals(_getId(e), id));
+                if (pendingIdx >= 0)
+                {
+                    _addedEntities.RemoveAt(pendingIdx);
+                    cancelledCount++;
+                }
+                else
+                {
+                    remainingToDelete.Add(entity);
+                }
             }
-            if (toRemove.Count > 0)
+
+            // Then process remaining against committed store
+            List<T> source = entities ?? _items;
+            var sourceById = new Dictionary<TProperty, T>(source.Count);
+            foreach (T item in source)
+                sourceById[_getId(item)!] = item;
+
+            var removeIds = new HashSet<TProperty>();
+            foreach (T entity in remainingToDelete)
             {
-                var removeSet = new HashSet<TProperty>(toRemove.Select(e => _getId(e)!));
-                source.RemoveAll(e => removeSet.Contains(_getId(e)!));
+                TProperty id = _getId(entity)!;
+                if (!sourceById.TryGetValue(id, out T? existing) || !removeIds.Add(id)) continue;
+                _deletedEntities.Add(existing);
             }
-            return count;
+
+            return cancelledCount + removeIds.Count;
         }
     }
 
-    private T UpsertCore(T entity, IEnumerable<T>? entities)
+    private T UpsertCore(T entity, List<T>? entities)
     {
         // Must be called within _lock
         // Both paths are deferred: mutations are applied in SaveChanges via ApplyPendingChanges.
-        List<T> source = entities is List<T> l ? l : _items;
+        List<T> source = entities ?? _items;
+
+        // Check if already pending as add (not yet saved)
+        var pendingIdx = _addedEntities.FindIndex(e =>
+            EqualityComparer<TProperty>.Default.Equals(_getId(e), _getId(entity)));
+        if (pendingIdx >= 0)
+        {
+            _addedEntities[pendingIdx] = entity; // replace pending add
+            return entity;
+        }
+
         var index = source.FindIndex(e =>
             EqualityComparer<TProperty>.Default.Equals(_getId(e), _getId(entity)));
         if (index >= 0)
@@ -175,25 +216,18 @@ internal sealed class InMemoryWriteStore<T, TProperty> where T : class where TPr
         return entity;
     }
 
-    internal T Upsert(T entity, IEnumerable<T>? entities = null)
+    internal T Upsert(T entity, List<T>? entities = null)
     {
-        if (entities != null && entities is not List<T>)
-            throw new ArgumentException(
-                "External store must be a List<T> to support mutations. Pass null to use the internal store.",
-                nameof(entities));
         lock (_lock)
         {
             return UpsertCore(entity, entities);
         }
     }
 
-    internal IEnumerable<T> UpsertRange(IEnumerable<T> entitiesToUpsert, IEnumerable<T>? entities = null)
+    internal IEnumerable<T> UpsertRange(IEnumerable<T> entitiesToUpsert, List<T>? entities = null)
     {
-        if (entities != null && entities is not List<T>)
-            throw new ArgumentException(
-                "External store must be a List<T> to support mutations. Pass null to use the internal store.",
-                nameof(entities));
-        var deduplicated = entitiesToUpsert
+        var input = entitiesToUpsert.ToList(); // snapshot before lock to avoid holding lock during enumeration
+        var deduplicated = input
             .GroupBy(e => _getId(e))
             .Select(g => g.Last())
             .ToList();
@@ -206,30 +240,31 @@ internal sealed class InMemoryWriteStore<T, TProperty> where T : class where TPr
         return results;
     }
 
-    internal int DeleteByCondition(Func<T, bool> predicate, IEnumerable<T>? entities = null)
+    internal int DeleteByCondition(Func<T, bool> predicate, List<T>? entities = null)
     {
         lock (_lock)
         {
+            // Cancel matching pending adds so they are not persisted on SaveChanges
+            var pendingToDelete = _addedEntities.Where(predicate).ToList();
+            foreach (var e in pendingToDelete)
+                _addedEntities.Remove(e);
+
             IEnumerable<T> dataSource = entities ?? _items;
             var toDelete = dataSource.Where(predicate).ToList();
             foreach (var entity in toDelete)
-            {
                 _deletedEntities.Add(entity);
-                if (entities is List<T> list)
-                    list.Remove(entity);
-            }
 
-            return toDelete.Count;
+            return pendingToDelete.Count + toDelete.Count;
         }
     }
 
-    internal void SaveChanges(IEnumerable<T>? entities = null)
+    internal void SaveChanges(List<T>? entities = null)
     {
         lock (_lock)
         {
-            if (entities is List<T> externalList)
+            if (entities != null)
             {
-                ApplyPendingChanges(externalList);
+                ApplyPendingChanges(entities);
                 return;
             }
 

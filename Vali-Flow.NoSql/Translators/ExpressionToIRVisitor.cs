@@ -158,6 +158,12 @@ internal sealed class ExpressionToIRVisitor : ExpressionVisitor
         {
             _result = new EqualNode(GetMemberName(node), true, false);
         }
+        else if (IsColumnExpression(node))
+        {
+            throw new NotSupportedException(
+                $"Member '{node.Member.Name}' of type '{node.Type.Name}' cannot be used as a standalone filter condition. " +
+                "Use a comparison expression (e.g., x.Status == MyEnum.Active).");
+        }
 
         return node;
     }

@@ -10,77 +10,80 @@ public interface IInMemoryEvaluatorWrite<T>
     /// Adds a single entity to the specified collection or a default context if no collection is provided.
     /// </summary>
     /// <param name="entity">The entity to add.</param>
-    /// <param name="entities">The optional collection of entities to add to. If null, uses a default context.</param>
+    /// <param name="entities">The optional list of entities to add to. If null, uses a default context.</param>
     /// <returns>True if the entity was added successfully; otherwise, false.</returns>
-    public bool Add(T entity,IEnumerable<T>? entities = null);
-    
+    public bool Add(T entity, List<T>? entities = null);
+
     /// <summary>
     /// Updates a single entity in the specified collection or a default context if no collection is provided.
     /// </summary>
     /// <param name="entity">The entity to update. The entity must exist in the collection for the update to succeed.</param>
-    /// <param name="entities">The optional collection of entities to update within. If null, uses a default context.</param>
+    /// <param name="entities">The optional list of entities to update within. If null, uses a default context.</param>
     /// <returns>The updated entity if successful, or null if the entity was not found or the update failed.</returns>
-    public T? Update(T entity,IEnumerable<T>? entities = null);
-    
+    public T? Update(T entity, List<T>? entities = null);
+
     /// <summary>
     /// Deletes a single entity from the specified collection or a default context if no collection is provided.
     /// </summary>
     /// <param name="entity">The entity to delete. The entity must exist in the collection for the deletion to succeed.</param>
-    /// <param name="entities">The optional collection of entities to delete from. If null, uses a default context.</param>
+    /// <param name="entities">The optional list of entities to delete from. If null, uses a default context.</param>
     /// <returns>True if the entity was deleted successfully; otherwise, false.</returns>
-    public bool Delete(T entity,IEnumerable<T>? entities = null);
-    
+    public bool Delete(T entity, List<T>? entities = null);
+
     /// <summary>
     /// Adds a collection of entities to the specified collection or a default context if no collection is provided.
     /// </summary>
     /// <param name="entitiesToAdd">The collection of entities to add.</param>
-    /// <param name="entities">The optional collection of entities to add to. If null, uses a default context.</param>
-    public void AddRange(IEnumerable<T> entitiesToAdd,IEnumerable<T>? entities = null);
-    
+    /// <param name="entities">The optional list of entities to add to. If null, uses a default context.</param>
+    public void AddRange(IEnumerable<T> entitiesToAdd, List<T>? entities = null);
+
     /// <summary>
     /// Updates a collection of entities in the specified collection or a default context if no collection is provided.
     /// </summary>
     /// <param name="entitiesToUpdate">The collection of entities to update. Entities must exist in the collection for updates to succeed.</param>
-    /// <param name="entities">The optional collection of entities to update within. If null, uses a default context.</param>
+    /// <param name="entities">The optional list of entities to update within. If null, uses a default context.</param>
     /// <returns>An enumerable of the updated entities.</returns>
-    public IEnumerable<T> UpdateRange(IEnumerable<T> entitiesToUpdate,IEnumerable<T>? entities = null);
-    
+    public IEnumerable<T> UpdateRange(IEnumerable<T> entitiesToUpdate, List<T>? entities = null);
+
     /// <summary>
     /// Deletes a collection of entities from the specified collection or a default context if no collection is provided.
     /// </summary>
     /// <param name="entitiesToDelete">The collection of entities to delete. Entities must exist in the collection for deletions to succeed.</param>
-    /// <param name="entities">The optional collection of entities to delete from. If null, uses a default context.</param>
-    /// <returns>The number of entities successfully deleted.</returns>
-    public int DeleteRange(IEnumerable<T> entitiesToDelete,IEnumerable<T>? entities = null);
-    
+    /// <param name="entities">The optional list of entities to delete from. If null, uses a default context.</param>
+    /// <returns>
+    /// The number of entities queued for deletion.
+    /// Changes are applied to the store when <see cref="SaveChanges"/> is called.
+    /// </returns>
+    public int DeleteRange(IEnumerable<T> entitiesToDelete, List<T>? entities = null);
+
     /// <summary>
     /// Saves any pending changes to the specified collection or a default context if no collection is provided.
     /// This method ensures that all previous write operations are applied.
     /// </summary>
-    /// <param name="entities">The optional collection of entities to save changes for. If null, uses a default context.</param>
-    public void SaveChanges(IEnumerable<T>? entities = null);
+    /// <param name="entities">The optional list of entities to save changes for. If null, uses a default context.</param>
+    public void SaveChanges(List<T>? entities = null);
 
     /// <summary>
     /// Inserts the entity if its key is not found in the store; otherwise updates it.
     /// </summary>
     /// <param name="entity">The entity to upsert.</param>
-    /// <param name="entities">Optional external collection. If null, operates on the internal store.</param>
+    /// <param name="entities">Optional external list. If null, operates on the internal store.</param>
     /// <returns>The upserted entity.</returns>
-    T Upsert(T entity, IEnumerable<T>? entities = null);
+    T Upsert(T entity, List<T>? entities = null);
 
     /// <summary>
     /// Upserts each entity in the collection — inserts if the key is new, updates if found.
     /// </summary>
     /// <param name="entitiesToUpsert">The entities to upsert.</param>
-    /// <param name="entities">Optional external collection. If null, operates on the internal store.</param>
+    /// <param name="entities">Optional external list. If null, operates on the internal store.</param>
     /// <returns>The collection of upserted entities.</returns>
-    IEnumerable<T> UpsertRange(IEnumerable<T> entitiesToUpsert, IEnumerable<T>? entities = null);
+    IEnumerable<T> UpsertRange(IEnumerable<T> entitiesToUpsert, List<T>? entities = null);
 
     /// <summary>
     /// Deletes all entities that satisfy the given predicate.
     /// </summary>
     /// <param name="predicate">The condition to match entities for deletion.</param>
-    /// <param name="entities">Optional external collection. If null, operates on the internal store.</param>
+    /// <param name="entities">Optional external list. If null, operates on the internal store.</param>
     /// <returns>The number of entities deleted.</returns>
-    int DeleteByCondition(Func<T, bool> predicate, IEnumerable<T>? entities = null);
+    int DeleteByCondition(Func<T, bool> predicate, List<T>? entities = null);
 }

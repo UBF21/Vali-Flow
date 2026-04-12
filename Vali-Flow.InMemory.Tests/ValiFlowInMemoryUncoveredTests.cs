@@ -556,6 +556,12 @@ public sealed class ValiFlowInMemoryUncoveredTests
         int deleted = evaluator.DeleteByCondition(p => p.IsActive == false, data);
 
         deleted.Should().Be(2);
+
+        // Deferred: list unchanged before SaveChanges
+        data.Should().HaveCount(5);
+
+        evaluator.SaveChanges(data);
+
         data.Should().HaveCount(3);
         data.Should().OnlyContain(p => p.IsActive);
     }
@@ -581,6 +587,12 @@ public sealed class ValiFlowInMemoryUncoveredTests
         int deleted = evaluator.DeleteByCondition(p => p.Id > 0, data);
 
         deleted.Should().Be(5);
+
+        // Deferred: list unchanged before SaveChanges
+        data.Should().HaveCount(5);
+
+        evaluator.SaveChanges(data);
+
         data.Should().BeEmpty();
     }
 
@@ -593,6 +605,12 @@ public sealed class ValiFlowInMemoryUncoveredTests
         int deleted = evaluator.DeleteByCondition(p => p.Id == 3, data);
 
         deleted.Should().Be(1);
+
+        // Deferred: list unchanged before SaveChanges
+        data.Should().HaveCount(5);
+
+        evaluator.SaveChanges(data);
+
         data.Should().HaveCount(4);
         data.Should().NotContain(p => p.Id == 3);
     }

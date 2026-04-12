@@ -538,5 +538,180 @@ public sealed class ElasticsearchFilterTranslatorTests
         terms.Term.Should().NotBeNull();
     }
 
+    // ── Decimal range ─────────────────────────────────────────────────────────
+
+    [Fact]
+    public void ToElasticsearch_DecimalGreaterThan_ProducesNumberRangeGt()
+    {
+        Expression<Func<TestDocument, bool>> expr = x => x.Price > 99.99m;
+
+        Query q = expr.ToElasticsearch();
+
+        q.TryGet<NumberRangeQuery>(out var range);
+        range.Should().NotBeNull();
+        range!.Field.ToString().Should().Be("Price");
+        range.Gt.Should().BeApproximately((double)99.99m, 0.001);
+        range.Gte.Should().BeNull();
+    }
+
+    [Fact]
+    public void ToElasticsearch_DecimalLessThanOrEqual_ProducesNumberRangeLte()
+    {
+        Expression<Func<TestDocument, bool>> expr = x => x.Price <= 500m;
+
+        Query q = expr.ToElasticsearch();
+
+        q.TryGet<NumberRangeQuery>(out var range);
+        range.Should().NotBeNull();
+        range!.Lte.Should().BeApproximately((double)500m, 0.001);
+        range.Lt.Should().BeNull();
+    }
+
+    // ── String IN list ────────────────────────────────────────────────────────
+
+    [Fact]
+    public void ToElasticsearch_StringListContains_ProducesTermsQuery()
+    {
+        var categories = new List<string> { "Electronics", "Books" };
+        Expression<Func<TestDocument, bool>> expr = x => categories.Contains(x.Category);
+
+        Query q = expr.ToElasticsearch();
+
+        q.TryGet<TermsQuery>(out var terms);
+        terms.Should().NotBeNull();
+        terms!.Field.ToString().Should().Be("Category");
+        terms.Term.Should().NotBeNull();
+    }
+
+    [Fact]
+    public void ToElasticsearch_SingleItemList_ProducesTermsQuery()
+    {
+        var ids = new List<int> { 42 };
+        Expression<Func<TestDocument, bool>> expr = x => ids.Contains(x.Id);
+
+        Query q = expr.ToElasticsearch();
+
+        q.TryGet<TermsQuery>(out var terms);
+        terms.Should().NotBeNull();
+    }
+
+    // ── Constant on left — todos los operadores ───────────────────────────────
+
+    [Fact]
+    public void ToElasticsearch_ConstantOnLeftLessThan_FlipsToGreaterThan()
+    {
+        // 65 > x.Age → x.Age < 65
+        Expression<Func<TestDocument, bool>> expr = x => 65 > x.Age;
+
+        Query q = expr.ToElasticsearch();
+
+        q.TryGet<NumberRangeQuery>(out var range);
+        range.Should().NotBeNull();
+        range!.Field.ToString().Should().Be("Age");
+        range.Lt.Should().Be(65.0);
+    }
+
+    [Fact]
+    public void ToElasticsearch_ConstantOnLeftGreaterThanOrEqual_FlipsToLessThanOrEqual()
+    {
+        // 100 >= x.Age → x.Age <= 100
+        Expression<Func<TestDocument, bool>> expr = x => 100 >= x.Age;
+
+        Query q = expr.ToElasticsearch();
+
+        q.TryGet<NumberRangeQuery>(out var range);
+        range.Should().NotBeNull();
+        range!.Lte.Should().Be(100.0);
+    }
+
+    // ── Lógica anidada profunda ───────────────────────────────────────────────
+
+    [Fact]
+    public void ToElasticsearch_NotOfAndOr_ProducesBoolMustNotWithNestedBool()
+    {
+        // NOT ((A AND B) OR C)
+        var a    = new EqualNode("IsActive", true, false);
+        var b    = new ComparisonNode("Age", 18, ComparisonOp.GreaterThan);
+        var c    = new EqualNode("Name", "Admin", false);
+        var node = new NotNode(new OrNode(new AndNode(a, b), c));
+
+        Query q = ElasticsearchFilterTranslator.Translate(node);
+
+        q.TryGet<BoolQuery>(out var outer);
+        outer.Should().NotBeNull();
+        outer!.MustNot.Should().HaveCount(1);
+        outer.MustNot!.First().TryGet<BoolQuery>(out var inner);
+        inner.Should().NotBeNull();
+        // inner is an OR → should have Should clauses
+        inner!.Should.Should().HaveCount(2);
+    }
+
+    [Fact]
+    public void ToElasticsearch_FourLevelNesting_ProducesValidQuery()
+    {
+        // A AND (B OR (C AND D))
+        var a    = new EqualNode("IsActive", true, false);
+        var b    = new ComparisonNode("Age", 18, ComparisonOp.GreaterThan);
+        var c    = new EqualNode("Category", "Books", false);
+        var d    = new ComparisonNode("Price", 50m, ComparisonOp.LessThan);
+        var node = new AndNode(a, new OrNode(b, new AndNode(c, d)));
+
+        // Should not throw and produce a valid bool query
+        Query q = ElasticsearchFilterTranslator.Translate(node);
+        q.Should().NotBeNull();
+        q.TryGet<BoolQuery>(out var root);
+        root.Should().NotBeNull();
+    }
+
+    // ── ValiFlow pipeline de 4 condiciones ───────────────────────────────────
+
+    [Fact]
+    public void ToElasticsearch_ValiFlowFourConditions_ProducesNestedBoolMust()
+    {
+        var flow = new ValiFlow<TestDocument>()
+            .EqualTo(x => x.IsActive, true)
+            .GreaterThan(x => x.Age, 18)
+            .LessThanOrEqualTo(x => x.Price, 500m)
+            .EqualTo(x => x.Category, "Electronics");
+
+        Query q = flow.ToElasticsearch();
+
+        q.Should().NotBeNull();
+        q.TryGet<BoolQuery>(out var bool_);
+        bool_.Should().NotBeNull();
+        bool_!.Must.Should().NotBeNullOrEmpty();
+    }
+
+    // ── Null in NOT-EQUAL produces MustNot(Null check) ───────────────────────
+
+    [Fact]
+    public void ToElasticsearch_EqualToNull_ProducesMustNotExists()
+    {
+        var node = new NullNode("Email", NullCheckOp.IsNull);
+
+        Query q = ElasticsearchFilterTranslator.Translate(node);
+
+        q.TryGet<BoolQuery>(out var bool_);
+        bool_.Should().NotBeNull();
+        bool_!.MustNot.Should().HaveCount(1);
+        bool_.MustNot!.First().TryGet<ExistsQuery>(out var exists);
+        exists.Should().NotBeNull();
+        exists!.Field.ToString().Should().Be("Email");
+    }
+
+    // ── NOT-EQUAL con null produce ExistsQuery ────────────────────────────────
+
+    [Fact]
+    public void ToElasticsearch_NotEqualNull_ProducesExistsQuery()
+    {
+        var node = new NullNode("Email", NullCheckOp.IsNotNull);
+
+        Query q = ElasticsearchFilterTranslator.Translate(node);
+
+        q.TryGet<ExistsQuery>(out var exists);
+        exists.Should().NotBeNull();
+        exists!.Field.ToString().Should().Be("Email");
+    }
+
     private enum TestStatusEnum { Active = 1 }
 }

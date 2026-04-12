@@ -5,41 +5,58 @@
         <RootNamespace>Vali_Flow</RootNamespace>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+
+        <!-- Package identity -->
+        <PackageId>Vali-Flow</PackageId>
         <Title>Vali-Flow</Title>
+        <Product>Vali-Flow</Product>
+        <Version>1.1.0</Version>
         <Authors>Felipe Rafael Montenegro Morriberon</Authors>
-        <Description>Vali-Flow library a .NET library designed to simplify data access and validation in Entity Framework Core (EF Core) applications. The library offers a fluent API for building specifications (ValiFlow), a robust evaluator (ValiFlowEvaluator) for querying and modifying data, specification classes (QuerySpecification, BasicSpecification) for defining query criteria, and a generic repository (DbRepositoryAsync) for clean data access patterns. </Description>
-        <PackageProjectUrl>#</PackageProjectUrl>
-        <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+        <Copyright>Copyright © 2025 - FM. All rights reserved.</Copyright>
+
+        <!-- Repository -->
         <RepositoryUrl>https://github.com/UBF21/vali-flow</RepositoryUrl>
         <RepositoryType>git</RepositoryType>
-        <PackageReleaseNotes>
-            -Enhanced Expression Building: Improved Vali_Flow.Core to support more complex and reusable expression composition, enabling developers to create dynamic and scalable query filters with ease.
-            -Optimized Specification Evaluation: Enhanced ValiFlowEvaluator to improve performance for complex specifications, including better handling of includes, pagination, and grouping operations.
-            -Bulk Operation Improvements: Optimized bulk operations (e.g., BulkInsertAsync, BulkUpdateAsync) in Vali_Flow for faster data manipulation, with improved integration with EF Core and Vali_Flow.Core specifications.
-        </PackageReleaseNotes>
+        <PackageProjectUrl>https://vali-flow-docs.netlify.app/docs/adapters/ef-core</PackageProjectUrl>
+
+        <!-- License -->
+        <PackageLicenseExpression>MIT</PackageLicenseExpression>
         <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
-        <Copyright>Copyright © 2025 - FM. Todos los derechos reservados.</Copyright>
-        <Version>1.1.0</Version>
-        <PackageIcon>logo_vali_flow_.png</PackageIcon>
-        <PackageId>Vali-Flow</PackageId>
-        <Product>Vali-Flow</Product>
+
+        <!-- Discoverability -->
+        <PackageTags>vali;vali-flow;efcore;entity-framework;specification;repository;query;filter;pagination;bulk;dotnet</PackageTags>
+        <PackageIcon>VF_logo.png</PackageIcon>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
+
+        <!-- Source Link / Symbols -->
+        <PublishRepositoryUrl>true</PublishRepositoryUrl>
+        <EmbedUntrackedSources>true</EmbedUntrackedSources>
+        <DebugType>embedded</DebugType>
+        <IncludeSymbols>true</IncludeSymbols>
+        <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+
+        <Description>Vali-Flow is a .NET library that simplifies data access in Entity Framework Core applications via a fluent specification API. Provides ValiFlowEvaluator for querying and writing data, QuerySpecification and BasicSpecification for defining query criteria, and bulk operation support via EFCore.BulkExtensions.</Description>
+        <PackageReleaseNotes>v1.1.0 — Enhanced expression building, optimized specification evaluation for includes/pagination/grouping, and improved bulk operation performance.</PackageReleaseNotes>
     </PropertyGroup>
 
     <ItemGroup>
-
+        <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All" />
         <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.0" />
         <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="9.0.0" />
         <PackageReference Include="EFCore.BulkExtensions" Version="8.1.3" />
-        <ProjectReference Include="..\..\Vali-Flow.Core\Vali-Flow.Core\Vali-Flow.Core.csproj" />
+        <PackageReference Include="Vali-Flow.Core" Version="2.0.0" />
         <ProjectReference Include="..\Vali-Flow.Abstractions\Vali-Flow.Abstractions.csproj" />
-
-
     </ItemGroup>
-    
+
     <ItemGroup>
-        <None Include="logo_vali_flow_.png">
+        <None Include="VF_logo.png">
             <Pack>True</Pack>
             <PackagePath></PackagePath>
+        </None>
+        <None Include="README.md">
+            <Pack>True</Pack>
+            <PackagePath>\</PackagePath>
         </None>
     </ItemGroup>
 

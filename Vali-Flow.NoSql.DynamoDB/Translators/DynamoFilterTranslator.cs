@@ -84,9 +84,9 @@ public static class DynamoFilterTranslator
 
         public string VisitIn(InNode node)
         {
-            // Empty IN → always false: contradictory attribute_exists AND attribute_not_exists
             if (node.Values.Count == 0)
-                return $"(attribute_exists({ctx.AddName(node.Field)}) AND attribute_not_exists({ctx.AddName(node.Field)}))";
+                throw new InvalidOperationException(
+                    "IN condition with empty list is not supported in DynamoDB expressions. Filter the empty case before building the query.");
 
             if (node.Values.Count > MaxInValues)
                 throw new InvalidOperationException(
@@ -139,6 +139,10 @@ public static class DynamoFilterTranslator
 
         public string AddName(string fieldName)
         {
+            // Reuse existing placeholder if the same field was already registered
+            var existing = Names.FirstOrDefault(kv => kv.Value == fieldName);
+            if (existing.Key != null) return existing.Key;
+
             var placeholder = $"#f{_nameCounter++}";
             Names[placeholder] = fieldName;
             return placeholder;

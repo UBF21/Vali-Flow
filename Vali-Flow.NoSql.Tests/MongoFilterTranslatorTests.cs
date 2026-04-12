@@ -277,6 +277,22 @@ public sealed class MongoFilterTranslatorTests
         doc["Name"].AsString.Should().Be("Alice");
     }
 
+    [Fact]
+    public void VisitIn_WithCustomConverter_AppliesConverterToEachValue()
+    {
+        // Converter turns int → BsonString (e.g. for a string-typed enum stored as int)
+        Func<object?, BsonValue?> converter = v => v is int i ? new BsonString($"ID_{i}") : null;
+
+        var node = new InNode("Ref", new List<object?> { 1, 2, 3 });
+        BsonDocument doc = MongoFilterTranslator.Translate(node, converter);
+
+        var arr = doc["Ref"].AsBsonDocument["$in"].AsBsonArray;
+        arr.Should().HaveCount(3);
+        arr[0].AsString.Should().Be("ID_1");
+        arr[1].AsString.Should().Be("ID_2");
+        arr[2].AsString.Should().Be("ID_3");
+    }
+
     // ── ToBsonValue type coverage ─────────────────────────────────────────────
 
     [Fact]

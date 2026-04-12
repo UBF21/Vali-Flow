@@ -77,6 +77,20 @@ Query filter = expr.ToElasticsearch();
 - Range queries use `NumberRangeQuery` and convert values to `double`. For date range queries, use a `customConverter` to produce `DateRangeQuery`.
 - An empty `In` list produces `bool { must_not: [match_all] }` — always false.
 
+## Contributing
+
+Contributions, issues, and feature requests are welcome. Feel free to open a pull request or an issue on [GitHub](https://github.com/UBF21/vali-flow).
+
+If this package is useful to you, consider supporting its development:
+
+- **Latin America** — [MercadoPago](https://link.mercadopago.com.pe/felipermm)
+- **International** — [PayPal](https://paypal.me/felipeRMM?country.x=PE&locale.x=es_XC)
+
+## License
+
+Licensed under the [MIT License](LICENSE).  
+Copyright &copy; 2025 Felipe Rafael Montenegro Morriberon. All rights reserved.
+
 ## Full documentation
 
-[docs/en/vali-flow-nosql-elasticsearch.md](https://github.com/your-org/Vali-Flow/blob/main/docs/en/vali-flow-nosql-elasticsearch.md)
+[vali-flow-docs.netlify.app/docs/adapters/nosql/elasticsearch/overview](https://vali-flow-docs.netlify.app/docs/adapters/nosql/elasticsearch/overview)

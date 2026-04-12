@@ -53,6 +53,8 @@ public sealed class SqlMergeBuilder<TTarget, TSource>
         Expression<Func<TTarget, object>> targetKey,
         Expression<Func<TSource, object>> sourceKey)
     {
+        if (_sourceTable == null)
+            throw new InvalidOperationException("Call Using() before On().");
         string tc = ExpressionHelper.GetMemberName(targetKey);
         string sc = ExpressionHelper.GetMemberName(sourceKey);
         _onConditions.Add(
@@ -188,7 +190,7 @@ public sealed class SqlMergeBuilder<TTarget, TSource>
 
         // Target table
         string targetTable = BuildTargetTableSql();
-        sb.Append($"MERGE INTO {targetTable} AS target\n");
+        sb.Append($"MERGE INTO {targetTable} {_dialect.MergeTargetAlias("target")}\n");
 
         // USING
         string quotedSource = _dialect.QuoteTable(_sourceTable!);
@@ -207,6 +209,11 @@ public sealed class SqlMergeBuilder<TTarget, TSource>
         // WHEN NOT MATCHED BY TARGET
         if (_notMatchedInsertClauses.Count > 0)
         {
+            if (!_dialect.SupportsMergeNotMatchedByTarget)
+                throw new InvalidOperationException(
+                    $"WHEN NOT MATCHED BY TARGET is not supported by {_dialect.GetType().Name}. " +
+                    "Use WHEN NOT MATCHED instead.");
+
             var cols = _notMatchedInsertClauses.Select(c => _dialect.QuoteIdentifier(c.TargetCol));
             var vals = _notMatchedInsertClauses.Select(c => c.SourceExpr);
             sb.Append("WHEN NOT MATCHED BY TARGET THEN\n");
@@ -221,7 +228,7 @@ public sealed class SqlMergeBuilder<TTarget, TSource>
         string sql = sb.ToString().TrimEnd() + ";";
         string finalSql = _tag != null ? $"-- {_tag}\n{sql}" : sql;
 
-        return new SqlQueryResult(finalSql, parameters);
+        return new SqlQueryResult(finalSql, parameters, _dialect.ParameterPrefix);
     }
 
     private string BuildTargetTableSql()
