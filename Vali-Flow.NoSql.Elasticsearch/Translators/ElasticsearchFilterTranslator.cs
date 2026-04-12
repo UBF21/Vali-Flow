@@ -84,10 +84,10 @@ public static class ElasticsearchFilterTranslator
             var d = ToDouble(value);
             return op switch
             {
-                ComparisonOp.GreaterThan        => Query.Range(new NumberRangeQuery(field) { Gt  = d }),
-                ComparisonOp.GreaterThanOrEqual => Query.Range(new NumberRangeQuery(field) { Gte = d }),
-                ComparisonOp.LessThan           => Query.Range(new NumberRangeQuery(field) { Lt  = d }),
-                ComparisonOp.LessThanOrEqual    => Query.Range(new NumberRangeQuery(field) { Lte = d }),
+                ComparisonOp.GreaterThan        => Query.Range(new NumberRangeQuery(field!) { Gt  = d }),
+                ComparisonOp.GreaterThanOrEqual => Query.Range(new NumberRangeQuery(field!) { Gte = d }),
+                ComparisonOp.LessThan           => Query.Range(new NumberRangeQuery(field!) { Lt  = d }),
+                ComparisonOp.LessThanOrEqual    => Query.Range(new NumberRangeQuery(field!) { Lte = d }),
                 _ => throw new NotSupportedException($"ComparisonOp.{op} is not mapped.")
             };
         }
@@ -97,10 +97,10 @@ public static class ElasticsearchFilterTranslator
             DateMath dateMath = utcDate.ToString("yyyy-MM-ddTHH:mm:ss.fffZ");
             return op switch
             {
-                ComparisonOp.GreaterThan        => Query.Range(new DateRangeQuery(field) { Gt  = dateMath }),
-                ComparisonOp.GreaterThanOrEqual => Query.Range(new DateRangeQuery(field) { Gte = dateMath }),
-                ComparisonOp.LessThan           => Query.Range(new DateRangeQuery(field) { Lt  = dateMath }),
-                ComparisonOp.LessThanOrEqual    => Query.Range(new DateRangeQuery(field) { Lte = dateMath }),
+                ComparisonOp.GreaterThan        => Query.Range(new DateRangeQuery(field!) { Gt  = dateMath }),
+                ComparisonOp.GreaterThanOrEqual => Query.Range(new DateRangeQuery(field!) { Gte = dateMath }),
+                ComparisonOp.LessThan           => Query.Range(new DateRangeQuery(field!) { Lt  = dateMath }),
+                ComparisonOp.LessThanOrEqual    => Query.Range(new DateRangeQuery(field!) { Lte = dateMath }),
                 _ => throw new NotSupportedException($"ComparisonOp.{op} is not mapped.")
             };
         }

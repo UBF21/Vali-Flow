@@ -21,6 +21,7 @@ public static class ValiFlowRedisSearchExtensions
     /// </summary>
     /// <typeparam name="T">The entity / document type.</typeparam>
     /// <param name="flow">The ValiFlow builder containing the conditions.</param>
+    /// <param name="customConverter">Optional custom converter for field values.</param>
     /// <returns>
     /// A RediSearch query string ready to pass to <c>new Query(result)</c>.
     /// </returns>

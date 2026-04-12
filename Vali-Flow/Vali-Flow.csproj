@@ -6,6 +6,7 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <NoWarn>$(NoWarn);NU1608</NoWarn>
 
         <!-- Package identity -->
         <PackageId>Vali-Flow</PackageId>

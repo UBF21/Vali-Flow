@@ -21,9 +21,14 @@ namespace Vali_Flow.Sql.Builder;
 /// // SQL: COUNT(*) > @ph0 AND SUM([Amount]) > @ph1
 /// </code>
 /// </example>
+/// <summary>
+/// Builder for HAVING clauses in GROUP BY queries.
+/// </summary>
+/// <typeparam name="T">The entity type.</typeparam>
 public sealed class SqlHavingBuilder<T> : SqlConditionBuilderBase<SqlHavingBuilder<T>, T>
     where T : class
 {
+    /// <summary>Parameter name prefix for HAVING clause parameters (e.g., "ph0", "ph1").</summary>
     protected override string ParamPrefix => "ph";
 
     /// <summary>Creates a new HAVING builder.</summary>

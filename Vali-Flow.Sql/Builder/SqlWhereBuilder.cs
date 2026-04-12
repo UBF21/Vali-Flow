@@ -31,6 +31,7 @@ public sealed class SqlWhereBuilder<T> : SqlConditionBuilderBase<SqlWhereBuilder
 {
     private static readonly ConcurrentDictionary<string, Regex> _regexCache = new();
 
+    /// <summary>Parameter name prefix for WHERE clause parameters (e.g., "pw0", "pw1").</summary>
     protected override string ParamPrefix => "pw";
 
     /// <summary>Creates a new root WHERE builder.</summary>

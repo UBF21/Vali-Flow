@@ -226,9 +226,11 @@ public sealed class SqlInsertBuilder<T> where T : class
 
     /// <summary>
     /// Registers a column as part of the ON CONFLICT target column list.
-    /// Intended for use inside the <paramref name="conflictKeys"/> action of
-    /// <see cref="OnConflictDoUpdate"/>.
+    /// Intended for use inside the <c>OnConflictDoUpdate</c> action.
     /// </summary>
+    /// <typeparam name="TValue">The type of the column value.</typeparam>
+    /// <param name="column">Expression selecting the column to add as a conflict key.</param>
+    /// <returns>The builder instance for method chaining.</returns>
     public SqlInsertBuilder<T> AddConflictKey<TValue>(Expression<Func<T, TValue>> column)
     {
         if (column == null) throw new ArgumentNullException(nameof(column));
@@ -238,9 +240,12 @@ public sealed class SqlInsertBuilder<T> where T : class
 
     /// <summary>
     /// Registers a column = value assignment for the DO UPDATE SET clause.
-    /// Intended for use inside the <paramref name="updateAssignments"/> action of
-    /// <see cref="OnConflictDoUpdate"/>.
+    /// Intended for use inside the <c>OnConflictDoUpdate</c> action.
     /// </summary>
+    /// <typeparam name="TValue">The type of the column value.</typeparam>
+    /// <param name="column">Expression selecting the column to update.</param>
+    /// <param name="value">The new value for the column.</param>
+    /// <returns>The builder instance for method chaining.</returns>
     public SqlInsertBuilder<T> AddConflictUpdate<TValue>(Expression<Func<T, TValue>> column, TValue value)
     {
         if (column == null) throw new ArgumentNullException(nameof(column));
@@ -280,9 +285,12 @@ public sealed class SqlInsertBuilder<T> where T : class
 
     /// <summary>
     /// Registers a column = value assignment for the ON DUPLICATE KEY UPDATE clause.
-    /// Intended for use inside the <paramref name="configure"/> action of
-    /// <see cref="OnDuplicateKeyUpdate"/>.
+    /// Intended for use inside the <c>OnDuplicateKeyUpdate</c> action.
     /// </summary>
+    /// <typeparam name="TValue">The type of the column value.</typeparam>
+    /// <param name="column">Expression selecting the column to update.</param>
+    /// <param name="value">The new value for the column.</param>
+    /// <returns>The builder instance for method chaining.</returns>
     public SqlInsertBuilder<T> AddDuplicateKeyAssignment<TValue>(Expression<Func<T, TValue>> column, TValue value)
     {
         if (column == null) throw new ArgumentNullException(nameof(column));

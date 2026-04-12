@@ -24,6 +24,7 @@ public static class ValiFlowElasticsearchExtensions
     /// </summary>
     /// <typeparam name="T">The entity / document type.</typeparam>
     /// <param name="flow">The ValiFlow builder containing the conditions.</param>
+    /// <param name="customConverter">Optional custom converter for field values.</param>
     /// <returns>
     /// A <see cref="Query"/> ready to pass to <c>Search</c>, <c>Count</c>, <c>DeleteByQuery</c>, etc.
     /// </returns>

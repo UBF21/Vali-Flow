@@ -9,7 +9,7 @@ namespace Vali_Flow.NoSql.Translators;
 /// types (<c>TResult?</c> where <c>TResult : class</c> → same CLR type as <c>TResult</c>)
 /// and nullable value types (<c>TResult?</c> where <c>TResult : struct</c> → <c>Nullable&lt;TResult&gt;</c>).
 /// MongoDB, Redis, and DynamoDB use the class overload; Elasticsearch uses the struct overload
-/// because <see cref="Elastic.Clients.Elasticsearch.FieldValue"/> is a struct.
+/// because FieldValue (Elastic.Clients.Elasticsearch) is a struct.
 /// </remarks>
 public static class ConditionValueResolver
 {

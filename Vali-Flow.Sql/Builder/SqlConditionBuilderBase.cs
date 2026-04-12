@@ -18,14 +18,20 @@ public abstract class SqlConditionBuilderBase<TBuilder, T>
     /// Shared parameter counter and dictionary.
     /// Sub-builders (e.g. AddSubGroup) receive the parent's state so parameter names never collide.
     /// </summary>
+    /// <summary>
+    /// Shared parameter counter and state for grouped conditions.
+    /// </summary>
     protected sealed class SharedState
     {
+        /// <summary>Current parameter index for generating unique parameter names.</summary>
         internal int ParamIndex;
+        /// <summary>Dictionary of parameter names and values.</summary>
         public readonly Dictionary<string, object> Parameters = new();
     }
 
     private readonly List<(Func<ISqlDialect, string> SqlFactory, bool IsAnd)> _conditions = new();
     private bool _nextIsAnd = true;
+    /// <summary>Shared state for parameter management across builder hierarchy.</summary>
     protected readonly SharedState _state;
 
     /// <summary>Parameter name prefix, e.g. "pw" for WHERE or "ph" for HAVING.</summary>
@@ -64,6 +70,11 @@ public abstract class SqlConditionBuilderBase<TBuilder, T>
 
     // ── Protected helpers ─────────────────────────────────────────────────────
 
+    /// <summary>
+    /// Adds a condition factory that will be evaluated when building the final SQL.
+    /// </summary>
+    /// <param name="factory">Function that generates SQL based on the dialect.</param>
+    /// <returns>The builder instance for method chaining.</returns>
     protected TBuilder AddCondition(Func<ISqlDialect, string> factory)
     {
         _conditions.Add((factory, _nextIsAnd));
@@ -71,6 +82,11 @@ public abstract class SqlConditionBuilderBase<TBuilder, T>
         return (TBuilder)this;
     }
 
+    /// <summary>
+    /// Adds a parameter to the shared parameter dictionary and returns its name.
+    /// </summary>
+    /// <param name="value">The parameter value to store.</param>
+    /// <returns>The generated parameter name.</returns>
     protected string AddParam(object? value)
     {
         string name = $"{ParamPrefix}{_state.ParamIndex++}";
@@ -78,6 +94,11 @@ public abstract class SqlConditionBuilderBase<TBuilder, T>
         return name;
     }
 
+    /// <summary>
+    /// Extracts the property name from a member expression.
+    /// </summary>
+    /// <typeparam name="TValue">The type of the property.</typeparam>
+    /// <param name="selector">Expression selecting the property.</param>
     protected static string GetName<TValue>(Expression<Func<T, TValue>> selector)
     {
         if (selector == null) throw new ArgumentNullException(nameof(selector));

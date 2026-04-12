@@ -8,83 +8,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="aa4fc315-c37b-4ab3-b9cc-02a55a2255c8" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/.idea.vali-flow/.idea/projectSettingsUpdater.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.vali-flow/.idea/projectSettingsUpdater.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/.idea.vali-flow/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.vali-flow/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Vali-Flow.Abstractions/Vali-Flow.Abstractions.csproj" beforeDir="false" afterPath="$PROJECT_DIR$/Vali-Flow.Abstractions/Vali-Flow.Abstractions.csproj" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Vali-Flow.InMemory.Tests/ValiFlowInMemoryAggregateAndOrderTests.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Vali-Flow.InMemory.Tests/ValiFlowInMemoryAggregateAndOrderTests.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Vali-Flow.InMemory.Tests/ValiFlowInMemoryByGroupTests.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Vali-Flow.InMemory.Tests/ValiFlowInMemoryByGroupTests.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Vali-Flow.InMemory.Tests/ValiFlowInMemoryEdgeCaseTests.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Vali-Flow.InMemory.Tests/ValiFlowInMemoryEdgeCaseTests.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Vali-Flow.InMemory.Tests/ValiFlowInMemoryNewMethodTests.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Vali-Flow.InMemory.Tests/ValiFlowInMemoryNewMethodTests.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Vali-Flow.InMemory.Tests/ValiFlowInMemoryUncoveredTests.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Vali-Flow.InMemory.Tests/ValiFlowInMemoryUncoveredTests.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Vali-Flow.InMemory.Tests/ValiFlowInMemoryUpsertRangeTests.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Vali-Flow.InMemory.Tests/ValiFlowInMemoryUpsertRangeTests.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Vali-Flow.InMemory.Tests/ValiFlowInMemoryWriteTests.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Vali-Flow.InMemory.Tests/ValiFlowInMemoryWriteTests.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Vali-Flow.InMemory/Classes/Evaluators/AsyncInMemoryAdapter.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Vali-Flow.InMemory/Classes/Evaluators/AsyncInMemoryAdapter.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Vali-Flow.InMemory/Classes/Evaluators/ValiFlowEvaluator.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Vali-Flow.InMemory/Classes/Evaluators/ValiFlowEvaluator.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Vali-Flow.InMemory/Classes/Stores/InMemoryWriteStore.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Vali-Flow.InMemory/Classes/Stores/InMemoryWriteStore.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Vali-Flow.InMemory/Interfaces/Evaluators/Write/IInMemoryEvaluatorWrite.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Vali-Flow.InMemory/Interfaces/Evaluators/Write/IInMemoryEvaluatorWrite.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Vali-Flow.InMemory/Utils/ConstantHelper.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Vali-Flow.InMemory/Utils/ConstantHelper.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Vali-Flow.InMemory/Utils/UtilHelper.cs" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Vali-Flow.InMemory/Utils/ValidationHelper.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Vali-Flow.InMemory/Utils/ValidationHelper.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Vali-Flow.InMemory/Vali-Flow.InMemory.csproj" beforeDir="false" afterPath="$PROJECT_DIR$/Vali-Flow.InMemory/Vali-Flow.InMemory.csproj" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Vali-Flow.NoSql.DynamoDB.Tests/DynamoFilterTranslatorTests.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Vali-Flow.NoSql.DynamoDB.Tests/DynamoFilterTranslatorTests.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Vali-Flow.NoSql.DynamoDB/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/Vali-Flow.NoSql.DynamoDB/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Vali-Flow.NoSql.DynamoDB/Translators/DynamoFilterTranslator.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Vali-Flow.NoSql.DynamoDB/Translators/DynamoFilterTranslator.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Vali-Flow.NoSql.DynamoDB/Vali-Flow.NoSql.DynamoDB.csproj" beforeDir="false" afterPath="$PROJECT_DIR$/Vali-Flow.NoSql.DynamoDB/Vali-Flow.NoSql.DynamoDB.csproj" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Vali-Flow.NoSql.Elasticsearch.Tests/ElasticsearchFilterTranslatorTests.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Vali-Flow.NoSql.Elasticsearch.Tests/ElasticsearchFilterTranslatorTests.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Vali-Flow.NoSql.Elasticsearch/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/Vali-Flow.NoSql.Elasticsearch/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Vali-Flow.NoSql.Elasticsearch/Translators/ElasticsearchFilterTranslator.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Vali-Flow.NoSql.Elasticsearch/Translators/ElasticsearchFilterTranslator.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Vali-Flow.NoSql.Elasticsearch/Vali-Flow.NoSql.Elasticsearch.csproj" beforeDir="false" afterPath="$PROJECT_DIR$/Vali-Flow.NoSql.Elasticsearch/Vali-Flow.NoSql.Elasticsearch.csproj" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Vali-Flow.NoSql.MongoDB/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/Vali-Flow.NoSql.MongoDB/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Vali-Flow.NoSql.MongoDB/Translators/MongoFilterTranslator.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Vali-Flow.NoSql.MongoDB/Translators/MongoFilterTranslator.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Vali-Flow.NoSql.MongoDB/Vali-Flow.NoSql.MongoDB.csproj" beforeDir="false" afterPath="$PROJECT_DIR$/Vali-Flow.NoSql.MongoDB/Vali-Flow.NoSql.MongoDB.csproj" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Vali-Flow.NoSql.Redis.Tests/RedisSearchFilterTranslatorTests.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Vali-Flow.NoSql.Redis.Tests/RedisSearchFilterTranslatorTests.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Vali-Flow.NoSql.Redis/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/Vali-Flow.NoSql.Redis/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Vali-Flow.NoSql.Redis/Translators/RedisSearchFilterTranslator.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Vali-Flow.NoSql.Redis/Translators/RedisSearchFilterTranslator.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Vali-Flow.NoSql.Redis/Vali-Flow.NoSql.Redis.csproj" beforeDir="false" afterPath="$PROJECT_DIR$/Vali-Flow.NoSql.Redis/Vali-Flow.NoSql.Redis.csproj" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Vali-Flow.NoSql.Tests/MongoFilterTranslatorTests.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Vali-Flow.NoSql.Tests/MongoFilterTranslatorTests.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Vali-Flow.NoSql/IR/InNode.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Vali-Flow.NoSql/IR/InNode.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Vali-Flow.NoSql/IR/LikeNode.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Vali-Flow.NoSql/IR/LikeNode.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Vali-Flow.NoSql/Translators/ExpressionToIRVisitor.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Vali-Flow.NoSql/Translators/ExpressionToIRVisitor.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Vali-Flow.NoSql/Vali-Flow.NoSql.csproj" beforeDir="false" afterPath="$PROJECT_DIR$/Vali-Flow.NoSql/Vali-Flow.NoSql.csproj" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Vali-Flow.Sql.Tests/Builder/OracleDialectTests.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Vali-Flow.Sql.Tests/Builder/OracleDialectTests.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Vali-Flow.Sql.Tests/Builder/SqlHavingBuilderTests.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Vali-Flow.Sql.Tests/Builder/SqlHavingBuilderTests.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Vali-Flow.Sql.Tests/Builder/SqlInsertBuilderTests.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Vali-Flow.Sql.Tests/Builder/SqlInsertBuilderTests.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Vali-Flow.Sql.Tests/Builder/SqlMergeBuilderTests.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Vali-Flow.Sql.Tests/Builder/SqlMergeBuilderTests.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Vali-Flow.Sql.Tests/Builder/SqlWhereBuilderTests.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Vali-Flow.Sql.Tests/Builder/SqlWhereBuilderTests.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Vali-Flow.Sql.Tests/ExpressionToSqlRemainingGapsTests.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Vali-Flow.Sql.Tests/ExpressionToSqlRemainingGapsTests.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Vali-Flow.Sql.Tests/ExpressionToSqlVisitorTests.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Vali-Flow.Sql.Tests/ExpressionToSqlVisitorTests.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Vali-Flow.Sql.Tests/SqlQueryBuilderPaginationValidationTests.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Vali-Flow.Sql.Tests/SqlQueryBuilderPaginationValidationTests.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Vali-Flow.Sql.Tests/SqlQueryResultTests.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Vali-Flow.Sql.Tests/SqlQueryResultTests.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Vali-Flow.Sql/Builder/SqlConditionBuilderBase.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Vali-Flow.Sql/Builder/SqlConditionBuilderBase.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Vali-Flow.Sql/Builder/SqlDeleteBuilder.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Vali-Flow.Sql/Builder/SqlDeleteBuilder.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Vali-Flow.Sql/Builder/SqlHavingBuilder.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Vali-Flow.Sql/Builder/SqlHavingBuilder.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Vali-Flow.Sql/Builder/SqlInsertBuilder.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Vali-Flow.Sql/Builder/SqlInsertBuilder.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Vali-Flow.Sql/Builder/SqlMergeBuilder.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Vali-Flow.Sql/Builder/SqlMergeBuilder.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Vali-Flow.Sql/Builder/SqlQueryBuilder.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Vali-Flow.Sql/Builder/SqlQueryBuilder.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Vali-Flow.Sql/Builder/SqlTruncateBuilder.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Vali-Flow.Sql/Builder/SqlTruncateBuilder.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Vali-Flow.Sql/Builder/SqlUpdateBuilder.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Vali-Flow.Sql/Builder/SqlUpdateBuilder.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Vali-Flow.Sql/Builder/SqlWhereBuilder.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Vali-Flow.Sql/Builder/SqlWhereBuilder.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Vali-Flow.Sql/Dialects/ISqlDialect.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Vali-Flow.Sql/Dialects/ISqlDialect.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Vali-Flow.Sql/Dialects/MySqlDialect.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Vali-Flow.Sql/Dialects/MySqlDialect.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Vali-Flow.Sql/Dialects/OracleDialect.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Vali-Flow.Sql/Dialects/OracleDialect.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Vali-Flow.Sql/Dialects/PostgreSqlDialect.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Vali-Flow.Sql/Dialects/PostgreSqlDialect.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Vali-Flow.Sql/Dialects/SqlServerDialect.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Vali-Flow.Sql/Dialects/SqlServerDialect.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Vali-Flow.Sql/Dialects/SqliteDialect.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Vali-Flow.Sql/Dialects/SqliteDialect.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Vali-Flow.Sql/Extensions/ValiFlowSqlExtensions.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Vali-Flow.Sql/Extensions/ValiFlowSqlExtensions.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Vali-Flow.Sql/Models/SqlQueryResult.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Vali-Flow.Sql/Models/SqlQueryResult.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Vali-Flow.Sql/Models/SqlResult.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Vali-Flow.Sql/Models/SqlResult.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Vali-Flow.Sql/Translators/ExpressionToSqlVisitor.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Vali-Flow.Sql/Translators/ExpressionToSqlVisitor.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Vali-Flow.Sql/Vali-Flow.Sql.csproj" beforeDir="false" afterPath="$PROJECT_DIR$/Vali-Flow.Sql/Vali-Flow.Sql.csproj" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Vali-Flow/Classes/Evaluators/ValiFlowEvaluator.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Vali-Flow/Classes/Evaluators/ValiFlowEvaluator.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Vali-Flow/Extensions/ServiceCollectionExtensions.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Vali-Flow/Extensions/ServiceCollectionExtensions.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Vali-Flow/Interfaces/Evaluators/Read/IEvaluatorRead.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Vali-Flow/Interfaces/Evaluators/Read/IEvaluatorRead.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Vali-Flow/Models/PagedResult.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Vali-Flow/Models/PagedResult.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Vali-Flow/Utils/Constants.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Vali-Flow/Utils/Constants.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Vali-Flow/Utils/Validation.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Vali-Flow/Utils/Validation.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Vali-Flow/Vali-Flow.csproj" beforeDir="false" afterPath="$PROJECT_DIR$/Vali-Flow/Vali-Flow.csproj" afterDir="false" />
-    </list>
+    <list default="true" id="aa4fc315-c37b-4ab3-b9cc-02a55a2255c8" name="Changes" comment="" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -109,18 +33,8 @@
   }
 }</component>
   <component name="HighlightingSettingsPerFile">
-    <setting file="file://$APPLICATION_CONFIG_DIR$/resharper-host/DecompilerCache/ILViewer/8f134e7635b74b86aa90d7b5b78f4ecbfc00/a6/9443296a/02000008.il" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$APPLICATION_CONFIG_DIR$/resharper-host/DecompilerCache/decompiler/3442bdbe7a07406dbd4e05fe7357d408c40e00/4d/c91dd509/IEnumerable`1.cs" root0="SKIP_HIGHLIGHTING" />
-    <setting file="file://$APPLICATION_CONFIG_DIR$/resharper-host/DecompilerCache/decompiler/8f134e7635b74b86aa90d7b5b78f4ecbfc00/cf/c4ec0cb2/ValidationHelper.cs" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$APPLICATION_CONFIG_DIR$/resharper-host/DecompilerCache/decompiler/a11fb02b10e04f8883113b5389cc1b4fb85f8/11/84988e72/EntityFrameworkQueryableExtensions.cs" root0="SKIP_HIGHLIGHTING" />
-    <setting file="file://$APPLICATION_CONFIG_DIR$/resharper-host/SourcesCache/67818da183a0c61cb12efd51eff113abd0238f8e25f75580148096acdd4a6be3/Aggregate.cs" root0="FORCE_HIGHLIGHTING" />
-    <setting file="mock:///Users/isw21/RiderProjects/vali-flow/Vali-Flow.Core/Utils/ValidationHelper.cs" root0="SKIP_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/Vali-Flow/Classes/Evaluators/ValiFlowEvaluator.cs" root0="FORCE_HIGHLIGHTING" />
-    <setting file="mock:///Users/isw21/RiderProjects/vali-flow/Vali-Flow/Classes/Evaluators/ValiFlowEvaluator.cs" root0="SKIP_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/Vali-Flow/Interfaces/Evaluators/Read/IEvaluatorRead.cs" root0="FORCE_HIGHLIGHTING" />
-    <setting file="mock:///Users/isw21/RiderProjects/vali-flow/Vali-Flow/Interfaces/Evaluators/Write/IEvaluatorWrite.cs" root0="SKIP_HIGHLIGHTING" />
-    <setting file="file:///usr/local/share/dotnet/sdk/7.0.410/Sdks/Microsoft.NET.Sdk/Sdk/Sdk.props" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file:///usr/local/share/dotnet/sdk/7.0.410/Sdks/Microsoft.NET.Sdk/Sdk/Sdk.targets" root0="FORCE_HIGHLIGHTING" />
   </component>
   <component name="MetaFilesCheckinStateConfiguration" checkMetaFiles="true" />
   <component name="ProblemsViewState">
