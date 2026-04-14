@@ -40,7 +40,7 @@
         <SymbolPackageFormat>snupkg</SymbolPackageFormat>
 
         <Description>Vali-Flow is a .NET library that simplifies data access in Entity Framework Core applications via a fluent specification API. Provides ValiFlowEvaluator for querying and writing data, QuerySpecification and BasicSpecification for defining query criteria, and bulk operation support via EFCore.BulkExtensions.</Description>
-        <PackageReleaseNotes>v1.1.0 — Enhanced expression building, optimized specification evaluation for includes/pagination/grouping, and improved bulk operation performance.</PackageReleaseNotes>
+        <PackageReleaseNotes>v1.2.0 — Architectural refactor: ValiFlowEvaluator split into 5 partial files (Aggregates, Grouped, Read, Write, Bridge) for better maintainability. Enhanced XML documentation across all public methods. Added CancellationToken to distinct/duplicates queries. Eliminated all compiler warnings (CS + NU). Updated to Vali-Flow.Core v2.0.0 via NuGet.</PackageReleaseNotes>
     </PropertyGroup>
 
     <ItemGroup>
