@@ -100,3 +100,25 @@ Mirrors the EF Core evaluator API but synchronous and without a DbContext. Usefu
 - **`negateCondition` parameter**: all read methods accept this flag to invert the `ValiFlow<T>` filter (logical NOT).
 - **`ValiSort<T>`**: sorting helper from Vali-Flow.Core; used by `QuerySpecification` for dynamic/reflection-based ordering.
 - **No xUnit tests yet**: testing is done via the `vali-flow-test` console app. A proper test project (xUnit + FluentAssertions) should be added following the same pattern as `Vali-Flow.Core.Tests`.
+
+## CRITICAL: Partial Classes & Modifiers
+
+⚠️ **IMPORTANT WHEN MODIFYING ValiFlowEvaluator:**
+
+Both `ValiFlowEvaluator<T>` (Vali-Flow) and `ValiFlowEvaluator<T, TProperty>` (InMemory) are **`partial` classes split across multiple files**:
+
+**Vali-Flow:**
+- `ValiFlowEvaluator.cs` — main declaration (MUST have `public partial class`)
+- `ValiFlowEvaluator.Read.cs` — read operations
+- `ValiFlowEvaluator.Write.cs` — write operations
+- `ValiFlowEvaluator.Aggregates.cs` — aggregates
+
+**InMemory:**
+- Similar split structure
+
+**GOTCHA:** When removing modifiers (like `sealed`), ALWAYS ensure the main declaration includes `partial`. Forgetting this causes `CS0260: Missing partial modifier` compilation error even though the class looks correct in isolation.
+
+**Process for modifying these classes:**
+1. Edit ValiFlowEvaluator.cs and verify: `public partial class ValiFlowEvaluator<T>`
+2. If removing sealed or other modifiers, rebuild with `dotnet build` BEFORE packing NuGet
+3. After rebuild succeeds, generate NuGet with `dotnet pack --no-build`
