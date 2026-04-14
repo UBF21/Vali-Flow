@@ -14,7 +14,7 @@
         <PackageId>Vali-Flow</PackageId>
         <Title>Vali-Flow</Title>
         <Product>Vali-Flow</Product>
-        <Version>1.1.0</Version>
+        <Version>1.2.0</Version>
         <Authors>Felipe Rafael Montenegro Morriberon</Authors>
         <Copyright>Copyright © 2025 - FM. All rights reserved.</Copyright>
 
@@ -49,7 +49,7 @@
         <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="9.0.0" />
         <PackageReference Include="EFCore.BulkExtensions" Version="8.1.3" />
         <PackageReference Include="Vali-Flow.Core" Version="2.0.0" />
-        <ProjectReference Include="..\Vali-Flow.Abstractions\Vali-Flow.Abstractions.csproj" />
+        <PackageReference Include="Vali-Flow.Abstractions" Version="1.0.0" />
     </ItemGroup>
 
     <ItemGroup>
