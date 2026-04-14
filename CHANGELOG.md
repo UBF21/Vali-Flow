@@ -10,7 +10,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) and 
 
 ---
 
-## Vali-Flow — 1.3.2
+## Vali-Flow — 1.3.3
 
 ### Fixed
 - Removed `sealed` modifier from all `ValiFlowEvaluator<T>` partial declarations:
