@@ -5,29 +5,47 @@
         <RootNamespace>Vali_Flow.Abstractions</RootNamespace>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
         <Title>Vali-Flow.Abstractions</Title>
         <Authors>Felipe Rafael Montenegro Morriberon</Authors>
-        <Description>Provider-agnostic contracts for the Vali-Flow ecosystem. Contains shared interfaces (IQueryEvaluator) implemented by Vali-Flow (EF Core), Vali-Flow.InMemory, and future providers.</Description>
+        <Description>Provider-agnostic contracts for the Vali-Flow ecosystem. Contains shared interfaces (IQueryEvaluator, IExpressionTranslator) and utilities (ExpressionInspector) used by all Vali-Flow adapters (EF Core, In-Memory, SQL, and future providers).</Description>
         <PackageLicenseExpression>MIT</PackageLicenseExpression>
         <RepositoryUrl>https://github.com/UBF21/vali-flow</RepositoryUrl>
         <RepositoryType>git</RepositoryType>
         <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
-        <Copyright>Copyright © 2025 - FM. Todos los derechos reservados.</Copyright>
-        <Version>1.0.0</Version>
+        <Copyright>Copyright © 2025 - FM. All rights reserved.</Copyright>
+        <Version>1.1.0</Version>
         <PackageIcon>VF_logo.png</PackageIcon>
         <PackageId>Vali-Flow.Abstractions</PackageId>
         <Product>Vali-Flow.Abstractions</Product>
+        <PackageTags>vali;vali-flow;abstractions;contracts;interface;evaluator;translator;dotnet</PackageTags>
+        <PackageProjectUrl>https://vali-flow-docs.netlify.app/docs/ecosystem/abstractions</PackageProjectUrl>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
+
+        <!-- Source Link / Symbols -->
+        <PublishRepositoryUrl>true</PublishRepositoryUrl>
+        <EmbedUntrackedSources>true</EmbedUntrackedSources>
+        <DebugType>embedded</DebugType>
+        <IncludeSymbols>true</IncludeSymbols>
+        <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+
+        <PackageReleaseNotes>v1.1.0 — Enhanced documentation and internal contracts alignment with ecosystem refactor.</PackageReleaseNotes>
     </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All" />
+        <PackageReference Include="Vali-Flow.Core" Version="2.0.0" />
+    </ItemGroup>
 
     <ItemGroup>
         <None Include="VF_logo.png">
             <Pack>True</Pack>
             <PackagePath></PackagePath>
         </None>
-    </ItemGroup>
-
-    <ItemGroup>
-        <PackageReference Include="Vali-Flow.Core" Version="2.0.0" />
+        <None Include="README.md">
+            <Pack>True</Pack>
+            <PackagePath>\</PackagePath>
+        </None>
     </ItemGroup>
 
 </Project>
