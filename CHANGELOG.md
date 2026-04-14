@@ -10,17 +10,17 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) and 
 
 ---
 
-## Vali-Flow — 1.3.1
+## Vali-Flow — 1.3.2
 
 ### Fixed
-- NuGet package v1.3.0 was published before `ValiFlowEvaluator<T>` had the `sealed` modifier removed. This patch release includes the fix to allow inheritance.
+- Missing `partial` modifier on `ValiFlowEvaluator<T>` declaration caused compilation failure. The class is split across multiple files (.Read, .Write, .Aggregates) and requires the `partial` keyword.
 
 ---
 
-## Vali-Flow.InMemory — 1.1.2
+## Vali-Flow.InMemory — 1.1.3
 
 ### Fixed
-- NuGet package v1.1.1 was published before `ValiFlowEvaluator<T, TProperty>` had the `sealed` modifier removed. This patch release includes the fix to allow inheritance.
+- Missing `partial` modifier on `ValiFlowEvaluator<T, TProperty>` declaration caused compilation failure. The class is split across multiple files and requires the `partial` keyword.
 
 ---
 
