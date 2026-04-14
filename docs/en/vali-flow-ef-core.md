@@ -85,7 +85,7 @@ dotnet add package Vali-Flow
 
 ## Setup
 
-`ValiFlowEvaluator<T>` is a sealed generic class that accepts a `DbContext` and implements both `IEvaluatorRead<T>` and `IEvaluatorWrite<T>`.
+`ValiFlowEvaluator<T>` is a generic class that accepts a `DbContext` and implements both `IEvaluatorRead<T>` and `IEvaluatorWrite<T>`. It is inheritable, allowing you to extend it with custom logic in repository implementations.
 
 **Constructor**
 
@@ -110,6 +110,28 @@ builder.Services.AddScoped<ValiFlowEvaluator<Order>>(sp =>
 
 ```csharp
 var evaluator = new ValiFlowEvaluator<Order>(dbContext);
+```
+
+**Repository pattern (inheritance)**
+
+Since `ValiFlowEvaluator<T>` is inheritable, you can extend it to create a clean repository:
+
+```csharp
+public class OrderRepository : ValiFlowEvaluator<Order>
+{
+    public OrderRepository(AppDbContext dbContext) : base(dbContext)
+    {
+    }
+
+    // Add custom methods
+    public async Task<IEnumerable<Order>> GetRecentOrdersAsync()
+    {
+        var spec = new QuerySpecification<Order>(
+            new ValiFlow<Order>()
+                .GreaterThanOrEqual(o => o.CreatedAt, DateTime.UtcNow.AddDays(-30)));
+        return await EvaluateQueryAsync(spec);
+    }
+}
 ```
 
 > **Note:** The evaluator holds a reference to the `DbContext` provided. Follow standard EF Core scoping rules — inject a scoped `DbContext` in web applications.
