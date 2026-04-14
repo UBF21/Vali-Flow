@@ -1,6 +1,6 @@
 namespace Vali_Flow.InMemory.Classes.Stores;
 
-internal sealed class InMemoryWriteStore<T, TProperty> where T : class where TProperty : notnull
+internal class InMemoryWriteStore<T, TProperty> where T : class where TProperty : notnull
 {
     private readonly object _lock = new();
 

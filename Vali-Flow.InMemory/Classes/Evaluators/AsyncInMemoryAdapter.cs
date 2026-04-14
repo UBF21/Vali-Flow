@@ -11,7 +11,7 @@ namespace Vali_Flow.InMemory.Classes.Evaluators;
 /// as <see cref="Task{T}"/> for compatibility with async interfaces.
 /// All methods complete synchronously — no I/O is performed.
 /// </summary>
-internal sealed class AsyncInMemoryAdapter<T, TProperty>
+internal class AsyncInMemoryAdapter<T, TProperty>
     where T : class
     where TProperty : notnull
 {

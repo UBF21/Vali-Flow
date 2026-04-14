@@ -13,14 +13,26 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) and 
 ## Vali-Flow — 1.3.2
 
 ### Fixed
-- Missing `partial` modifier on `ValiFlowEvaluator<T>` declaration caused compilation failure. The class is split across multiple files (.Read, .Write, .Aggregates) and requires the `partial` keyword.
+- Removed `sealed` modifier from all `ValiFlowEvaluator<T>` partial declarations:
+  - ValiFlowEvaluator.cs (main)
+  - ValiFlowEvaluator.Read.cs
+  - ValiFlowEvaluator.Write.cs
+  - ValiFlowEvaluator.Aggregates.cs
+  - ValiFlowEvaluator.Grouped.cs
+  - ValiFlowEvaluator.Bridge.cs
 
 ---
 
-## Vali-Flow.InMemory — 1.1.3
+## Vali-Flow.InMemory — 1.1.4
 
 ### Fixed
-- Missing `partial` modifier on `ValiFlowEvaluator<T, TProperty>` declaration caused compilation failure. The class is split across multiple files and requires the `partial` keyword.
+- Removed `sealed` modifier from all classes for full inheritance support:
+  - `ValiFlowEvaluator<T, TProperty>` (main evaluator)
+  - `AsyncInMemoryAdapter<T, TProperty>` (async wrapper)
+  - `InMemoryWriteStore<T, TProperty>` (write operations store)
+  - `PagedResult<T>` (pagination result model)
+
+Users can now create custom implementations by extending any of these classes.
 
 ---
 

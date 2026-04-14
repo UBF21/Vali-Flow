@@ -4,7 +4,7 @@ namespace Vali_Flow.InMemory.Models;
 /// Represents a paginated result set with metadata about the current page, total count, and navigation flags.
 /// </summary>
 /// <typeparam name="T">The type of items in the result set.</typeparam>
-public sealed class PagedResult<T>
+public class PagedResult<T>
 {
     /// <summary>Gets the items on the current page.</summary>
     public IReadOnlyList<T> Items { get; }
