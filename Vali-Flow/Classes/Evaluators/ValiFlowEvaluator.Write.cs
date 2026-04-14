@@ -5,7 +5,7 @@ using Vali_Flow.Utils;
 
 namespace Vali_Flow.Classes.Evaluators;
 
-public sealed partial class ValiFlowEvaluator<T>
+public partial class ValiFlowEvaluator<T>
 {
     /// <summary>
     /// Adds a single entity to the <see cref="Microsoft.EntityFrameworkCore.DbContext"/> and optionally persists it immediately.

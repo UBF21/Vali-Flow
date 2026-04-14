@@ -6,7 +6,7 @@ using Vali_Flow.Utils;
 
 namespace Vali_Flow.Classes.Evaluators;
 
-public sealed partial class ValiFlowEvaluator<T>
+public partial class ValiFlowEvaluator<T>
 {
     /// <summary>
     /// Groups entities matching the specification by the given key and returns a dictionary of lists.

@@ -7,7 +7,7 @@ using Vali_Flow.Utils;
 
 namespace Vali_Flow.Classes.Evaluators;
 
-public sealed partial class ValiFlowEvaluator<T>
+public partial class ValiFlowEvaluator<T>
 {
     /// <summary>
     /// Evaluates whether a single entity satisfies the given <see cref="ValiFlow{T}"/> condition.

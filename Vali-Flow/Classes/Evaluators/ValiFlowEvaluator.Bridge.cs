@@ -6,7 +6,7 @@ using Vali_Flow.Core.Builder;
 
 namespace Vali_Flow.Classes.Evaluators;
 
-public sealed partial class ValiFlowEvaluator<T>
+public partial class ValiFlowEvaluator<T>
 {
     async Task<bool> IQueryReader<T>.EvaluateAnyAsync(ValiFlow<T>? filter, CancellationToken cancellationToken)
     {

@@ -5,17 +5,17 @@ using Vali_Flow.Interfaces.Specification;
 
 namespace Vali_Flow.Classes.Evaluators;
 
-public sealed partial class ValiFlowEvaluator<T>
+public partial class ValiFlowEvaluator<T>
 {
     /// <summary>
     /// Returns the minimum value of the projected property for entities matching the specification.
-    /// Returns <see cref="TResult.Zero"/> if the result set is empty.
+    /// Returns the zero value of <typeparamref name="TResult"/> if the result set is empty.
     /// </summary>
     /// <typeparam name="TResult">Numeric type of the projected property.</typeparam>
     /// <param name="specification">Specification that defines the filter and EF Core query hints.</param>
     /// <param name="selector">Expression that projects the property to minimize.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>The minimum projected value, or <see cref="TResult.Zero"/> if the set is empty.</returns>
+    /// <returns>The minimum projected value, or the zero value of <typeparamref name="TResult"/> if the set is empty.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="specification"/> or <paramref name="selector"/> is <c>null</c>.</exception>
     public async Task<TResult> EvaluateMinAsync<TResult>(
         IBasicSpecification<T> specification,
@@ -40,13 +40,13 @@ public sealed partial class ValiFlowEvaluator<T>
 
     /// <summary>
     /// Returns the maximum value of the projected property for entities matching the specification.
-    /// Returns <see cref="TResult.Zero"/> if the result set is empty.
+    /// Returns the zero value of <typeparamref name="TResult"/> if the result set is empty.
     /// </summary>
     /// <typeparam name="TResult">Numeric type of the projected property.</typeparam>
     /// <param name="specification">Specification that defines the filter and EF Core query hints.</param>
     /// <param name="selector">Expression that projects the property to maximize.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>The maximum projected value, or <see cref="TResult.Zero"/> if the set is empty.</returns>
+    /// <returns>The maximum projected value, or the zero value of <typeparamref name="TResult"/> if the set is empty.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="specification"/> or <paramref name="selector"/> is <c>null</c>.</exception>
     public async Task<TResult> EvaluateMaxAsync<TResult>(
         IBasicSpecification<T> specification,
@@ -210,14 +210,14 @@ public sealed partial class ValiFlowEvaluator<T>
 
     /// <summary>
     /// Applies a custom binary aggregator over the projected property for entities matching the specification.
-    /// Returns <see cref="TResult.Zero"/> if the result set is empty.
+    /// Returns the zero value of <typeparamref name="TResult"/> if the result set is empty.
     /// </summary>
     /// <typeparam name="TResult">Numeric type of the projected property and aggregation result.</typeparam>
     /// <param name="specification">Specification that defines the filter and EF Core query hints.</param>
     /// <param name="selector">Expression that projects the property to aggregate.</param>
     /// <param name="aggregator">Binary function applied cumulatively over the projected values.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>The aggregated result, or <see cref="TResult.Zero"/> if the set is empty.</returns>
+    /// <returns>The aggregated result, or the zero value of <typeparamref name="TResult"/> if the set is empty.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="specification"/>, <paramref name="selector"/>, or <paramref name="aggregator"/> is <c>null</c>.</exception>
     /// <remarks>All matching values are loaded into memory to apply the custom aggregator. For standard aggregations (Sum, Min, Max, Avg), prefer the dedicated methods which delegate computation to the database.</remarks>
     public async Task<TResult> EvaluateAggregateAsync<TResult>(
