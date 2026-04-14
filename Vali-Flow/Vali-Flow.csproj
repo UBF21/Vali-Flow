@@ -14,7 +14,7 @@
         <PackageId>Vali-Flow</PackageId>
         <Title>Vali-Flow</Title>
         <Product>Vali-Flow</Product>
-        <Version>1.2.0</Version>
+        <Version>1.3.0</Version>
         <Authors>Felipe Rafael Montenegro Morriberon</Authors>
         <Copyright>Copyright © 2025 - FM. All rights reserved.</Copyright>
 
@@ -40,7 +40,7 @@
         <SymbolPackageFormat>snupkg</SymbolPackageFormat>
 
         <Description>Vali-Flow is a .NET library that simplifies data access in Entity Framework Core applications via a fluent specification API. Provides ValiFlowEvaluator for querying and writing data, QuerySpecification and BasicSpecification for defining query criteria, and bulk operation support via EFCore.BulkExtensions.</Description>
-        <PackageReleaseNotes>v1.2.0 — Architectural refactor: ValiFlowEvaluator split into 5 partial files (Aggregates, Grouped, Read, Write, Bridge) for better maintainability. Enhanced XML documentation across all public methods. Added CancellationToken to distinct/duplicates queries. Eliminated all compiler warnings (CS + NU). Updated to Vali-Flow.Core v2.0.0 via NuGet.</PackageReleaseNotes>
+        <PackageReleaseNotes>v1.3.0 — Made ValiFlowEvaluator&lt;T&gt; inheritable (removed sealed modifier). This allows repositories to extend ValiFlowEvaluator directly instead of using composition, enabling a cleaner repository pattern implementation. No breaking changes.</PackageReleaseNotes>
     </PropertyGroup>
 
     <ItemGroup>

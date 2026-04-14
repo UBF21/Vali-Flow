@@ -9,6 +9,16 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) · Versioning: 
 
 ---
 
+## [1.3.0]
+
+### Changed
+- `ValiFlowEvaluator<T>` is now inheritable — removed `sealed` modifier to enable clean repository pattern
+
+### Fixed
+- Improved extensibility for repository implementations
+
+---
+
 ## [1.1.0]
 
 ### Added

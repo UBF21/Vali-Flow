@@ -10,6 +10,26 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) and 
 
 ---
 
+## Vali-Flow — 1.3.0
+
+### Changed
+- `ValiFlowEvaluator<T>` is now inheritable — removed `sealed` modifier to enable clean repository pattern (repositories can now extend `ValiFlowEvaluator<T>` directly)
+
+### Fixed
+- Improved extensibility for repository implementations
+
+---
+
+## Vali-Flow.InMemory — 1.1.1
+
+### Changed
+- `ValiFlowEvaluator<T, TProperty>` is now inheritable — removed `sealed` modifier to enable clean repository pattern
+
+### Fixed
+- Improved extensibility for repository implementations
+
+---
+
 ## Vali-Flow — 1.1.0
 
 ### Added

@@ -11,7 +11,7 @@
         <PackageId>Vali-Flow.InMemory</PackageId>
         <Title>Vali-Flow.InMemory</Title>
         <Product>Vali-Flow.InMemory</Product>
-        <Version>1.1.0</Version>
+        <Version>1.1.1</Version>
         <Authors>Felipe Rafael Montenegro Morriberon</Authors>
         <Copyright>Copyright © 2025 - FM. All rights reserved.</Copyright>
 
@@ -37,7 +37,7 @@
         <SymbolPackageFormat>snupkg</SymbolPackageFormat>
 
         <Description>Synchronous in-memory evaluator for Vali-Flow.Core — filter, page, aggregate and write in-memory collections using the same fluent ValiFlow&lt;T&gt; specification API. Ideal for unit testing and caching layers without a database dependency.</Description>
-        <PackageReleaseNotes>v1.0.0 — Initial release. Synchronous in-memory evaluator supporting read, write, aggregate and grouped operations over IEnumerable&lt;T&gt;.</PackageReleaseNotes>
+        <PackageReleaseNotes>v1.1.1 — Made ValiFlowEvaluator&lt;T, TProperty&gt; inheritable (removed sealed modifier). Allows repositories to extend the evaluator directly for cleaner implementation. No breaking changes.</PackageReleaseNotes>
     </PropertyGroup>
 
     <ItemGroup>

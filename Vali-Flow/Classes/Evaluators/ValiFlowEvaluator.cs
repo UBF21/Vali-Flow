@@ -17,10 +17,15 @@ namespace Vali_Flow.Classes.Evaluators;
 /// using the Vali-Flow specification pattern over a <see cref="Microsoft.EntityFrameworkCore.DbContext"/>.
 /// </summary>
 /// <typeparam name="T">The entity type. Must be a reference type.</typeparam>
-public sealed partial class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where T : class
+public partial class ValiFlowEvaluator<T> : IEvaluatorRead<T>, IEvaluatorWrite<T> where T : class
 {
     private readonly DbContext _dbContext;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ValiFlowEvaluator{T}"/> class.
+    /// </summary>
+    /// <param name="dbContext">The Entity Framework Core <see cref="DbContext"/> instance used to perform queries and writes.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="dbContext"/> is <c>null</c>.</exception>
     public ValiFlowEvaluator(DbContext dbContext)
     {
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext), "The DbContext provided is null.");

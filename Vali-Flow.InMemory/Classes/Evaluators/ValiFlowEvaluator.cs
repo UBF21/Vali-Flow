@@ -16,7 +16,7 @@ namespace Vali_Flow.InMemory.Classes.Evaluators;
 /// </summary>
 /// <typeparam name="T">The type of the entities to evaluate. Must be a reference type.</typeparam>
 /// <typeparam name="TProperty">The type of the property used as the entity identifier key. Must be non-nullable.</typeparam>
-public sealed class ValiFlowEvaluator<T, TProperty> : IInMemoryEvaluatorRead<T>, IInMemoryEvaluatorWrite<T>
+public class ValiFlowEvaluator<T, TProperty> : IInMemoryEvaluatorRead<T>, IInMemoryEvaluatorWrite<T>
     where T : class
     where TProperty : notnull
 {
