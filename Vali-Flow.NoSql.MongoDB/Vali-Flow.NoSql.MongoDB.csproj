@@ -6,7 +6,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>Vali_Flow.NoSql.MongoDB</RootNamespace>
     <PackageId>Vali-Flow.NoSql.MongoDB</PackageId>
-    <Version>1.0.0</Version>
+    <Version>1.1.0</Version>
     <Authors>Felipe Rafael Montenegro Morriberon</Authors>
     <Title>Vali-Flow.NoSql.MongoDB</Title>
     <Description>MongoDB adapter for Vali-Flow.NoSql — translates the provider-agnostic IR tree into BsonDocument filters using the official MongoDB.Bson library. Use .ToMongo() on any ValiFlow&lt;T&gt; or Expression&lt;Func&lt;T, bool&gt;&gt;.</Description>
@@ -18,8 +18,14 @@
     <RepositoryType>git</RepositoryType>
     <PackageIcon>VF_logo.png</PackageIcon>
     <PackageReadmeFile>README.md</PackageReadmeFile>
-    <PackageReleaseNotes>Initial release — MongoDB BsonDocument filter builder for Vali-Flow.NoSql IR.</PackageReleaseNotes>
+    <PackageReleaseNotes>v1.1.0 — Enhanced documentation and adapter integration pattern alignment.</PackageReleaseNotes>
+    <PackageTags>vali;vali-flow;mongodb;bson;filter;nosql;dotnet</PackageTags>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <DebugType>embedded</DebugType>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
   </PropertyGroup>
 
   <ItemGroup>
@@ -34,10 +40,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Vali-Flow.NoSql\Vali-Flow.NoSql.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All" />
+    <PackageReference Include="Vali-Flow.NoSql" Version="1.1.0" />
     <PackageReference Include="MongoDB.Bson" Version="2.29.0" />
   </ItemGroup>
 
