@@ -14,9 +14,9 @@
         <PackageId>Vali-Flow</PackageId>
         <Title>Vali-Flow</Title>
         <Product>Vali-Flow</Product>
-        <Version>1.3.3</Version>
+        <Version>1.3.4</Version>
         <Authors>Felipe Rafael Montenegro Morriberon</Authors>
-        <Copyright>Copyright © 2025 - FM. All rights reserved.</Copyright>
+        <Copyright>Copyright © 2026 - FM. All rights reserved.</Copyright>
 
         <!-- Repository -->
         <RepositoryUrl>https://github.com/UBF21/vali-flow</RepositoryUrl>
@@ -40,7 +40,11 @@
         <SymbolPackageFormat>snupkg</SymbolPackageFormat>
 
         <Description>Vali-Flow is a .NET library that simplifies data access in Entity Framework Core applications via a fluent specification API. Provides ValiFlowEvaluator for querying and writing data, QuerySpecification and BasicSpecification for defining query criteria, and bulk operation support via EFCore.BulkExtensions.</Description>
-        <PackageReleaseNotes>v1.3.0 — Made ValiFlowEvaluator&lt;T&gt; inheritable (removed sealed modifier). This allows repositories to extend ValiFlowEvaluator directly instead of using composition, enabling a cleaner repository pattern implementation. No breaking changes.</PackageReleaseNotes>
+        <PackageReleaseNotes>v1.3.4 — Updated Vali-Flow.Core dependency to 2.0.2 (fixes IsNull/NotNull WHERE 0=1 bug with EF Core GlobalQueryFilter). No API changes.
+
+v1.3.3 — Updated Vali-Flow.Core dependency to 2.0.1.
+
+v1.3.0 — Made ValiFlowEvaluator&lt;T&gt; inheritable (removed sealed modifier). This allows repositories to extend ValiFlowEvaluator directly instead of using composition, enabling a cleaner repository pattern implementation. No breaking changes.</PackageReleaseNotes>
     </PropertyGroup>
 
     <ItemGroup>
@@ -48,7 +52,7 @@
         <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.0" />
         <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="9.0.0" />
         <PackageReference Include="EFCore.BulkExtensions" Version="8.1.3" />
-        <PackageReference Include="Vali-Flow.Core" Version="2.0.0" />
+        <ProjectReference Include="../../Vali-Flow.Core/Vali-Flow.Core/Vali-Flow.Core.csproj" />
         <PackageReference Include="Vali-Flow.Abstractions" Version="1.0.0" />
     </ItemGroup>
 
