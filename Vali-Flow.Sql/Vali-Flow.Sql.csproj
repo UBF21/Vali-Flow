@@ -11,9 +11,9 @@
         <PackageId>Vali-Flow.Sql</PackageId>
         <Title>Vali-Flow.Sql</Title>
         <Product>Vali-Flow.Sql</Product>
-        <Version>1.1.0</Version>
+        <Version>1.1.1</Version>
         <Authors>Felipe Rafael Montenegro Morriberon</Authors>
-        <Copyright>Copyright © 2025 - FM. All rights reserved.</Copyright>
+        <Copyright>Copyright © 2026 - FM. All rights reserved.</Copyright>
 
         <!-- Repository -->
         <RepositoryUrl>https://github.com/UBF21/vali-flow</RepositoryUrl>
@@ -37,12 +37,14 @@
         <SymbolPackageFormat>snupkg</SymbolPackageFormat>
 
         <Description>SQL translator for Vali-Flow.Core — converts ValiFlow&lt;T&gt; expression trees to parameterized SQL for Dapper and ADO.NET. Supports SQL Server, PostgreSQL, MySQL, and SQLite dialects.</Description>
-        <PackageReleaseNotes>v1.0.0 — Initial release. Expression-to-SQL translator with dialect support for SQL Server, PostgreSQL, MySQL, and SQLite.</PackageReleaseNotes>
+        <PackageReleaseNotes>v1.1.1 — Updated Vali-Flow.Core dependency to 2.0.2 (fixes IsNull/NotNull WHERE 0=1 bug with EF Core GlobalQueryFilter). No API changes.
+
+v1.1.0 — Initial release. Expression-to-SQL translator with dialect support for SQL Server, PostgreSQL, MySQL, and SQLite.</PackageReleaseNotes>
     </PropertyGroup>
 
     <ItemGroup>
         <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All" />
-        <PackageReference Include="Vali-Flow.Core" Version="2.0.0" />
+        <ProjectReference Include="../../Vali-Flow.Core/Vali-Flow.Core/Vali-Flow.Core.csproj" />
         <PackageReference Include="Vali-Flow.Abstractions" Version="1.1.0" />
     </ItemGroup>
 
