@@ -44,7 +44,7 @@ v1.1.0 — Initial release. Expression-to-SQL translator with dialect support fo
 
     <ItemGroup>
         <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All" />
-        <ProjectReference Include="../../Vali-Flow.Core/Vali-Flow.Core/Vali-Flow.Core.csproj" />
+        <PackageReference Include="Vali-Flow.Core" Version="2.0.2" />
         <PackageReference Include="Vali-Flow.Abstractions" Version="1.1.0" />
     </ItemGroup>
 
