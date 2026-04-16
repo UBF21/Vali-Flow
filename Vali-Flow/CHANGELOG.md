@@ -9,6 +9,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) · Versioning: 
 
 ---
 
+## [1.3.4] - 2026-04-15
+
+### Fixed
+- Updated Vali-Flow.Core dependency to 2.0.2 which fixes IsNull/NotNull WHERE 0=1 bug with EF Core GlobalQueryFilter
+
+---
+
 ## [1.3.0]
 
 ### Changed
