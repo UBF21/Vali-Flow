@@ -1,0 +1,20 @@
+## JetBrains Rider
+.idea/
+*.sln.iml
+
+## IDE
+*.swp
+*.swo
+*~
+.DS_Store
+
+## Build
+bin/
+obj/
+
+## Visual Studio
+.vs/
+
+## NuGet
+*.nupkg
+*.snupkg
