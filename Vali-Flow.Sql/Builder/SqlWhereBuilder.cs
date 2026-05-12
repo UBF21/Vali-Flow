@@ -11,7 +11,7 @@ namespace Vali_Flow.Sql.Builder;
 /// </summary>
 /// <remarks>
 /// Conditions are grouped using the same AND/OR grouping algorithm as ValiFlow.Core:
-/// each call to <see cref="Or"/> starts a new OR group; conditions within a group are ANDed.
+/// each call to the <c>Or()</c> method starts a new OR group; conditions within a group are ANDed.
 /// Parameters use the <c>pw</c> prefix (e.g. <c>@pw0</c>) to avoid collisions with
 /// other parameter sources (ExpressionToSqlVisitor uses <c>@p</c>).
 /// </remarks>

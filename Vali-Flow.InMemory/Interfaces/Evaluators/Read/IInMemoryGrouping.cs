@@ -153,6 +153,7 @@ public interface IInMemoryGrouping<T> where T : class
     /// Groups entities that satisfy the specified Vali-Flow condition by a key and returns the top N entities for each group, with optional ordering.
     /// </summary>
     /// <typeparam name="TKey">The type of the key used for grouping.</typeparam>
+    /// <typeparam name="TOrderKey">The type of the ordering key extracted from each entity.</typeparam>
     /// <param name="entities">The collection of entities to evaluate.</param>
     /// <param name="keySelector">A function to extract the grouping key from each entity.</param>
     /// <param name="count">The maximum number of entities to return per group.</param>

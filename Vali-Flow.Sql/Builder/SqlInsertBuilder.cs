@@ -522,6 +522,7 @@ public sealed class SqlInsertBuilder<T> where T : class
     /// Remaps parameters from a SELECT query to use sequential 'pi' prefixed names,
     /// matching the INSERT parameter prefix convention.
     /// </summary>
+    /// <param name="source">The SELECT query result containing SQL and parameters to remap.</param>
     /// <param name="parameterPrefix">
     /// The dialect-specific parameter prefix (e.g. "@" for SQL Server/PostgreSQL/MySQL/SQLite,
     /// ":" for Oracle). Passed from <c>_dialect.ParameterPrefix</c> at the call site.

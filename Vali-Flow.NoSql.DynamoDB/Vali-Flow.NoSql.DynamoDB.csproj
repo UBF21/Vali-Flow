@@ -19,7 +19,7 @@
     <PackageIcon>VF_logo.png</PackageIcon>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageTags>vali;vali-flow;dynamodb;aws;filter;nosql;dotnet</PackageTags>
-    <PackageReleaseNotes">v1.1.0 — Enhanced documentation and adapter integration pattern alignment.</PackageReleaseNotes>
+    <PackageReleaseNotes>v1.1.0 — Enhanced documentation and adapter integration pattern alignment.</PackageReleaseNotes>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <EmbedUntrackedSources>true</EmbedUntrackedSources>

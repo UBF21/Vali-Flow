@@ -75,6 +75,7 @@ public interface IEvaluatorRead<T> : IQueryEvaluator<T> where T : class
     /// <typeparam name="TKey">The type of the key used for grouping entities, which must be non-nullable.</typeparam>
     /// <param name="specification">The query specification defining the filtering, ordering, and pagination criteria for the query. Must not be null.</param>
     /// <param name="selector">An expression that defines the key to group entities by for determining uniqueness. Must not be null.</param>
+    /// <param name="cancellationToken">A token to cancel the asynchronous operation.</param>
     /// <returns>
     /// A task that resolves to an <see cref="IQueryable{T}"/> containing the distinct entities based on the specified key.
     /// The query is not executed immediately; it can be further composed or executed later.
@@ -102,6 +103,7 @@ public interface IEvaluatorRead<T> : IQueryEvaluator<T> where T : class
     /// <typeparam name="TKey">The type of the key used for grouping entities, which must be non-nullable.</typeparam>
     /// <param name="specification">The query specification defining the filtering, ordering, and pagination criteria for the query. Must not be null.</param>
     /// <param name="selector">An expression that defines the key to group entities by for identifying duplicates. Must not be null.</param>
+    /// <param name="cancellationToken">A token to cancel the asynchronous operation.</param>
     /// <returns>
     /// A task that resolves to an <see cref="IQueryable{T}"/> containing the duplicate entities based on the specified key.
     /// The query is not executed immediately; it can be further composed or executed later.
@@ -636,7 +638,7 @@ public interface IEvaluatorRead<T> : IQueryEvaluator<T> where T : class
     /// </exception>
     /// <remarks>
     /// This method applies the filtering and ordering defined in the <paramref name="specification"/> before selecting the top entities.
-    /// If <see cref="IQuerySpecification{T}.Top"/> is not specified, the method defaults to taking 50 entities as defined by <see cref="ConstantHelper.Fifty"/>.
+    /// If <see cref="IQuerySpecification{T}.Top"/> is not specified, the method defaults to taking 50 entities.
     /// Pagination properties like <see cref="IQuerySpecification{T}.Page"/> and <see cref="IQuerySpecification{T}.PageSize"/> are ignored in this method.
     /// </remarks>
     Task<Dictionary<TKey, List<T>>> EvaluateTopByGroupAsync<TKey>(

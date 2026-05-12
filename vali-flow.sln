@@ -1,5 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vali-Flow.Abstractions", "Vali-Flow.Abstractions\Vali-Flow.Abstractions.csproj", "{33DD1847-9B7E-4F1A-A5C3-2E8F6D9A1C5B}"
+EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vali-Flow", "Vali-Flow\Vali-Flow.csproj", "{7AE77995-79B8-4801-9585-2111537494F2}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vali-Flow.InMemory", "Vali-Flow.InMemory\Vali-Flow.InMemory.csproj", "{02504EA2-D813-42AD-9C62-C7D95E2CA88D}"
@@ -42,6 +44,18 @@ Global
 		Release|x86 = Release|x86
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{33DD1847-9B7E-4F1A-A5C3-2E8F6D9A1C5B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{33DD1847-9B7E-4F1A-A5C3-2E8F6D9A1C5B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{33DD1847-9B7E-4F1A-A5C3-2E8F6D9A1C5B}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{33DD1847-9B7E-4F1A-A5C3-2E8F6D9A1C5B}.Debug|x64.Build.0 = Debug|Any CPU
+		{33DD1847-9B7E-4F1A-A5C3-2E8F6D9A1C5B}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{33DD1847-9B7E-4F1A-A5C3-2E8F6D9A1C5B}.Debug|x86.Build.0 = Debug|Any CPU
+		{33DD1847-9B7E-4F1A-A5C3-2E8F6D9A1C5B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{33DD1847-9B7E-4F1A-A5C3-2E8F6D9A1C5B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{33DD1847-9B7E-4F1A-A5C3-2E8F6D9A1C5B}.Release|x64.ActiveCfg = Release|Any CPU
+		{33DD1847-9B7E-4F1A-A5C3-2E8F6D9A1C5B}.Release|x64.Build.0 = Release|Any CPU
+		{33DD1847-9B7E-4F1A-A5C3-2E8F6D9A1C5B}.Release|x86.ActiveCfg = Release|Any CPU
+		{33DD1847-9B7E-4F1A-A5C3-2E8F6D9A1C5B}.Release|x86.Build.0 = Release|Any CPU
 		{7AE77995-79B8-4801-9585-2111537494F2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{7AE77995-79B8-4801-9585-2111537494F2}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{7AE77995-79B8-4801-9585-2111537494F2}.Debug|x64.ActiveCfg = Debug|Any CPU

@@ -1365,10 +1365,13 @@ public sealed class SqlQueryBuilder<T> where T : class
     }
 
     /// <summary>
-    /// Remaps parameter names in <paramref name="sql"/> starting from <paramref name="baseIndex"/>,
+    /// Remaps parameter names in SQL starting from a base index,
     /// so they do not collide with existing parameters collected so far.
     /// Returns the renamed SQL and new parameter dictionary.
     /// </summary>
+    /// <param name="sql">The SQL string containing parameter placeholders to be renamed.</param>
+    /// <param name="sourceParams">The source parameters dictionary with original names and values.</param>
+    /// <param name="baseIndex">The starting index for renaming parameters sequentially.</param>
     /// <param name="parameterPrefix">
     /// The dialect-specific parameter prefix (e.g. "@" for SQL Server/PostgreSQL/MySQL/SQLite,
     /// ":" for Oracle). Passed from <c>_dialect.ParameterPrefix</c> at call sites.
