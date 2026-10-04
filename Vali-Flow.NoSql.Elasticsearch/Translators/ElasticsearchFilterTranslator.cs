@@ -1,5 +1,6 @@
 using Elastic.Clients.Elasticsearch;
 using Elastic.Clients.Elasticsearch.QueryDsl;
+using Vali_Flow.Abstractions.Diagnostics;
 using Vali_Flow.NoSql.IR;
 using Vali_Flow.NoSql.Translators;
 
@@ -17,6 +18,10 @@ namespace Vali_Flow.NoSql.Elasticsearch.Translators;
 /// </remarks>
 public static class ElasticsearchFilterTranslator
 {
+    // Elasticsearch's documented server-side limit on terms-query clause count is
+    // index.max_terms_count, default 65536. https://www.elastic.co/guide/en/elasticsearch/reference/current/index-modules.html
+    private const int MaxInValues = 65_536;
+
     /// <summary>
     /// Translates the given <see cref="IConditionNode"/> into an Elasticsearch <see cref="Query"/>.
     /// </summary>
@@ -35,11 +40,20 @@ public static class ElasticsearchFilterTranslator
     /// var results = await client.SearchAsync&lt;User&gt;(s =&gt; s.Query(esFilter));
     /// </code>
     /// </example>
-    public static Query Translate(IConditionNode node, Func<object?, FieldValue?>? customConverter = null)
+    public static Query Translate(IConditionNode node, Func<object?, FieldValue?>? customConverter = null, string? tag = null, string? entityType = null)
     {
         if (node == null) throw new ArgumentNullException(nameof(node));
 
-        return node.Accept(new ElasticsearchVisitor(customConverter));
+        using var activity = ValiFlowDiagnostics.StartActivity("Vali-Flow.NoSql.Elasticsearch.Translate", tag, entityType);
+        try
+        {
+            return node.Accept(new ElasticsearchVisitor(customConverter));
+        }
+        catch (Exception ex)
+        {
+            ValiFlowDiagnostics.RecordException(activity, ex);
+            throw;
+        }
     }
 
     private sealed class ElasticsearchVisitor(Func<object?, FieldValue?>? customConverter) : IConditionNodeVisitor<Query>
@@ -120,6 +134,12 @@ public static class ElasticsearchFilterTranslator
                     MustNot = [Query.MatchAll(new MatchAllQuery())]
                 });
 
+            if (node.Values.Count > MaxInValues)
+                throw new InvalidOperationException(
+                    $"Elasticsearch terms query supports at most {MaxInValues} values " +
+                    $"(index.max_terms_count server default); received {node.Values.Count}. " +
+                    "Split the query or batch the values.");
+
             return Query.Terms(new TermsQuery
             {
                 Field = node.Field!,
@@ -154,7 +174,7 @@ public static class ElasticsearchFilterTranslator
         private static double ToDouble(object value)
         {
             try { return Convert.ToDouble(value); }
-            catch { throw new NotSupportedException($"Cannot convert '{value?.GetType().Name}' to double for a range query."); }
+            catch (Exception ex) { throw new NotSupportedException($"Cannot convert '{value?.GetType().Name}' to double for a range query.", ex); }
         }
 
         private FieldValue ToFieldValue(object? value) =>

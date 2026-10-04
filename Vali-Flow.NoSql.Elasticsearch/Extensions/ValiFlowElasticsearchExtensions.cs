@@ -38,21 +38,21 @@ public static class ValiFlowElasticsearchExtensions
     /// var results = await client.SearchAsync&lt;User&gt;(s =&gt; s.Query(esFilter));
     /// </code>
     /// </example>
-    public static Query ToElasticsearch<T>(this ValiFlow<T> flow, Func<object?, FieldValue?>? customConverter = null) where T : class
+    public static Query ToElasticsearch<T>(this ValiFlow<T> flow, Func<object?, FieldValue?>? customConverter = null, string? tag = null) where T : class
     {
         if (flow == null) throw new ArgumentNullException(nameof(flow));
 
-        return ElasticsearchFilterTranslator.Translate(flow.ToNoSqlIR(), customConverter);
+        return ElasticsearchFilterTranslator.Translate(flow.ToNoSqlIR(), customConverter, tag, typeof(T).Name);
     }
 
     /// <summary>
     /// Translates a prebuilt <see cref="Expression{TDelegate}"/> into an Elasticsearch query.
     /// Use this overload when you already have a compiled expression.
     /// </summary>
-    public static Query ToElasticsearch<T>(this Expression<Func<T, bool>> expression, Func<object?, FieldValue?>? customConverter = null)
+    public static Query ToElasticsearch<T>(this Expression<Func<T, bool>> expression, Func<object?, FieldValue?>? customConverter = null, string? tag = null)
     {
         if (expression == null) throw new ArgumentNullException(nameof(expression));
 
-        return ElasticsearchFilterTranslator.Translate(expression.ToNoSqlIR(), customConverter);
+        return ElasticsearchFilterTranslator.Translate(expression.ToNoSqlIR(), customConverter, tag, typeof(T).Name);
     }
 }
