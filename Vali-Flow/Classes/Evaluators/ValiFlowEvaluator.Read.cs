@@ -1,5 +1,7 @@
+using System.Diagnostics;
 using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
+using Vali_Flow.Abstractions.Diagnostics;
 using Vali_Flow.Interfaces.Specification;
 using Vali_Flow.Core.Builder;
 using Vali_Flow.Models;
@@ -38,9 +40,21 @@ public partial class ValiFlowEvaluator<T>
     )
     {
         if (specification == null) throw new ArgumentNullException(nameof(specification));
-        IQueryable<T> query = BuildBasicQuery(specification);
-        return await ExecuteWithExceptionHandlingAsync(() => query.AnyAsync(cancellationToken),
-            nameof(EvaluateAnyAsync));
+        using var activity = ValiFlowDiagnostics.StartActivity(
+            "Vali-Flow.EvaluateAnyAsync", tag: specification.TagWith, entityType: typeof(T).Name);
+        try
+        {
+            activity?.SetTag("vali_flow.has_filter", specification.Filter != null);
+            activity?.SetTag("vali_flow.include_count", specification.Includes?.Count() ?? 0);
+            IQueryable<T> query = BuildBasicQuery(specification);
+            return await ExecuteWithExceptionHandlingAsync(() => query.AnyAsync(cancellationToken),
+                nameof(EvaluateAnyAsync));
+        }
+        catch (Exception ex)
+        {
+            ValiFlowDiagnostics.RecordException(activity, ex);
+            throw;
+        }
     }
 
     /// <summary>
@@ -56,9 +70,21 @@ public partial class ValiFlowEvaluator<T>
     )
     {
         if (specification == null) throw new ArgumentNullException(nameof(specification));
-        IQueryable<T> query = BuildBasicQuery(specification);
-        return await ExecuteWithExceptionHandlingAsync(() => query.CountAsync(cancellationToken),
-            nameof(EvaluateCountAsync));
+        using var activity = ValiFlowDiagnostics.StartActivity(
+            "Vali-Flow.EvaluateCountAsync", tag: specification.TagWith, entityType: typeof(T).Name);
+        try
+        {
+            activity?.SetTag("vali_flow.has_filter", specification.Filter != null);
+            activity?.SetTag("vali_flow.include_count", specification.Includes?.Count() ?? 0);
+            IQueryable<T> query = BuildBasicQuery(specification);
+            return await ExecuteWithExceptionHandlingAsync(() => query.CountAsync(cancellationToken),
+                nameof(EvaluateCountAsync));
+        }
+        catch (Exception ex)
+        {
+            ValiFlowDiagnostics.RecordException(activity, ex);
+            throw;
+        }
     }
 
     /// <summary>
@@ -75,9 +101,21 @@ public partial class ValiFlowEvaluator<T>
     )
     {
         if (specification == null) throw new ArgumentNullException(nameof(specification));
-        var query = BuildBasicQuery(specification, true);
-        return await ExecuteWithExceptionHandlingAsync(() => query.FirstOrDefaultAsync(cancellationToken),
-            nameof(EvaluateGetFirstFailedAsync));
+        using var activity = ValiFlowDiagnostics.StartActivity(
+            "Vali-Flow.EvaluateGetFirstFailedAsync", tag: specification.TagWith, entityType: typeof(T).Name);
+        try
+        {
+            activity?.SetTag("vali_flow.has_filter", specification.Filter != null);
+            activity?.SetTag("vali_flow.include_count", specification.Includes?.Count() ?? 0);
+            var query = BuildBasicQuery(specification, true);
+            return await ExecuteWithExceptionHandlingAsync(() => query.FirstOrDefaultAsync(cancellationToken),
+                nameof(EvaluateGetFirstFailedAsync));
+        }
+        catch (Exception ex)
+        {
+            ValiFlowDiagnostics.RecordException(activity, ex);
+            throw;
+        }
     }
 
     /// <summary>
@@ -93,9 +131,21 @@ public partial class ValiFlowEvaluator<T>
     )
     {
         if (specification == null) throw new ArgumentNullException(nameof(specification));
-        var query = BuildBasicQuery(specification);
-        return await ExecuteWithExceptionHandlingAsync(() => query.FirstOrDefaultAsync(cancellationToken),
-            nameof(EvaluateGetFirstAsync));
+        using var activity = ValiFlowDiagnostics.StartActivity(
+            "Vali-Flow.EvaluateGetFirstAsync", tag: specification.TagWith, entityType: typeof(T).Name);
+        try
+        {
+            activity?.SetTag("vali_flow.has_filter", specification.Filter != null);
+            activity?.SetTag("vali_flow.include_count", specification.Includes?.Count() ?? 0);
+            var query = BuildBasicQuery(specification);
+            return await ExecuteWithExceptionHandlingAsync(() => query.FirstOrDefaultAsync(cancellationToken),
+                nameof(EvaluateGetFirstAsync));
+        }
+        catch (Exception ex)
+        {
+            ValiFlowDiagnostics.RecordException(activity, ex);
+            throw;
+        }
     }
 
     /// <summary>
@@ -108,8 +158,22 @@ public partial class ValiFlowEvaluator<T>
     public Task<IQueryable<T>> EvaluateQueryFailedAsync(IQuerySpecification<T> specification)
     {
         if (specification == null) throw new ArgumentNullException(nameof(specification));
-        IQueryable<T> query = BuildQuery(specification, negateFilter: true);
-        return Task.FromResult(query);
+        using var activity = ValiFlowDiagnostics.StartActivity(
+            "Vali-Flow.EvaluateQueryFailedAsync", tag: specification.TagWith, entityType: typeof(T).Name);
+        try
+        {
+            activity?.SetTag("vali_flow.has_filter", specification.Filter != null);
+            activity?.SetTag("vali_flow.include_count", specification.Includes?.Count() ?? 0);
+            activity?.SetTag("vali_flow.has_pagination", specification.Page.HasValue || specification.PageSize.HasValue);
+            activity?.SetTag("vali_flow.has_order_by", specification.OrderBy != null || specification.ValiSort != null);
+            IQueryable<T> query = BuildQuery(specification, negateFilter: true);
+            return Task.FromResult(query);
+        }
+        catch (Exception ex)
+        {
+            ValiFlowDiagnostics.RecordException(activity, ex);
+            throw;
+        }
     }
 
     /// <summary>
@@ -122,8 +186,22 @@ public partial class ValiFlowEvaluator<T>
     public Task<IQueryable<T>> EvaluateQueryAsync(IQuerySpecification<T> specification)
     {
         if (specification == null) throw new ArgumentNullException(nameof(specification));
-        IQueryable<T> query = BuildQuery(specification);
-        return Task.FromResult(query);
+        using var activity = ValiFlowDiagnostics.StartActivity(
+            "Vali-Flow.EvaluateQueryAsync", tag: specification.TagWith, entityType: typeof(T).Name);
+        try
+        {
+            activity?.SetTag("vali_flow.has_filter", specification.Filter != null);
+            activity?.SetTag("vali_flow.include_count", specification.Includes?.Count() ?? 0);
+            activity?.SetTag("vali_flow.has_pagination", specification.Page.HasValue || specification.PageSize.HasValue);
+            activity?.SetTag("vali_flow.has_order_by", specification.OrderBy != null || specification.ValiSort != null);
+            IQueryable<T> query = BuildQuery(specification);
+            return Task.FromResult(query);
+        }
+        catch (Exception ex)
+        {
+            ValiFlowDiagnostics.RecordException(activity, ex);
+            throw;
+        }
     }
 
     /// <summary>
@@ -197,25 +275,41 @@ public partial class ValiFlowEvaluator<T>
     ) where TKey : notnull
     {
         if (specification == null) throw new ArgumentNullException(nameof(specification));
-        if (specification.Page.HasValue != specification.PageSize.HasValue)
-            throw new InvalidOperationException("Both Page and PageSize must be set together, or neither.");
-        if (selector == null) throw new ArgumentNullException(nameof(selector));
-        bool hasPagination = specification.PageSize.HasValue || specification.Top.HasValue;
-        bool hasOrdering = specification.OrderBy != null || specification.ValiSort != null;
-        if (hasPagination && !hasOrdering)
-            throw new InvalidOperationException("Pagination requires an ordering.");
-        Func<T, TKey> keySelectorFn = selector.Compile();
-        IQueryable<T> query = BuildBasicQuery(specification);
-        query = ApplyOrdering(query, specification);
-        List<T> items = await query.ToListAsync(cancellationToken);
-        IEnumerable<T> result = items.GroupBy(keySelectorFn).Select(g => g.First());
-        // Pagination applied AFTER grouping so it operates on distinct groups, not raw rows
-        if (specification is { Page: not null, PageSize: not null })
-            result = result.Skip((specification.Page.Value - Constants.One) * specification.PageSize.Value)
-                           .Take(specification.PageSize.Value);
-        else if (specification.Top != null)
-            result = result.Take(specification.Top.Value);
-        return result;
+        using var activity = ValiFlowDiagnostics.StartActivity(
+            "Vali-Flow.EvaluateDistinctAsync", tag: specification.TagWith, entityType: typeof(T).Name);
+        try
+        {
+            if (specification.Page.HasValue != specification.PageSize.HasValue)
+                throw new InvalidOperationException("Both Page and PageSize must be set together, or neither.");
+            if (selector == null) throw new ArgumentNullException(nameof(selector));
+            bool hasPagination = specification.PageSize.HasValue || specification.Top.HasValue;
+            bool hasOrdering = specification.OrderBy != null || specification.ValiSort != null;
+            if (hasPagination && !hasOrdering)
+                throw new InvalidOperationException("Pagination requires an ordering.");
+
+            activity?.SetTag("vali_flow.has_filter", specification.Filter != null);
+            activity?.SetTag("vali_flow.include_count", specification.Includes?.Count() ?? 0);
+            activity?.SetTag("vali_flow.has_pagination", hasPagination);
+            activity?.SetTag("vali_flow.has_order_by", hasOrdering);
+
+            Func<T, TKey> keySelectorFn = selector.Compile();
+            IQueryable<T> query = BuildBasicQuery(specification);
+            query = ApplyOrdering(query, specification);
+            List<T> items = await query.ToListAsync(cancellationToken);
+            IEnumerable<T> result = items.GroupBy(keySelectorFn).Select(g => g.First());
+            // Pagination applied AFTER grouping so it operates on distinct groups, not raw rows
+            if (specification is { Page: not null, PageSize: not null })
+                result = result.Skip((specification.Page.Value - Constants.One) * specification.PageSize.Value)
+                               .Take(specification.PageSize.Value);
+            else if (specification.Top != null)
+                result = result.Take(specification.Top.Value);
+            return result;
+        }
+        catch (Exception ex)
+        {
+            ValiFlowDiagnostics.RecordException(activity, ex);
+            throw;
+        }
     }
 
     /// <summary>
@@ -237,27 +331,43 @@ public partial class ValiFlowEvaluator<T>
     ) where TKey : notnull
     {
         if (specification == null) throw new ArgumentNullException(nameof(specification));
-        if (specification.Page.HasValue != specification.PageSize.HasValue)
-            throw new InvalidOperationException("Both Page and PageSize must be set together, or neither.");
-        if (selector == null) throw new ArgumentNullException(nameof(selector));
-        bool hasPagination = specification.PageSize.HasValue || specification.Top.HasValue;
-        bool hasOrdering = specification.OrderBy != null || specification.ValiSort != null;
-        if (hasPagination && !hasOrdering)
-            throw new InvalidOperationException("Pagination requires an ordering.");
-        Func<T, TKey> keySelectorFn = selector.Compile();
-        IQueryable<T> query = BuildBasicQuery(specification);
-        query = ApplyOrdering(query, specification);
-        List<T> items = await query.ToListAsync(cancellationToken);
-        IEnumerable<T> result = items.GroupBy(keySelectorFn)
-            .Where(g => g.Count() > Constants.One)
-            .SelectMany(g => g);
-        // Pagination applied AFTER grouping so it operates on the duplicate set, not raw rows
-        if (specification is { Page: not null, PageSize: not null })
-            result = result.Skip((specification.Page.Value - Constants.One) * specification.PageSize.Value)
-                           .Take(specification.PageSize.Value);
-        else if (specification.Top != null)
-            result = result.Take(specification.Top.Value);
-        return result;
+        using var activity = ValiFlowDiagnostics.StartActivity(
+            "Vali-Flow.EvaluateDuplicatesAsync", tag: specification.TagWith, entityType: typeof(T).Name);
+        try
+        {
+            if (specification.Page.HasValue != specification.PageSize.HasValue)
+                throw new InvalidOperationException("Both Page and PageSize must be set together, or neither.");
+            if (selector == null) throw new ArgumentNullException(nameof(selector));
+            bool hasPagination = specification.PageSize.HasValue || specification.Top.HasValue;
+            bool hasOrdering = specification.OrderBy != null || specification.ValiSort != null;
+            if (hasPagination && !hasOrdering)
+                throw new InvalidOperationException("Pagination requires an ordering.");
+
+            activity?.SetTag("vali_flow.has_filter", specification.Filter != null);
+            activity?.SetTag("vali_flow.include_count", specification.Includes?.Count() ?? 0);
+            activity?.SetTag("vali_flow.has_pagination", hasPagination);
+            activity?.SetTag("vali_flow.has_order_by", hasOrdering);
+
+            Func<T, TKey> keySelectorFn = selector.Compile();
+            IQueryable<T> query = BuildBasicQuery(specification);
+            query = ApplyOrdering(query, specification);
+            List<T> items = await query.ToListAsync(cancellationToken);
+            IEnumerable<T> result = items.GroupBy(keySelectorFn)
+                .Where(g => g.Count() > Constants.One)
+                .SelectMany(g => g);
+            // Pagination applied AFTER grouping so it operates on the duplicate set, not raw rows
+            if (specification is { Page: not null, PageSize: not null })
+                result = result.Skip((specification.Page.Value - Constants.One) * specification.PageSize.Value)
+                               .Take(specification.PageSize.Value);
+            else if (specification.Top != null)
+                result = result.Take(specification.Top.Value);
+            return result;
+        }
+        catch (Exception ex)
+        {
+            ValiFlowDiagnostics.RecordException(activity, ex);
+            throw;
+        }
     }
 
     /// <summary>
@@ -275,16 +385,30 @@ public partial class ValiFlowEvaluator<T>
     )
     {
         if (specification == null) throw new ArgumentNullException(nameof(specification));
-        if (specification.Page.HasValue || specification.PageSize.HasValue)
-            throw new InvalidOperationException(
-                "EvaluateGetLastFailedAsync does not support pagination. Use EvaluateQueryAsync for paged queries.");
-        if (specification.OrderBy == null && specification.ValiSort == null)
-            throw new InvalidOperationException(
-                $"{nameof(EvaluateGetLastFailedAsync)} requires an ordering (OrderBy or ValiSort). EF Core cannot translate LastOrDefault without ORDER BY.");
+        using var activity = ValiFlowDiagnostics.StartActivity(
+            "Vali-Flow.EvaluateGetLastFailedAsync", tag: specification.TagWith, entityType: typeof(T).Name);
+        try
+        {
+            if (specification.Page.HasValue || specification.PageSize.HasValue)
+                throw new InvalidOperationException(
+                    "EvaluateGetLastFailedAsync does not support pagination. Use EvaluateQueryAsync for paged queries.");
+            if (specification.OrderBy == null && specification.ValiSort == null)
+                throw new InvalidOperationException(
+                    $"{nameof(EvaluateGetLastFailedAsync)} requires an ordering (OrderBy or ValiSort). EF Core cannot translate LastOrDefault without ORDER BY.");
 
-        IQueryable<T> query = BuildQuery(specification, negateFilter: true);
-        return await ExecuteWithExceptionHandlingAsync(() => query.LastOrDefaultAsync(cancellationToken),
-            nameof(EvaluateGetLastFailedAsync));
+            activity?.SetTag("vali_flow.has_filter", specification.Filter != null);
+            activity?.SetTag("vali_flow.include_count", specification.Includes?.Count() ?? 0);
+            activity?.SetTag("vali_flow.has_order_by", true);
+
+            IQueryable<T> query = BuildQuery(specification, negateFilter: true);
+            return await ExecuteWithExceptionHandlingAsync(() => query.LastOrDefaultAsync(cancellationToken),
+                nameof(EvaluateGetLastFailedAsync));
+        }
+        catch (Exception ex)
+        {
+            ValiFlowDiagnostics.RecordException(activity, ex);
+            throw;
+        }
     }
 
     /// <summary>
@@ -302,16 +426,30 @@ public partial class ValiFlowEvaluator<T>
     )
     {
         if (specification == null) throw new ArgumentNullException(nameof(specification));
-        if (specification.Page.HasValue || specification.PageSize.HasValue)
-            throw new InvalidOperationException(
-                "EvaluateGetLastAsync does not support pagination. Use EvaluateQueryAsync for paged queries.");
-        if (specification.OrderBy == null && specification.ValiSort == null)
-            throw new InvalidOperationException(
-                $"{nameof(EvaluateGetLastAsync)} requires an ordering (OrderBy or ValiSort). EF Core cannot translate LastOrDefault without ORDER BY.");
+        using var activity = ValiFlowDiagnostics.StartActivity(
+            "Vali-Flow.EvaluateGetLastAsync", tag: specification.TagWith, entityType: typeof(T).Name);
+        try
+        {
+            if (specification.Page.HasValue || specification.PageSize.HasValue)
+                throw new InvalidOperationException(
+                    "EvaluateGetLastAsync does not support pagination. Use EvaluateQueryAsync for paged queries.");
+            if (specification.OrderBy == null && specification.ValiSort == null)
+                throw new InvalidOperationException(
+                    $"{nameof(EvaluateGetLastAsync)} requires an ordering (OrderBy or ValiSort). EF Core cannot translate LastOrDefault without ORDER BY.");
 
-        IQueryable<T> query = BuildQuery(specification);
-        return await ExecuteWithExceptionHandlingAsync(() => query.LastOrDefaultAsync(cancellationToken),
-            nameof(EvaluateGetLastAsync));
+            activity?.SetTag("vali_flow.has_filter", specification.Filter != null);
+            activity?.SetTag("vali_flow.include_count", specification.Includes?.Count() ?? 0);
+            activity?.SetTag("vali_flow.has_order_by", true);
+
+            IQueryable<T> query = BuildQuery(specification);
+            return await ExecuteWithExceptionHandlingAsync(() => query.LastOrDefaultAsync(cancellationToken),
+                nameof(EvaluateGetLastAsync));
+        }
+        catch (Exception ex)
+        {
+            ValiFlowDiagnostics.RecordException(activity, ex);
+            throw;
+        }
     }
 
     /// <summary>
@@ -333,38 +471,68 @@ public partial class ValiFlowEvaluator<T>
     )
     {
         if (specification == null) throw new ArgumentNullException(nameof(specification));
-        if (!specification.Page.HasValue)
-            throw new ArgumentException(
-                $"{nameof(EvaluatePagedAsync)} requires Page to be explicitly set on the specification.",
-                nameof(specification));
-        if (!specification.PageSize.HasValue)
-            throw new ArgumentException(
-                $"{nameof(EvaluatePagedAsync)} requires PageSize to be explicitly set on the specification.",
-                nameof(specification));
+        using var activity = ValiFlowDiagnostics.StartActivity(
+            "Vali-Flow.EvaluatePagedAsync", tag: specification.TagWith, entityType: typeof(T).Name);
+        try
+        {
+            if (!specification.Page.HasValue)
+                throw new ArgumentException(
+                    $"{nameof(EvaluatePagedAsync)} requires Page to be explicitly set on the specification.",
+                    nameof(specification));
+            if (!specification.PageSize.HasValue)
+                throw new ArgumentException(
+                    $"{nameof(EvaluatePagedAsync)} requires PageSize to be explicitly set on the specification.",
+                    nameof(specification));
 
-        bool hasOrdering = specification.OrderBy != null || specification.ValiSort != null;
-        if (!hasOrdering)
-            throw new InvalidOperationException(
-                $"{nameof(EvaluatePagedAsync)} requires an ordering (OrderBy or ValiSort) for deterministic pagination results.");
+            bool hasOrdering = specification.OrderBy != null || specification.ValiSort != null;
+            if (!hasOrdering)
+                throw new InvalidOperationException(
+                    $"{nameof(EvaluatePagedAsync)} requires an ordering (OrderBy or ValiSort) for deterministic pagination results.");
 
-        int page = specification.Page.Value;
-        int pageSize = specification.PageSize.Value;
+            int page = specification.Page.Value;
+            int pageSize = specification.PageSize.Value;
 
-        if (page < 1) throw new ArgumentOutOfRangeException(nameof(specification), "Page must be greater than or equal to 1.");
-        if (pageSize < 1) throw new ArgumentOutOfRangeException(nameof(specification), "PageSize must be greater than or equal to 1.");
+            if (page < 1) throw new ArgumentOutOfRangeException(nameof(specification), "Page must be greater than or equal to 1.");
+            if (pageSize < 1) throw new ArgumentOutOfRangeException(nameof(specification), "PageSize must be greater than or equal to 1.");
 
-        IQueryable<T> baseQuery = BuildBasicQuery(specification);
+            activity?.SetTag("vali_flow.has_filter", specification.Filter != null);
+            activity?.SetTag("vali_flow.include_count", specification.Includes?.Count() ?? 0);
+            activity?.SetTag("vali_flow.has_pagination", true);
+            activity?.SetTag("vali_flow.has_order_by", hasOrdering);
+            activity?.SetTag("vali_flow.page", page);
+            activity?.SetTag("vali_flow.page_size", pageSize);
 
-        int totalCount = await ExecuteWithExceptionHandlingAsync(
-            () => baseQuery.CountAsync(cancellationToken),
-            nameof(EvaluatePagedAsync));
+            IQueryable<T> baseQuery = BuildBasicQuery(specification);
 
-        IQueryable<T> orderedQuery = ApplyOrdering(baseQuery, specification);
-        int skip = (page - Constants.One) * pageSize;
-        IList<T> items = await ExecuteWithExceptionHandlingAsync(
-            () => orderedQuery.Skip(skip).Take(pageSize).ToListAsync(cancellationToken),
-            nameof(EvaluatePagedAsync));
+            int totalCount = await ExecuteWithExceptionHandlingAsync(
+                () => baseQuery.CountAsync(cancellationToken),
+                nameof(EvaluatePagedAsync));
 
-        return new PagedResult<T>(items.AsReadOnly(), totalCount, page, pageSize);
+            IQueryable<T> orderedQuery = ApplyOrdering(baseQuery, specification);
+            int skip = (page - Constants.One) * pageSize;
+            IList<T> items = await ExecuteWithExceptionHandlingAsync(
+                () => orderedQuery.Skip(skip).Take(pageSize).ToListAsync(cancellationToken),
+                nameof(EvaluatePagedAsync));
+
+            return new PagedResult<T>(items.AsReadOnly(), totalCount, page, pageSize);
+        }
+        catch (Exception ex)
+        {
+            ValiFlowDiagnostics.RecordException(activity, ex);
+            throw;
+        }
     }
+
+    /// <summary>
+    /// Alias for <see cref="EvaluatePagedAsync"/> — provided for API symmetry with
+    /// <c>Vali-Flow.InMemory</c>'s <c>EvaluatePagedResult</c>. See <see cref="EvaluatePagedAsync"/> for behavior,
+    /// requirements, and the count/items round-trip remark.
+    /// </summary>
+    /// <param name="specification">Specification that defines the filter, ordering, pagination, and EF Core query hints.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>A <see cref="PagedResult{T}"/> with the page items, total count, and pagination metadata.</returns>
+    public Task<PagedResult<T>> EvaluatePagedResultAsync(
+        IQuerySpecification<T> specification,
+        CancellationToken cancellationToken = default
+    ) => EvaluatePagedAsync(specification, cancellationToken);
 }

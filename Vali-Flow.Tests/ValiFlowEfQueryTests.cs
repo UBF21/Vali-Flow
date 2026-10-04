@@ -318,4 +318,26 @@ public sealed class ValiFlowEfQueryTests
         paged.Items[0].CustomerName.Should().Be("Carol");
         paged.Items[1].CustomerName.Should().Be("Alice");
     }
+
+    [Fact]
+    public async Task EvaluatePagedResultAsync_IsAliasOfEvaluatePagedAsync_SameResult()
+    {
+        await using var ctx = await CreateSeededContextAsync();
+        var ev = new ValiFlowEvaluator<TestOrder>(ctx);
+
+        var spec = new QuerySpecification<TestOrder>(
+                new ValiFlowQuery<TestOrder>().IsTrue(o => o.IsShipped))
+            .WithOrderBy(o => o.Total)
+            .WithPagination(1, 2);
+
+        var paged = await ev.EvaluatePagedResultAsync(spec);
+
+        // Same data/behavior as EvaluatePagedAsync_FilteredShipped_PaginationIsCorrect —
+        // EvaluatePagedResultAsync is a pure alias kept for API symmetry with Vali-Flow.InMemory.
+        paged.TotalCount.Should().Be(3);
+        paged.TotalPages.Should().Be(2);
+        paged.Items.Should().HaveCount(2);
+        paged.Items[0].CustomerName.Should().Be("Carol");
+        paged.Items[1].CustomerName.Should().Be("Alice");
+    }
 }

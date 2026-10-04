@@ -168,6 +168,51 @@ public sealed class ValiFlowEfWriteTests
         result.Total.Should().Be(500m);
     }
 
+    // ── UpsertRangeAsync — duplicate keys within the same batch ──────────────
+
+    [Fact]
+    public async Task UpsertRangeAsync_DuplicateKeysNotYetInDatabase_InsertsOnlyOne()
+    {
+        await using var ctx = CreateContext();
+        var ev = new ValiFlowEvaluator<TestOrder>(ctx);
+
+        // Two incoming entities share the same business key (CustomerName) and neither
+        // exists in the DB yet. A correct upsert should collapse them into a single row
+        // (last one wins), not insert both.
+        var entities = new[]
+        {
+            new TestOrder { CustomerName = "Dup", Total = 10m, IsShipped = false, CreatedAt = DateTime.UtcNow },
+            new TestOrder { CustomerName = "Dup", Total = 20m, IsShipped = true,  CreatedAt = DateTime.UtcNow }
+        };
+
+        await ev.UpsertRangeAsync(entities, o => o.CustomerName);
+
+        var rows = await ctx.Orders.AsNoTracking().Where(o => o.CustomerName == "Dup").ToListAsync();
+        rows.Should().HaveCount(1);
+        rows[0].Total.Should().Be(20m); // last occurrence in the batch wins
+    }
+
+    [Fact]
+    public async Task UpsertRangeAsync_DuplicateKeysAgainstExistingRow_UpdatesOnceWithLastValue()
+    {
+        await using var ctx = await CreateSeededContextAsync();
+        var ev = new ValiFlowEvaluator<TestOrder>(ctx);
+
+        // Alice (Id=1) already exists. Two incoming entities target her by key; the
+        // batch should still result in exactly one row for Alice with the last value applied.
+        var entities = new[]
+        {
+            new TestOrder { Id = 1, CustomerName = "Alice", Total = 111m, IsShipped = false, CreatedAt = DateTime.UtcNow },
+            new TestOrder { Id = 1, CustomerName = "Alice", Total = 222m, IsShipped = true,  CreatedAt = DateTime.UtcNow }
+        };
+
+        await ev.UpsertRangeAsync(entities, o => o.CustomerName);
+
+        var rows = await ctx.Orders.AsNoTracking().Where(o => o.CustomerName == "Alice").ToListAsync();
+        rows.Should().HaveCount(1);
+        rows[0].Total.Should().Be(222m);
+    }
+
     // ── SaveChangesAsync — deferred ───────────────────────────────────────────
 
     [Fact]
