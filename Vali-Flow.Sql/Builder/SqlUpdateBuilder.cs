@@ -1,4 +1,7 @@
+using System.Diagnostics;
 using System.Linq.Expressions;
+using System.Reflection;
+using Vali_Flow.Abstractions.Diagnostics;
 using Vali_Flow.Core.Builder;
 using Vali_Flow.Sql.Dialects;
 using Vali_Flow.Sql.Models;
@@ -54,10 +57,8 @@ public sealed class SqlUpdateBuilder<T> where T : class
     /// <summary>Sets the target table name and optional schema.</summary>
     public SqlUpdateBuilder<T> Table(string tableName, string? schema = null)
     {
-        if (string.IsNullOrWhiteSpace(tableName))
-            throw new ArgumentException("Table name cannot be null or empty.", nameof(tableName));
-        _tableName = tableName;
-        _schema = schema;
+        _tableName = SqlIdentifierGuard.EnsureValidIdentifier(tableName, nameof(tableName));
+        _schema = schema == null ? null : SqlIdentifierGuard.EnsureValidIdentifier(schema, nameof(schema));
         return this;
     }
 
@@ -71,6 +72,48 @@ public sealed class SqlUpdateBuilder<T> where T : class
     {
         if (column == null) throw new ArgumentNullException(nameof(column));
         _assignments.Add((ExpressionHelper.GetMemberName(column), value));
+        return this;
+    }
+
+    /// <summary>
+    /// Maps every public readable instance property of <typeparamref name="T"/> to a
+    /// <see cref="Set{TValue}"/> call, reading each value from <paramref name="entity"/> via
+    /// reflection. Properties listed in <paramref name="exclude"/> (typically the primary key
+    /// used in the WHERE clause) are skipped.
+    /// </summary>
+    /// <remarks>
+    /// Limitations: only public instance properties are considered; indexers
+    /// (<c>this[int]</c>) and non-public properties are always skipped. Collection/complex
+    /// navigation properties are mapped like any other property (their raw value is passed to
+    /// <see cref="Set{TValue}"/> as-is) — this method does not attempt to flatten or serialize them.
+    /// </remarks>
+    public SqlUpdateBuilder<T> SetAllFrom(T entity, params Expression<Func<T, object>>[] exclude)
+    {
+        if (entity == null) throw new ArgumentNullException(nameof(entity));
+
+        var excluded = exclude != null
+            ? new HashSet<string>(exclude.Select(ExpressionHelper.GetMemberName))
+            : new HashSet<string>();
+
+        foreach (var prop in typeof(T).GetProperties(BindingFlags.Public | BindingFlags.Instance))
+        {
+            if (prop.GetIndexParameters().Length > 0) continue;
+            if (!prop.CanRead) continue;
+            if (excluded.Contains(prop.Name)) continue;
+
+            var value = prop.GetValue(entity);
+            var parameter = Expression.Parameter(typeof(T), "x");
+            var lambda = Expression.Lambda(
+                typeof(Func<,>).MakeGenericType(typeof(T), prop.PropertyType),
+                Expression.Property(parameter, prop),
+                parameter);
+
+            var setMethod = typeof(SqlUpdateBuilder<T>)
+                .GetMethod(nameof(Set))!
+                .MakeGenericMethod(prop.PropertyType);
+            setMethod.Invoke(this, new object?[] { lambda, value });
+        }
+
         return this;
     }
 
@@ -132,7 +175,11 @@ public sealed class SqlUpdateBuilder<T> where T : class
     /// both conditions are combined with AND in the final SQL.</remarks>
     public SqlUpdateBuilder<T> Where(Expression<Func<T, bool>> predicate)
     {
-        _wherePredicate = predicate ?? throw new ArgumentNullException(nameof(predicate));
+        if (predicate == null) throw new ArgumentNullException(nameof(predicate));
+        if (_wherePredicate != null)
+            throw new InvalidOperationException(
+                "Where predicate already set. Combine conditions within a single expression (e.g. with &&).");
+        _wherePredicate = predicate;
         return this;
     }
 
@@ -140,8 +187,7 @@ public sealed class SqlUpdateBuilder<T> where T : class
     public SqlUpdateBuilder<T> Where(ValiFlow<T> filter)
     {
         if (filter == null) throw new ArgumentNullException(nameof(filter));
-        _wherePredicate = filter.Build();
-        return this;
+        return Where(filter.Build());
     }
 
     // ── UPDATE FROM / JOIN ────────────────────────────────────────────────────
@@ -161,10 +207,8 @@ public sealed class SqlUpdateBuilder<T> where T : class
         if (!_dialect.SupportsUpdateFrom)
             throw new InvalidOperationException(
                 $"Dialect '{_dialect.DialectName}' does not support UPDATE\u2026FROM/JOIN syntax.");
-        if (string.IsNullOrWhiteSpace(sourceTable))
-            throw new ArgumentException("Source table name cannot be null or empty.", nameof(sourceTable));
-        _fromTable = sourceTable;
-        _fromAlias = alias;
+        _fromTable = SqlIdentifierGuard.EnsureValidIdentifier(sourceTable, nameof(sourceTable));
+        _fromAlias = alias == null ? null : SqlIdentifierGuard.EnsureValidIdentifier(alias, nameof(alias));
         return this;
     }
 
@@ -235,6 +279,24 @@ public sealed class SqlUpdateBuilder<T> where T : class
 
     /// <summary>Assembles and returns the final <see cref="SqlQueryResult"/>.</summary>
     public SqlQueryResult Build()
+    {
+        using var activity = ValiFlowDiagnostics.StartActivity(
+            "Vali-Flow.Sql.SqlUpdateBuilder.Build", tag: _tag, entityType: typeof(T).Name);
+        try
+        {
+            SqlQueryResult result = BuildCore();
+            bool hasWhere = _wherePredicate != null || _whereBuilder != null;
+            activity?.SetTag("vali_flow.has_where", hasWhere);
+            return result;
+        }
+        catch (Exception ex)
+        {
+            ValiFlowDiagnostics.RecordException(activity, ex);
+            throw;
+        }
+    }
+
+    private SqlQueryResult BuildCore()
     {
         _paramIndex = 0;
 

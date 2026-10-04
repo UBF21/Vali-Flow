@@ -1,4 +1,6 @@
+using System.Diagnostics;
 using FluentAssertions;
+using Vali_Flow.Abstractions.Diagnostics;
 using Vali_Flow.Core.Builder;
 using Vali_Flow.Sql.Builder;
 using Vali_Flow.Sql.Dialects;
@@ -25,6 +27,14 @@ public sealed class SqlDeleteBuilderTests
 
         result.Sql.Should().Be("DELETE FROM [Users]");
         result.Parameters.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void From_UnsafeTableName_ThrowsArgumentException()
+    {
+        var act = () => new SqlDeleteBuilder<TestUser>(Sql).From("Users]; DROP TABLE Users;--");
+
+        act.Should().Throw<ArgumentException>().WithParameterName("tableName");
     }
 
     // ── WHERE variants ────────────────────────────────────────────────────────
@@ -90,6 +100,44 @@ public sealed class SqlDeleteBuilderTests
             .Build();
 
         result.Sql.Should().Contain("AND");
+    }
+
+    [Fact]
+    public void Where_LambdaExpression_CalledTwice_ThrowsInvalidOperationException()
+    {
+        // Previously this silently overwrote the first predicate with the second one
+        // with no error — inconsistent with the SqlWhereBuilder overload (Where(SqlWhereBuilder<T>)),
+        // which already guards against being set twice.
+        var builder = new SqlDeleteBuilder<TestUser>(Sql)
+            .From("Users")
+            .Where(x => x.Age < 18);
+
+        builder.Invoking(b => b.Where(x => x.Age > 65))
+            .Should().Throw<InvalidOperationException>();
+    }
+
+    [Fact]
+    public void Where_ValiFlow_CalledTwice_ThrowsInvalidOperationException()
+    {
+        var filter1 = new ValiFlow<TestUser>().EqualTo(x => x.Department, "Sales");
+        var filter2 = new ValiFlow<TestUser>().EqualTo(x => x.Department, "IT");
+        var builder = new SqlDeleteBuilder<TestUser>(Sql)
+            .From("Users")
+            .Where(filter1);
+
+        builder.Invoking(b => b.Where(filter2))
+            .Should().Throw<InvalidOperationException>();
+    }
+
+    [Fact]
+    public void Where_SqlWhereBuilder_CalledTwice_ThrowsInvalidOperationException()
+    {
+        var builder = new SqlDeleteBuilder<TestUser>(Sql)
+            .From("Users")
+            .Where(w => w.EqualTo(x => x.Id, 1));
+
+        builder.Invoking(b => b.Where(w => w.EqualTo(x => x.Id, 2)))
+            .Should().Throw<InvalidOperationException>();
     }
 
     // ── Table + schema ────────────────────────────────────────────────────────
@@ -229,5 +277,52 @@ public sealed class SqlDeleteBuilderTests
     {
         var act = () => new SqlDeleteBuilder<TestUser>(null!);
         act.Should().Throw<ArgumentNullException>();
+    }
+
+    // ── Observability ─────────────────────────────────────────────────────────
+
+    [Fact]
+    public void Build_WithTag_RecordsActivityWithTagAndEntityType()
+    {
+        Activity? seen = null;
+        using var listener = new ActivityListener
+        {
+            ShouldListenTo = source => source.Name == ValiFlowDiagnostics.SourceName,
+            Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllData,
+            ActivityStopped = activity => seen = activity
+        };
+        ActivitySource.AddActivityListener(listener);
+
+        new SqlDeleteBuilder<TestUser>(Sql)
+            .From("Users")
+            .AllowDeleteAll()
+            .Tag("Delete all users")
+            .Build();
+
+        seen.Should().NotBeNull();
+        seen!.GetTagItem("vali_flow.tag").Should().Be("Delete all users");
+        seen.GetTagItem("vali_flow.entity_type").Should().Be("TestUser");
+        seen.GetTagItem("vali_flow.has_where").Should().Be(false);
+        seen.Status.Should().Be(ActivityStatusCode.Unset);
+    }
+
+    [Fact]
+    public void Build_WithoutWhereOrAllowDeleteAll_RecordsErrorStatus()
+    {
+        Activity? seen = null;
+        using var listener = new ActivityListener
+        {
+            ShouldListenTo = source => source.Name == ValiFlowDiagnostics.SourceName,
+            Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllData,
+            ActivityStopped = activity => seen = activity
+        };
+        ActivitySource.AddActivityListener(listener);
+
+        // No Where() and no AllowDeleteAll() triggers the existing safety guard in Build().
+        var act = () => new SqlDeleteBuilder<TestUser>(Sql).From("Users").Build();
+
+        act.Should().Throw<InvalidOperationException>();
+        seen.Should().NotBeNull();
+        seen!.Status.Should().Be(ActivityStatusCode.Error);
     }
 }

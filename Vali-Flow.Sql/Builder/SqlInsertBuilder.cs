@@ -1,5 +1,8 @@
+using System.Diagnostics;
 using System.Linq.Expressions;
+using System.Reflection;
 using System.Text.RegularExpressions;
+using Vali_Flow.Abstractions.Diagnostics;
 using Vali_Flow.Sql.Dialects;
 using Vali_Flow.Sql.Models;
 
@@ -74,10 +77,8 @@ public sealed class SqlInsertBuilder<T> where T : class
     /// <summary>Sets the target table name and optional schema.</summary>
     public SqlInsertBuilder<T> Into(string tableName, string? schema = null)
     {
-        if (string.IsNullOrWhiteSpace(tableName))
-            throw new ArgumentException("Table name cannot be null or empty.", nameof(tableName));
-        _tableName = tableName;
-        _schema = schema;
+        _tableName = SqlIdentifierGuard.EnsureValidIdentifier(tableName, nameof(tableName));
+        _schema = schema == null ? null : SqlIdentifierGuard.EnsureValidIdentifier(schema, nameof(schema));
         return this;
     }
 
@@ -90,7 +91,52 @@ public sealed class SqlInsertBuilder<T> where T : class
     public SqlInsertBuilder<T> Set<TValue>(Expression<Func<T, TValue>> column, TValue value)
     {
         if (column == null) throw new ArgumentNullException(nameof(column));
+        if (_selectQuery != null)
+            throw new InvalidOperationException(
+                "Cannot combine Set() with SelectFrom(). Use one or the other.");
         CurrentRow.Add((ExpressionHelper.GetMemberName(column), value));
+        return this;
+    }
+
+    /// <summary>
+    /// Maps every public readable instance property of <typeparamref name="T"/> to a
+    /// <see cref="Set{TValue}"/> call for the current row, reading each value from
+    /// <paramref name="entity"/> via reflection. Properties listed in <paramref name="exclude"/>
+    /// (typically the primary key) are skipped.
+    /// </summary>
+    /// <remarks>
+    /// Limitations: only public instance properties are considered; indexers
+    /// (<c>this[int]</c>) and non-public properties are always skipped. Collection/complex
+    /// navigation properties are mapped like any other property (their raw value is passed to
+    /// <see cref="Set{TValue}"/> as-is) — this method does not attempt to flatten or serialize them.
+    /// </remarks>
+    public SqlInsertBuilder<T> SetAllFrom(T entity, params Expression<Func<T, object>>[] exclude)
+    {
+        if (entity == null) throw new ArgumentNullException(nameof(entity));
+
+        var excluded = exclude != null
+            ? new HashSet<string>(exclude.Select(ExpressionHelper.GetMemberName))
+            : new HashSet<string>();
+
+        foreach (var prop in typeof(T).GetProperties(BindingFlags.Public | BindingFlags.Instance))
+        {
+            if (prop.GetIndexParameters().Length > 0) continue;
+            if (!prop.CanRead) continue;
+            if (excluded.Contains(prop.Name)) continue;
+
+            var value = prop.GetValue(entity);
+            var parameter = Expression.Parameter(typeof(T), "x");
+            var lambda = Expression.Lambda(
+                typeof(Func<,>).MakeGenericType(typeof(T), prop.PropertyType),
+                Expression.Property(parameter, prop),
+                parameter);
+
+            var setMethod = typeof(SqlInsertBuilder<T>)
+                .GetMethod(nameof(Set))!
+                .MakeGenericMethod(prop.PropertyType);
+            setMethod.Invoke(this, new object?[] { lambda, value });
+        }
+
         return this;
     }
 
@@ -169,7 +215,12 @@ public sealed class SqlInsertBuilder<T> where T : class
     /// </summary>
     public SqlInsertBuilder<T> OrIgnore()
     {
-        if (!_dialect.SupportsOnConflict && string.IsNullOrEmpty(_dialect.InsertConflictPrefix))
+        // "INSERT OR IGNORE INTO" is SQLite-only syntax. MySqlDialect.InsertConflictPrefix is
+        // "IGNORE" (used for its own InsertIgnore() → "INSERT IGNORE INTO" keyword, unrelated
+        // to this method) and PostgreSqlDialect.SupportsOnConflict is true (for ON CONFLICT
+        // DO NOTHING/UPDATE, unrelated to this method too). Checking either of those alone
+        // previously let MySQL and PostgreSQL through here and produced invalid SQL.
+        if (_dialect.DialectName != "SQLite")
             throw new InvalidOperationException(
                 $"OrIgnore() is not supported by dialect '{_dialect.DialectName}'.");
         _orIgnore = true;
@@ -182,7 +233,8 @@ public sealed class SqlInsertBuilder<T> where T : class
     /// </summary>
     public SqlInsertBuilder<T> OrReplace()
     {
-        if (!_dialect.SupportsOnConflict && string.IsNullOrEmpty(_dialect.InsertConflictPrefix))
+        // Same reasoning as OrIgnore(): "INSERT OR REPLACE INTO" is SQLite-only syntax.
+        if (_dialect.DialectName != "SQLite")
             throw new InvalidOperationException(
                 $"OrReplace() is not supported by dialect '{_dialect.DialectName}'.");
         _orReplace = true;
@@ -347,6 +399,24 @@ public sealed class SqlInsertBuilder<T> where T : class
 
     /// <summary>Assembles and returns the final <see cref="SqlQueryResult"/>.</summary>
     public SqlQueryResult Build()
+    {
+        using var activity = ValiFlowDiagnostics.StartActivity(
+            "Vali-Flow.Sql.SqlInsertBuilder.Build", tag: _tag, entityType: typeof(T).Name);
+        try
+        {
+            SqlQueryResult result = BuildCore();
+            activity?.SetTag("vali_flow.row_count", _rows.Count);
+            activity?.SetTag("vali_flow.is_insert_select", _selectQuery != null);
+            return result;
+        }
+        catch (Exception ex)
+        {
+            ValiFlowDiagnostics.RecordException(activity, ex);
+            throw;
+        }
+    }
+
+    private SqlQueryResult BuildCore()
     {
         _paramIndex = 0;
 
