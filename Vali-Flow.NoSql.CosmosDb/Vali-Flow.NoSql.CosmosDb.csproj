@@ -1,0 +1,47 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net8.0;net9.0</TargetFrameworks>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>Vali_Flow.NoSql.CosmosDb</RootNamespace>
+    <PackageId>Vali-Flow.NoSql.CosmosDb</PackageId>
+    <Version>1.0.0</Version>
+    <Authors>Felipe Rafael Montenegro Morriberon</Authors>
+    <Title>Vali-Flow.NoSql.CosmosDb</Title>
+    <Description>Azure Cosmos DB (SQL API) adapter for Vali-Flow.NoSql — translates the provider-agnostic IR tree into a parameterized Cosmos SQL WHERE clause fragment. Use .ToCosmosDb() on any ValiFlow&lt;T&gt; or Expression&lt;Func&lt;T, bool&gt;&gt;.</Description>
+    <Copyright>Copyright © 2026 - FM. Todos los derechos reservados.</Copyright>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
+    <PackageProjectUrl>https://vali-flow-docs.netlify.app/docs/adapters/nosql/cosmosdb/overview</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/UBF21/vali-flow</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageIcon>VF_logo.png</PackageIcon>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageTags>vali;vali-flow;cosmosdb;azure;sql-api;filter;nosql;dotnet</PackageTags>
+    <PackageReleaseNotes>v1.0.0 — Initial release. Cosmos DB SQL API WHERE clause translator.</PackageReleaseNotes>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <DebugType>embedded</DebugType>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="VF_logo.png" Condition="Exists('VF_logo.png')">
+      <Pack>True</Pack>
+      <PackagePath></PackagePath>
+    </None>
+    <None Include="README.md" Condition="Exists('README.md')">
+      <Pack>True</Pack>
+      <PackagePath></PackagePath>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All" />
+    <PackageReference Include="Vali-Flow.NoSql" Version="1.1.0" />
+  </ItemGroup>
+
+</Project>
