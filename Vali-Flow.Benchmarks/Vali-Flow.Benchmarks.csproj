@@ -8,8 +8,10 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="BenchmarkDotNet" Version="0.14.0" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="9.0.0" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="../Vali-Flow/Vali-Flow.csproj" />
     <ProjectReference Include="../Vali-Flow.InMemory/Vali-Flow.InMemory.csproj" />
     <ProjectReference Include="../Vali-Flow.Sql/Vali-Flow.Sql.csproj" />
   </ItemGroup>
