@@ -83,18 +83,21 @@ var sqlOrders = await connection.QueryAsync<Order>(
 
 | Package | Purpose | Target | Version |
 |---------|---------|--------|---------|
-| **Vali-Flow** | EF Core async evaluator + specifications (read/write) | `DbContext` | [1.1.0](https://www.nuget.org/packages/Vali-Flow) |
-| **Vali-Flow.InMemory** | Synchronous in-memory evaluator for testing & caching | `IEnumerable<T>` | [1.0.0](https://www.nuget.org/packages/Vali-Flow.InMemory) |
-| **Vali-Flow.Sql** | SQL query builder for parameterized queries | Dapper / ADO.NET | [1.0.0](https://www.nuget.org/packages/Vali-Flow.Sql) |
+| **Vali-Flow** | EF Core async evaluator + specifications (read/write) | `DbContext` | [1.3.4](https://www.nuget.org/packages/Vali-Flow) |
+| **Vali-Flow.InMemory** | Synchronous in-memory evaluator for testing & caching | `IEnumerable<T>` | [1.1.5](https://www.nuget.org/packages/Vali-Flow.InMemory) |
+| **Vali-Flow.Sql** | SQL query builder for parameterized queries | Dapper / ADO.NET | [1.1.1](https://www.nuget.org/packages/Vali-Flow.Sql) |
 
 ### NoSQL Packages
 
 | Package | Database | Output Type | Version |
 |---------|----------|-------------|---------|
-| **Vali-Flow.NoSql.MongoDB** | MongoDB | `BsonDocument` | [1.0.0](https://www.nuget.org/packages/Vali-Flow.NoSql.MongoDB) |
-| **Vali-Flow.NoSql.Elasticsearch** | Elasticsearch | `Query` (Elastic.Clients) | [1.0.0](https://www.nuget.org/packages/Vali-Flow.NoSql.Elasticsearch) |
-| **Vali-Flow.NoSql.Redis** | Redis (RediSearch) | Query string | [1.0.0](https://www.nuget.org/packages/Vali-Flow.NoSql.Redis) |
-| **Vali-Flow.NoSql.DynamoDB** | AWS DynamoDB | `DynamoFilterExpression` | [1.0.0](https://www.nuget.org/packages/Vali-Flow.NoSql.DynamoDB) |
+| **Vali-Flow.NoSql.MongoDB** | MongoDB | `BsonDocument` | [1.1.0](https://www.nuget.org/packages/Vali-Flow.NoSql.MongoDB) |
+| **Vali-Flow.NoSql.Elasticsearch** | Elasticsearch | `Query` (Elastic.Clients) | [1.1.0](https://www.nuget.org/packages/Vali-Flow.NoSql.Elasticsearch) |
+| **Vali-Flow.NoSql.Redis** | Redis (RediSearch) | Query string | [1.1.0](https://www.nuget.org/packages/Vali-Flow.NoSql.Redis) |
+| **Vali-Flow.NoSql.DynamoDB** | AWS DynamoDB | `DynamoFilterExpression` | [1.1.0](https://www.nuget.org/packages/Vali-Flow.NoSql.DynamoDB) |
+| **Vali-Flow.NoSql.Couchbase** | Couchbase | N1QL WHERE fragment + parameters | [1.0.0](https://www.nuget.org/packages/Vali-Flow.NoSql.Couchbase) |
+| **Vali-Flow.NoSql.CosmosDb** | Azure Cosmos DB (SQL API) | SQL WHERE fragment + parameters | [1.0.0](https://www.nuget.org/packages/Vali-Flow.NoSql.CosmosDb) |
+| **Vali-Flow.NoSql.Firestore** | Google Cloud Firestore | `Filter` (Google.Cloud.Firestore) | [1.0.0](https://www.nuget.org/packages/Vali-Flow.NoSql.Firestore) |
 
 ### Architecture
 
@@ -103,13 +106,16 @@ Vali-Flow.Core  (expression builder — ValiFlow<T>)
        │
        ├─── Vali-Flow                    (EF Core async)
        ├─── Vali-Flow.InMemory           (sync in-memory)
-       ├─── Vali-Flow.Sql                (SQL: SQL Server, PostgreSQL, MySQL, SQLite)
+       ├─── Vali-Flow.Sql                (SQL: SQL Server, PostgreSQL, MySQL, SQLite, Oracle)
        │
        └─── Vali-Flow.NoSql
                ├─── Vali-Flow.NoSql.MongoDB        (MongoDB BSON)
                ├─── Vali-Flow.NoSql.Elasticsearch  (Elasticsearch Query DSL)
                ├─── Vali-Flow.NoSql.Redis          (RediSearch)
-               └─── Vali-Flow.NoSql.DynamoDB       (DynamoDB filter expressions)
+               ├─── Vali-Flow.NoSql.DynamoDB       (DynamoDB filter expressions)
+               ├─── Vali-Flow.NoSql.Couchbase      (N1QL / SQL++)
+               ├─── Vali-Flow.NoSql.CosmosDb       (Cosmos DB SQL API)
+               └─── Vali-Flow.NoSql.Firestore      (Firestore native Filter)
 ```
 
 ---
