@@ -22,7 +22,8 @@ public interface IInMemoryGrouping<T> where T : class
         IEnumerable<T>? entities,
         Func<T, TKey> keySelector,
         ValiFlow<T>? valiFlow = null,
-        bool negateCondition = false
+        bool negateCondition = false,
+        string? tag = null
     ) where TKey : notnull;
 
     /// <summary>
@@ -38,7 +39,8 @@ public interface IInMemoryGrouping<T> where T : class
         IEnumerable<T>? entities,
         Func<T, TKey> keySelector,
         ValiFlow<T>? valiFlow = null,
-        bool negateCondition = false
+        bool negateCondition = false,
+        string? tag = null
     ) where TKey : notnull;
 
     /// <summary>
@@ -57,7 +59,8 @@ public interface IInMemoryGrouping<T> where T : class
         Func<T, TKey> keySelector,
         Func<T, TResult> selector,
         ValiFlow<T>? valiFlow = null,
-        bool negateCondition = false
+        bool negateCondition = false,
+        string? tag = null
     ) where TResult : INumber<TResult> where TKey : notnull;
 
     /// <summary>
@@ -76,7 +79,8 @@ public interface IInMemoryGrouping<T> where T : class
         Func<T, TKey> keySelector,
         Func<T, TResult> selector,
         ValiFlow<T>? valiFlow = null,
-        bool negateCondition = false
+        bool negateCondition = false,
+        string? tag = null
     ) where TResult : INumber<TResult> where TKey : notnull;
 
     /// <summary>
@@ -95,7 +99,8 @@ public interface IInMemoryGrouping<T> where T : class
         Func<T, TKey> keySelector,
         Func<T, TResult> selector,
         ValiFlow<T>? valiFlow = null,
-        bool negateCondition = false
+        bool negateCondition = false,
+        string? tag = null
     ) where TResult : INumber<TResult> where TKey : notnull;
 
     /// <summary>
@@ -114,7 +119,8 @@ public interface IInMemoryGrouping<T> where T : class
         Func<T, TKey> keySelector,
         Func<T, TResult> selector,
         ValiFlow<T>? valiFlow = null,
-        bool negateCondition = false
+        bool negateCondition = false,
+        string? tag = null
     ) where TResult : INumber<TResult> where TKey : notnull;
 
     /// <summary>
@@ -130,7 +136,8 @@ public interface IInMemoryGrouping<T> where T : class
         IEnumerable<T>? entities,
         Func<T, TKey> keySelector,
         ValiFlow<T>? valiFlow = null,
-        bool negateCondition = false
+        bool negateCondition = false,
+        string? tag = null
     ) where TKey : notnull;
 
     /// <summary>
@@ -146,7 +153,8 @@ public interface IInMemoryGrouping<T> where T : class
         IEnumerable<T>? entities,
         Func<T, TKey> keySelector,
         ValiFlow<T>? valiFlow = null,
-        bool negateCondition = false
+        bool negateCondition = false,
+        string? tag = null
     ) where TKey : notnull;
 
     /// <summary>
@@ -169,6 +177,7 @@ public interface IInMemoryGrouping<T> where T : class
         Func<T, TOrderKey>? orderBy = null,
         bool ascending = true,
         ValiFlow<T>? valiFlow = null,
-        bool negateCondition = false
+        bool negateCondition = false,
+        string? tag = null
     ) where TKey : notnull;
 }
