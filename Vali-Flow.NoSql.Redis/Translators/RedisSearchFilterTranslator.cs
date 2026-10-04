@@ -1,5 +1,7 @@
 using System.Globalization;
+using Vali_Flow.Abstractions.Diagnostics;
 using Vali_Flow.NoSql.IR;
+using Vali_Flow.NoSql.Translators;
 
 namespace Vali_Flow.NoSql.Redis.Translators;
 
@@ -21,13 +23,23 @@ namespace Vali_Flow.NoSql.Redis.Translators;
 /// </remarks>
 public static class RedisSearchFilterTranslator
 {
+    // RediSearch has no documented explicit limit on OR'd terms in a query. This is a
+    // conservative practical cap: each value expands to a full OR clause in the query string,
+    // so an unbounded list risks hitting Redis's proto-max-bulk-len and produces unwieldy queries.
+    private const int MaxInValues = 1_000;
+
     /// <summary>
     /// Translates the given <see cref="IConditionNode"/> into a RediSearch query string.
     /// </summary>
     /// <param name="node">The root condition node to translate.</param>
     /// <param name="customConverter">
-    /// Optional hook for converting custom CLR types to their Redis tag-value string.
-    /// Called before the built-in type switch. Return <c>null</c> to fall through to the default conversion.
+    /// Optional hook for converting custom CLR types to their Redis value string. Applied before the
+    /// built-in type switch for every value-producing node (Equal, Comparison/range, and IN — both its
+    /// numeric and tag branches), same evaluation order as the other NoSql providers
+    /// (<see cref="Vali_Flow.NoSql.Translators.ConditionValueResolver"/>): custom first, falls back to
+    /// the default conversion when it returns <c>null</c>. The string is embedded as a quoted tag value
+    /// for Equal/IN-tag queries, or unquoted for Comparison/IN-numeric range bounds — return the raw
+    /// value appropriate to the call site (e.g. a numeric string for a type used in range queries).
     /// Thread-safe: the converter is scoped to this call only.
     /// </param>
     /// <returns>
@@ -39,13 +51,22 @@ public static class RedisSearchFilterTranslator
     /// var results = db.FT().Search("idx:products", new Query(query));
     /// </code>
     /// </example>
-    public static string Translate(IConditionNode node, Func<object?, string?>? customConverter = null)
+    public static string Translate(IConditionNode node, Func<object?, string?>? customConverter = null, string? tag = null, string? entityType = null)
     {
         if (node == null) throw new ArgumentNullException(nameof(node));
 
-        Validate(node);
+        using var activity = ValiFlowDiagnostics.StartActivity("Vali-Flow.NoSql.Redis.Translate", tag, entityType);
+        try
+        {
+            Validate(node);
 
-        return node.Accept(new RedisVisitor(customConverter));
+            return node.Accept(new RedisVisitor(customConverter));
+        }
+        catch (Exception ex)
+        {
+            ValiFlowDiagnostics.RecordException(activity, ex);
+            throw;
+        }
     }
 
     /// <summary>
@@ -79,28 +100,49 @@ public static class RedisSearchFilterTranslator
         public string VisitEqual(EqualNode node) =>
             BuildEqualQuery(node.Field, node.Value, node.IsNegated);
 
-        public string VisitComparison(ComparisonNode node) => node.Op switch
+        public string VisitComparison(ComparisonNode node)
         {
-            // Exclusive bound uses leading '(' before the number: [(v +inf]
-            ComparisonOp.GreaterThan        => $"@{node.Field}:[({ToNumericString(node.Value)} +inf]",
-            ComparisonOp.GreaterThanOrEqual => $"@{node.Field}:[{ToNumericString(node.Value)} +inf]",
-            ComparisonOp.LessThan           => $"@{node.Field}:[-inf ({ToNumericString(node.Value)}]",
-            ComparisonOp.LessThanOrEqual    => $"@{node.Field}:[-inf {ToNumericString(node.Value)}]",
-            _ => throw new NotSupportedException($"ComparisonOp.{node.Op} is not mapped.")
-        };
+            // Custom converter runs first (same order as the other NoSql providers via
+            // ConditionValueResolver), falling back to the built-in numeric conversion.
+            var bound = ConditionValueResolver.Resolve(node.Value, customConverter, ToNumericString);
 
-        public string VisitLike(LikeNode node) => node.Op switch
+            return node.Op switch
+            {
+                // Exclusive bound uses leading '(' before the number: [(v +inf]
+                ComparisonOp.GreaterThan        => $"@{node.Field}:[({bound} +inf]",
+                ComparisonOp.GreaterThanOrEqual => $"@{node.Field}:[{bound} +inf]",
+                ComparisonOp.LessThan           => $"@{node.Field}:[-inf ({bound}]",
+                ComparisonOp.LessThanOrEqual    => $"@{node.Field}:[-inf {bound}]",
+                _ => throw new NotSupportedException($"ComparisonOp.{node.Op} is not mapped.")
+            };
+        }
+
+        public string VisitLike(LikeNode node)
         {
-            LikeOp.Contains   => $"@{node.Field}:*{node.Pattern}*",
-            LikeOp.StartsWith => $"@{node.Field}:{node.Pattern}*",
-            LikeOp.EndsWith   => $"@{node.Field}:*{node.Pattern}",
-            _ => throw new NotSupportedException($"LikeOp.{node.Op} is not mapped.")
-        };
+            // Escape RediSearch query-syntax special characters in the user-supplied pattern
+            // BEFORE adding our own wildcard '*' markers below — otherwise a pattern containing
+            // characters like ')', '|', '@' could break out of this field's scope and inject
+            // arbitrary RediSearch query syntax (e.g. "x) | @other:{admin}").
+            string escaped = EscapeTextTerm(node.Pattern);
+            return node.Op switch
+            {
+                LikeOp.Contains   => $"@{node.Field}:*{escaped}*",
+                LikeOp.StartsWith => $"@{node.Field}:{escaped}*",
+                LikeOp.EndsWith   => $"@{node.Field}:*{escaped}",
+                _ => throw new NotSupportedException($"LikeOp.{node.Op} is not mapped.")
+            };
+        }
 
         public string VisitIn(InNode node)
         {
             // Empty IN → always false (negate match-all)
             if (node.Values.Count == 0) return "(-*)";
+
+            if (node.Values.Count > MaxInValues)
+                throw new InvalidOperationException(
+                    $"RediSearch IN query supports at most {MaxInValues} values (practical limit — " +
+                    $"each value expands to a full OR clause in the query string); received {node.Values.Count}. " +
+                    "Split the query or batch the values.");
 
             if (node.Values.Any(v => v == null))
                 throw new InvalidOperationException(
@@ -119,7 +161,12 @@ public static class RedisSearchFilterTranslator
             if (allNumeric)
             {
                 // OR'd range queries: (@field:[v1 v1]|@field:[v2 v2]|...)
-                var parts = node.Values.Select(v => $"@{node.Field}:[{ToNumericString(v!)} {ToNumericString(v!)}]");
+                // Custom converter first, same order as Equal/Comparison, falls back to numeric.
+                var parts = node.Values.Select(v =>
+                {
+                    var num = ConditionValueResolver.Resolve(v!, customConverter, ToNumericString);
+                    return $"@{node.Field}:[{num} {num}]";
+                });
                 return $"({string.Join("|", parts)})";
             }
 
@@ -132,17 +179,16 @@ public static class RedisSearchFilterTranslator
 
         private string BuildEqualQuery(string field, object value, bool negated)
         {
-            // OCP: custom converter takes priority over built-in type detection
-            if (customConverter != null)
+            // Custom converter takes priority over built-in type detection (OCP),
+            // same evaluation order as every other NoSql provider via ConditionValueResolver:
+            // custom first, fall back to the default conversion only when it returns null.
+            var custom = customConverter?.Invoke(value);
+            if (custom != null)
             {
-                var custom = customConverter(value);
-                if (custom != null)
-                {
-                    var customTag = $"\"{EscapeTagValue(custom)}\"";
-                    return negated
-                        ? $"-@{field}:{{{customTag}}}"
-                        : $"@{field}:{{{customTag}}}";
-                }
+                var customTag = $"\"{EscapeTagValue(custom)}\"";
+                return negated
+                    ? $"-@{field}:{{{customTag}}}"
+                    : $"@{field}:{{{customTag}}}";
             }
 
             if (IsNumericOrBool(value))
@@ -154,37 +200,29 @@ public static class RedisSearchFilterTranslator
             }
 
             // String / other → quoted tag query (DIALECT 2).
-            // Converter already returned null above — pass null to avoid double-invocation (O1 fix).
-            var tag = BuildTagValue(value, null);
+            // Custom converter already ran above and returned null — build the default tag directly.
+            var tag = $"\"{EscapeTagValue(DefaultTagString(value))}\"";
             return negated
                 ? $"-@{field}:{{{tag}}}"
                 : $"@{field}:{{{tag}}}";
         }
 
-        private string BuildTagValue(object? value, Func<object?, string?>? converter = null)
-        {
-            var conv = converter ?? customConverter;
-            if (conv != null)
-            {
-                var custom = conv(value);
-                if (custom != null) return $"\"{EscapeTagValue(custom)}\"";
-            }
+        private string BuildTagValue(object? value) =>
+            $"\"{EscapeTagValue(ConditionValueResolver.Resolve(value, customConverter, DefaultTagString))}\"";
 
-            var str = value switch
-            {
-                null    => string.Empty,
-                bool b  => b ? "true" : "false",
-                string s => s,
-                Enum e  => e.ToString(),
-                _       => value.ToString() ?? string.Empty
-            };
-            return $"\"{EscapeTagValue(str)}\"";
-        }
+        private static string DefaultTagString(object? value) => value switch
+        {
+            null     => string.Empty,
+            bool b   => b ? "true" : "false",
+            string s => s,
+            Enum e   => e.ToString()!,
+            _        => value.ToString() ?? string.Empty
+        };
 
         private static bool IsNumericOrBool(object? value) =>
             value is int or long or double or float or decimal or bool;
 
-        private static string ToNumericString(object value) => value switch
+        private static string ToNumericString(object? value) => value switch
         {
             bool b      => b ? "1" : "0",
             int i       => i.ToString(CultureInfo.InvariantCulture),
@@ -198,6 +236,24 @@ public static class RedisSearchFilterTranslator
         // Escape \ and " inside DIALECT 2 quoted tag values
         private static string EscapeTagValue(string value)
             => value.Replace("\\", "\\\\").Replace("\"", "\\\"");
+
+        // RediSearch query-syntax special characters that must be backslash-escaped when they
+        // appear inside an unquoted text term (used for Contains/StartsWith/EndsWith wildcards).
+        // Backslash is escaped first so escaping the others doesn't double-escape it.
+        private static readonly char[] TextTermSpecialChars =
+            { '\\', ',', '.', '<', '>', '{', '}', '[', ']', '"', '\'', ':', ';', '!',
+              '@', '#', '$', '%', '^', '&', '*', '(', ')', '-', '+', '=', '~', '|' };
+
+        private static string EscapeTextTerm(string value)
+        {
+            var sb = new System.Text.StringBuilder(value.Length);
+            foreach (char c in value)
+            {
+                if (Array.IndexOf(TextTermSpecialChars, c) >= 0) sb.Append('\\');
+                sb.Append(c);
+            }
+            return sb.ToString();
+        }
     }
 
 }

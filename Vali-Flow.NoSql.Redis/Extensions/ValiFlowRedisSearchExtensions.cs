@@ -35,21 +35,21 @@ public static class ValiFlowRedisSearchExtensions
     /// var results = db.FT().Search("idx:products", new Query(query));
     /// </code>
     /// </example>
-    public static string ToRedisSearch<T>(this ValiFlow<T> flow, Func<object?, string?>? customConverter = null) where T : class
+    public static string ToRedisSearch<T>(this ValiFlow<T> flow, Func<object?, string?>? customConverter = null, string? tag = null) where T : class
     {
         if (flow == null) throw new ArgumentNullException(nameof(flow));
 
-        return RedisSearchFilterTranslator.Translate(flow.ToNoSqlIR(), customConverter);
+        return RedisSearchFilterTranslator.Translate(flow.ToNoSqlIR(), customConverter, tag, typeof(T).Name);
     }
 
     /// <summary>
     /// Translates a prebuilt <see cref="Expression{TDelegate}"/> into a RediSearch query string.
     /// Use this overload when you already have a compiled expression.
     /// </summary>
-    public static string ToRedisSearch<T>(this Expression<Func<T, bool>> expression, Func<object?, string?>? customConverter = null)
+    public static string ToRedisSearch<T>(this Expression<Func<T, bool>> expression, Func<object?, string?>? customConverter = null, string? tag = null)
     {
         if (expression == null) throw new ArgumentNullException(nameof(expression));
 
-        return RedisSearchFilterTranslator.Translate(expression.ToNoSqlIR(), customConverter);
+        return RedisSearchFilterTranslator.Translate(expression.ToNoSqlIR(), customConverter, tag, typeof(T).Name);
     }
 }

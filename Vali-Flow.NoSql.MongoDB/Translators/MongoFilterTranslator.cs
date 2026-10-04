@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using MongoDB.Bson;
+using Vali_Flow.Abstractions.Diagnostics;
 using Vali_Flow.NoSql.IR;
 using Vali_Flow.NoSql.Translators;
 
@@ -18,6 +19,11 @@ namespace Vali_Flow.NoSql.MongoDB.Translators;
 /// </remarks>
 public static class MongoFilterTranslator
 {
+    // MongoDB has no documented hard limit on $in array size — the real constraint is the
+    // 16MB BSON document limit for the whole query. This is a conservative practical cap to
+    // prevent abuse/oversized queries, not an official MongoDB limit.
+    private const int MaxInValues = 10_000;
+
     /// <summary>
     /// Translates the given <see cref="IConditionNode"/> into a MongoDB <see cref="BsonDocument"/> filter.
     /// </summary>
@@ -37,11 +43,20 @@ public static class MongoFilterTranslator
     /// var users = await collection.Find(filter).ToListAsync();
     /// </code>
     /// </example>
-    public static BsonDocument Translate(IConditionNode node, Func<object?, BsonValue?>? customConverter = null)
+    public static BsonDocument Translate(IConditionNode node, Func<object?, BsonValue?>? customConverter = null, string? tag = null, string? entityType = null)
     {
         if (node == null) throw new ArgumentNullException(nameof(node));
 
-        return node.Accept(new MongoVisitor(customConverter));
+        using var activity = ValiFlowDiagnostics.StartActivity("Vali-Flow.NoSql.MongoDB.Translate", tag, entityType);
+        try
+        {
+            return node.Accept(new MongoVisitor(customConverter));
+        }
+        catch (Exception ex)
+        {
+            ValiFlowDiagnostics.RecordException(activity, ex);
+            throw;
+        }
     }
 
     private sealed class MongoVisitor(Func<object?, BsonValue?>? customConverter) : IConditionNodeVisitor<BsonDocument>
@@ -85,10 +100,18 @@ public static class MongoFilterTranslator
             new BsonDocument(node.Field, new BsonDocument("$regex",
                 new BsonRegularExpression(BuildRegexPattern(node.Pattern, node.Op), node.CaseSensitive ? "" : "i")));
 
-        public BsonDocument VisitIn(InNode node) =>
-            new BsonDocument(node.Field,
+        public BsonDocument VisitIn(InNode node)
+        {
+            if (node.Values.Count > MaxInValues)
+                throw new InvalidOperationException(
+                    $"MongoDB $in filter supports at most {MaxInValues} values (practical limit, " +
+                    $"bounded by the 16MB BSON document size); received {node.Values.Count}. " +
+                    "Split the query or batch the values.");
+
+            return new BsonDocument(node.Field,
                 new BsonDocument("$in",
                     new BsonArray(node.Values.Select(v => ToBsonValue(v)))));
+        }
 
         public BsonDocument VisitNull(NullNode node) =>
             node.Check == NullCheckOp.IsNull
