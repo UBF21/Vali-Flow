@@ -152,7 +152,7 @@ public interface IEvaluatorRead<T> : IQueryEvaluator<T> where T : class
     /// <param name="specification">The specification defining the filtering and inclusion criteria.</param>
     /// <param name="selector">The expression to select the property to evaluate.</param>
     /// <param name="cancellationToken">A token to cancel the asynchronous operation.</param>
-    /// <returns>A task that represents the asynchronous operation, returning the minimum value of the selected property.</returns>
+    /// <returns>A task that represents the asynchronous operation, returning the minimum value of the selected property, or <c>default(TResult)</c> if no entity matches the specification.</returns>
     Task<TResult> EvaluateMinAsync<TResult>(
         IBasicSpecification<T> specification,
         Expression<Func<T, TResult>> selector,
@@ -166,7 +166,7 @@ public interface IEvaluatorRead<T> : IQueryEvaluator<T> where T : class
     /// <param name="specification">The specification defining the filtering and inclusion criteria.</param>
     /// <param name="selector">The expression to select the property to evaluate.</param>
     /// <param name="cancellationToken">A token to cancel the asynchronous operation.</param>
-    /// <returns>A task that represents the asynchronous operation, returning the maximum value of the selected property.</returns>
+    /// <returns>A task that represents the asynchronous operation, returning the maximum value of the selected property, or <c>default(TResult)</c> if no entity matches the specification.</returns>
     Task<TResult> EvaluateMaxAsync<TResult>(
         IBasicSpecification<T> specification,
         Expression<Func<T, TResult>> selector,
@@ -654,6 +654,18 @@ public interface IEvaluatorRead<T> : IQueryEvaluator<T> where T : class
     /// <param name="cancellationToken">A token to cancel the asynchronous operation.</param>
     /// <returns>A task that represents the asynchronous operation, returning a <see cref="PagedResult{T}"/> with the items and pagination metadata.</returns>
     Task<PagedResult<T>> EvaluatePagedAsync(
+        IQuerySpecification<T> specification,
+        CancellationToken cancellationToken = default
+    );
+
+    /// <summary>
+    /// Alias for <see cref="EvaluatePagedAsync"/> — provided for API symmetry with
+    /// Vali-Flow.InMemory's <c>EvaluatePagedResult</c>.
+    /// </summary>
+    /// <param name="specification">The specification defining the filtering, ordering, and pagination criteria.</param>
+    /// <param name="cancellationToken">A token to cancel the asynchronous operation.</param>
+    /// <returns>A task that represents the asynchronous operation, returning a <see cref="PagedResult{T}"/> with the items and pagination metadata.</returns>
+    Task<PagedResult<T>> EvaluatePagedResultAsync(
         IQuerySpecification<T> specification,
         CancellationToken cancellationToken = default
     );
