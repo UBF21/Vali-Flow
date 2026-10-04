@@ -14,6 +14,8 @@ public static class ExpressionInspector
     /// </summary>
     public static bool IsColumnExpression(Expression expr)
     {
+        ArgumentNullException.ThrowIfNull(expr);
+
         while (expr is UnaryExpression { NodeType: ExpressionType.Convert or ExpressionType.ConvertChecked } u)
             expr = u.Operand;
 
@@ -25,20 +27,28 @@ public static class ExpressionInspector
     /// including null wrapped in <c>Convert</c> wrappers.
     /// </summary>
     public static bool IsNullConstant(Expression expr)
-        => expr is ConstantExpression { Value: null }
-           || (expr is UnaryExpression { NodeType: ExpressionType.Convert } u && IsNullConstant(u.Operand));
+    {
+        ArgumentNullException.ThrowIfNull(expr);
+
+        return expr is ConstantExpression { Value: null }
+               || (expr is UnaryExpression { NodeType: ExpressionType.Convert or ExpressionType.ConvertChecked } u
+                   && IsNullConstant(u.Operand));
+    }
 
     /// <summary>
     /// Evaluates a non-column expression (closure capture, constant, or computed value)
     /// to its runtime value.
     /// </summary>
     /// <returns>The evaluated value, or <c>null</c> for null literals.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="expr"/> is <c>null</c>.</exception>
     /// <exception cref="InvalidOperationException">
     /// Thrown when the expression cannot be evaluated to a constant value
     /// (e.g. it references a non-captured variable).
     /// </exception>
     public static object? EvaluateExpression(Expression expr)
     {
+        ArgumentNullException.ThrowIfNull(expr);
+
         if (expr is ConstantExpression constant)
             return constant.Value;
 
