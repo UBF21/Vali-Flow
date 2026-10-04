@@ -1,5 +1,7 @@
+using System.Diagnostics;
 using System.Linq.Expressions;
 using MongoDB.Bson;
+using Vali_Flow.Abstractions.Diagnostics;
 using Vali_Flow.Core.Builder;
 using Vali_Flow.NoSql.IR;
 using Vali_Flow.NoSql.MongoDB.Extensions;
@@ -10,6 +12,49 @@ namespace Vali_Flow.NoSql.Tests;
 
 public sealed class MongoFilterTranslatorTests
 {
+    private static ActivityListener AttachListener()
+    {
+        var listener = new ActivityListener
+        {
+            ShouldListenTo = source => source.Name == ValiFlowDiagnostics.SourceName,
+            Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllData
+        };
+        ActivitySource.AddActivityListener(listener);
+        return listener;
+    }
+
+    [Fact]
+    public void ToMongo_WithTag_SetsTagAndEntityTypeOnActivity()
+    {
+        using var listener = AttachListener();
+        Activity? captured = null;
+        listener.ActivityStopped = a => captured = a;
+
+        var flow = new ValiFlow<TestDocument>().EqualTo(x => x.Name, "Alice");
+
+        flow.ToMongo(tag: "report-x");
+
+        captured.Should().NotBeNull();
+        captured!.GetTagItem("vali_flow.tag").Should().Be("report-x");
+        captured.GetTagItem("vali_flow.entity_type").Should().Be(nameof(TestDocument));
+    }
+
+    [Fact]
+    public void Translate_UnsupportedComparisonOp_SetsErrorStatusOnActivity()
+    {
+        using var listener = AttachListener();
+        Activity? captured = null;
+        listener.ActivityStopped = a => captured = a;
+
+        var node = new ComparisonNode("Age", 18, (ComparisonOp)999);
+
+        Action act = () => MongoFilterTranslator.Translate(node);
+
+        act.Should().Throw<NotSupportedException>();
+        captured.Should().NotBeNull();
+        captured!.Status.Should().Be(ActivityStatusCode.Error);
+    }
+
     // ── Equality ──────────────────────────────────────────────────────────────
 
     [Fact]
@@ -253,6 +298,26 @@ public sealed class MongoFilterTranslatorTests
         act.Should().Throw<ArgumentNullException>();
     }
 
+    [Fact]
+    public void ToMongo_NullFlow_ThrowsArgumentNullException()
+    {
+        ValiFlow<TestDocument>? flow = null;
+
+        Action act = () => flow!.ToMongo();
+
+        act.Should().Throw<ArgumentNullException>();
+    }
+
+    [Fact]
+    public void ToMongo_NullExpression_ThrowsArgumentNullException()
+    {
+        Expression<Func<TestDocument, bool>>? expr = null;
+
+        Action act = () => expr!.ToMongo();
+
+        act.Should().Throw<ArgumentNullException>();
+    }
+
     // ── OCP — CustomValueConverter ────────────────────────────────────────────
 
     [Fact]
@@ -385,6 +450,30 @@ public sealed class MongoFilterTranslatorTests
         var arr = doc["Name"].AsBsonDocument["$in"].AsBsonArray;
         arr.Should().HaveCount(3);
         arr[1].Should().Be(BsonNull.Value);
+    }
+
+    // ── Límite práctico de $in ───────────────────────────────────────────────
+
+    [Fact]
+    public void ToMongo_ListWithMoreThan10000Items_ThrowsInvalidOperationException()
+    {
+        var ids = Enumerable.Range(1, 10_001).Cast<object?>().ToList();
+        var node = new InNode("Id", ids);
+
+        Action act = () => MongoFilterTranslator.Translate(node);
+
+        act.Should().Throw<InvalidOperationException>().WithMessage("*10000*");
+    }
+
+    [Fact]
+    public void ToMongo_ListWithExactly10000Items_DoesNotThrow()
+    {
+        var ids = Enumerable.Range(1, 10_000).Cast<object?>().ToList();
+        var node = new InNode("Id", ids);
+
+        Action act = () => MongoFilterTranslator.Translate(node);
+
+        act.Should().NotThrow();
     }
 
     // ── Lógica anidada ────────────────────────────────────────────────────────

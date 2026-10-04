@@ -119,6 +119,15 @@ internal sealed class ExpressionToIRVisitor : ExpressionVisitor
         string fieldName = GetMemberName(columnExpr);
         object? value    = EvaluateExpression(valueExpr);
 
+        // A captured variable/constant that evaluates to null (e.g. `x.Email == someNullVar`)
+        // carries the same semantics as a literal `== null` — route it to NullNode instead of
+        // letting EqualNode's null guard throw an unrelated ArgumentNullException.
+        if (value is null && effectiveType is ExpressionType.Equal or ExpressionType.NotEqual)
+        {
+            return new NullNode(fieldName,
+                effectiveType == ExpressionType.Equal ? NullCheckOp.IsNull : NullCheckOp.IsNotNull);
+        }
+
         return effectiveType switch
         {
             ExpressionType.Equal              => new EqualNode(fieldName, value!, false),
