@@ -1,5 +1,7 @@
+using System.Diagnostics;
 using System.Linq.Expressions;
 using Amazon.DynamoDBv2.Model;
+using Vali_Flow.Abstractions.Diagnostics;
 using Vali_Flow.Core.Builder;
 using Vali_Flow.NoSql.DynamoDB.Extensions;
 using Vali_Flow.NoSql.DynamoDB.Models;
@@ -11,6 +13,49 @@ namespace Vali_Flow.NoSql.DynamoDB.Tests;
 
 public sealed class DynamoFilterTranslatorTests
 {
+    private static ActivityListener AttachListener()
+    {
+        var listener = new ActivityListener
+        {
+            ShouldListenTo = source => source.Name == ValiFlowDiagnostics.SourceName,
+            Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllData
+        };
+        ActivitySource.AddActivityListener(listener);
+        return listener;
+    }
+
+    [Fact]
+    public void ToDynamoDB_WithTag_SetsTagAndEntityTypeOnActivity()
+    {
+        using var listener = AttachListener();
+        Activity? captured = null;
+        listener.ActivityStopped = a => captured = a;
+
+        var flow = new ValiFlow<TestDocument>().EqualTo(x => x.Name, "Alice");
+
+        flow.ToDynamoDB(tag: "report-x");
+
+        captured.Should().NotBeNull();
+        captured!.GetTagItem("vali_flow.tag").Should().Be("report-x");
+        captured.GetTagItem("vali_flow.entity_type").Should().Be(nameof(TestDocument));
+    }
+
+    [Fact]
+    public void Translate_EndsWith_SetsErrorStatusOnActivity()
+    {
+        using var listener = AttachListener();
+        Activity? captured = null;
+        listener.ActivityStopped = a => captured = a;
+
+        var node = new LikeNode("Name", "son", LikeOp.EndsWith);
+
+        Action act = () => DynamoFilterTranslator.Translate(node);
+
+        act.Should().Throw<NotSupportedException>();
+        captured.Should().NotBeNull();
+        captured!.Status.Should().Be(ActivityStatusCode.Error);
+    }
+
     // ── Equality ──────────────────────────────────────────────────────────────
 
     [Fact]
