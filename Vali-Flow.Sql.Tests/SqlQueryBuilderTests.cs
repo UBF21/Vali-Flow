@@ -1,5 +1,7 @@
+using System.Diagnostics;
 using System.Linq.Expressions;
 using FluentAssertions;
+using Vali_Flow.Abstractions.Diagnostics;
 using Vali_Flow.Sql.Builder;
 using Vali_Flow.Sql.Dialects;
 using Vali_Flow.Sql.Tests.Models;
@@ -23,6 +25,24 @@ public sealed class SqlQueryBuilderTests
         var result = Sql().From("Users").Build();
         result.Sql.Should().Be("SELECT * FROM [Users]");
         result.Parameters.Should().BeEmpty();
+    }
+
+    [Theory]
+    [InlineData("Users]; DROP TABLE Users;--")]
+    [InlineData("Users WHERE 1=1")]
+    public void From_UnsafeTableName_ThrowsArgumentException(string tableName)
+    {
+        var act = () => Sql().From(tableName);
+
+        act.Should().Throw<ArgumentException>().WithParameterName("tableName");
+    }
+
+    [Fact]
+    public void From_UnsafeSchema_ThrowsArgumentException()
+    {
+        var act = () => Sql().From("Users", "dbo]; DROP TABLE Users;--");
+
+        act.Should().Throw<ArgumentException>().WithParameterName("schema");
     }
 
     [Fact]
@@ -1414,6 +1434,14 @@ public sealed class SqlQueryBuilderTests
     }
 
     [Fact]
+    public void SelectCast_UnsafeTypeName_ThrowsArgumentException()
+    {
+        var act = () => Sql().From("Users").SelectCast(x => x.Age, "INT); DROP TABLE Users;--", "AgeInt");
+
+        act.Should().Throw<ArgumentException>().WithParameterName("typeName");
+    }
+
+    [Fact]
     public void SelectConcat_SqlServer_UsesPlus()
     {
         var result = Sql()
@@ -1786,5 +1814,59 @@ public sealed class SqlQueryBuilderTests
         var builder = Sql().From("Users");
         builder.Invoking(b => b.InnerJoinSubquery(subquery, "  ", "ON 1=1"))
             .Should().Throw<ArgumentException>();
+    }
+
+    // ── Observability ─────────────────────────────────────────────────────────
+
+    private static ActivityListener AttachListener()
+    {
+        var listener = new ActivityListener
+        {
+            ShouldListenTo = source => source.Name == ValiFlowDiagnostics.SourceName,
+            Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllData
+        };
+        ActivitySource.AddActivityListener(listener);
+        return listener;
+    }
+
+    [Fact]
+    public void Build_WithTag_RecordsActivityWithTagAndEntityType()
+    {
+        using var listener = AttachListener();
+        Activity? seen = null;
+        using var localListener = new ActivityListener
+        {
+            ShouldListenTo = source => source.Name == ValiFlowDiagnostics.SourceName,
+            Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllData,
+            ActivityStopped = activity => seen = activity
+        };
+        ActivitySource.AddActivityListener(localListener);
+
+        Sql().From("Users").Tag("Get active users").Build();
+
+        seen.Should().NotBeNull();
+        seen!.GetTagItem("vali_flow.tag").Should().Be("Get active users");
+        seen.GetTagItem("vali_flow.entity_type").Should().Be("TestUser");
+        seen.Status.Should().Be(ActivityStatusCode.Unset);
+    }
+
+    [Fact]
+    public void Build_WhenValidationThrows_RecordsErrorStatus()
+    {
+        Activity? seen = null;
+        using var listener = new ActivityListener
+        {
+            ShouldListenTo = source => source.Name == ValiFlowDiagnostics.SourceName,
+            Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllData,
+            ActivityStopped = activity => seen = activity
+        };
+        ActivitySource.AddActivityListener(listener);
+
+        // Skip without Take/OrderBy triggers the existing pagination validation guard in Build().
+        var act = () => Sql().From("Users").Skip(10).Build();
+
+        act.Should().Throw<InvalidOperationException>();
+        seen.Should().NotBeNull();
+        seen!.Status.Should().Be(ActivityStatusCode.Error);
     }
 }

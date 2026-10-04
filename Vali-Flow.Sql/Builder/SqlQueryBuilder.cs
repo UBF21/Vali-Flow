@@ -1,7 +1,9 @@
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Linq.Expressions;
 using System.Text;
 using System.Text.RegularExpressions;
+using Vali_Flow.Abstractions.Diagnostics;
 using Vali_Flow.Core.Builder;
 using Vali_Flow.Sql.Dialects;
 using Vali_Flow.Sql.Models;
@@ -200,8 +202,7 @@ public sealed class SqlQueryBuilder<T> where T : class
         Expression<Func<T, object>> column, string typeName, string alias)
     {
         if (column == null) throw new ArgumentNullException(nameof(column));
-        if (string.IsNullOrWhiteSpace(typeName))
-            throw new ArgumentException("typeName cannot be empty.", nameof(typeName));
+        typeName = SqlIdentifierGuard.EnsureValidTypeName(typeName, nameof(typeName));
         if (string.IsNullOrWhiteSpace(alias))
             throw new ArgumentException("alias cannot be empty.", nameof(alias));
         var col = _dialect.QuoteIdentifier(ExpressionHelper.GetMemberName(column));
@@ -296,10 +297,8 @@ public sealed class SqlQueryBuilder<T> where T : class
     /// </summary>
     public SqlQueryBuilder<T> From(string tableName, string? schema = null)
     {
-        if (string.IsNullOrWhiteSpace(tableName))
-            throw new ArgumentException("Table name cannot be null or empty.", nameof(tableName));
-        _tableName = tableName;
-        _schema = schema;
+        _tableName = SqlIdentifierGuard.EnsureValidIdentifier(tableName, nameof(tableName));
+        _schema = schema == null ? null : SqlIdentifierGuard.EnsureValidIdentifier(schema, nameof(schema));
         return this;
     }
 
@@ -974,7 +973,12 @@ public sealed class SqlQueryBuilder<T> where T : class
 
     // ── Preview ───────────────────────────────────────────────────────────────
 
-    /// <summary>Returns a preview of the SQL mid-chain (useful in debugger watch window).</summary>
+    /// <summary>
+    /// Returns a preview of the SQL mid-chain (useful in debugger watch window).
+    /// Intentionally swallows any exception — the builder state may be incomplete mid-chain
+    /// (e.g. no table set yet), and this method must never throw since it is meant to be
+    /// evaluated by the debugger on every step, not called from production code paths.
+    /// </summary>
     public string ToPreviewSql()
     {
         try { return BuildInternal().Sql; }
@@ -989,6 +993,23 @@ public sealed class SqlQueryBuilder<T> where T : class
     // ── Internal ──────────────────────────────────────────────────────────────
 
     private SqlQueryResult BuildInternal()
+    {
+        using var activity = ValiFlowDiagnostics.StartActivity(
+            "Vali-Flow.Sql.SqlQueryBuilder.Build", tag: _tag, entityType: typeof(T).Name);
+        try
+        {
+            SqlQueryResult result = AssembleQuery();
+            activity?.SetTag("vali_flow.has_where", _wherePredicate != null || _whereBuilder != null || _whereRaw.Count > 0);
+            return result;
+        }
+        catch (Exception ex)
+        {
+            ValiFlowDiagnostics.RecordException(activity, ex);
+            throw;
+        }
+    }
+
+    private SqlQueryResult AssembleQuery()
     {
         if (_tag != null)
         {
