@@ -10,7 +10,8 @@
 │  IR nodes: EqualNode, ComparisonNode, LikeNode,         │
 │            InNode, NullNode, AndNode, OrNode, NotNode   │
 └────────────────────────┬────────────────────────────────┘
-                         │ ProjectReference (all packages)
+                         │ PackageReference (NuGet — see CLAUDE.md for the
+                         │ current repo-state caveat on internal cross-refs)
           ┌──────────────┼──────────────────┐
           │              │                  │
           ▼              ▼                  ▼
@@ -76,6 +77,11 @@ Each adapter has a single responsibility: convert IR nodes to the query format e
 | `Vali-Flow.NoSql.Elasticsearch` | `Query` | `Elastic.Clients.Elasticsearch` |
 | `Vali-Flow.NoSql.DynamoDB` | `DynamoFilterExpression` | `AWSSDK.DynamoDBv2` |
 | `Vali-Flow.NoSql.Redis` | `string` (RediSearch DSL) | `NRedisStack` |
+| `Vali-Flow.NoSql.Couchbase` | `CouchbaseFilterExpression` (N1QL text + params) | none — text output, no SDK needed |
+| `Vali-Flow.NoSql.CosmosDb` | `CosmosFilterExpression` (SQL API text + params) | none — text output, no SDK needed |
+| `Vali-Flow.NoSql.Firestore` | `Filter` (native) | `Google.Cloud.Firestore` |
+
+> Mongo/Elasticsearch/DynamoDB/Firestore return a **native SDK object** because their query language *is* an object graph. Sql/Couchbase/CosmosDb return **parameterized text** because their query language *is* text — the consumer applies it with their own client. See "Translator design pattern" in the root `CLAUDE.md` before adding a new provider.
 
 ---
 
@@ -134,13 +140,22 @@ Vali-Flow.sln
 ├── Vali-Flow.NoSql.DynamoDB/   DynamoDB adapter
 ├── Vali-Flow.NoSql.Elasticsearch/ Elasticsearch adapter
 ├── Vali-Flow.NoSql.Redis/      Redis/RediSearch adapter
+├── Vali-Flow.NoSql.Couchbase/  Couchbase (N1QL) adapter
+├── Vali-Flow.NoSql.CosmosDb/   Azure Cosmos DB (SQL API) adapter
+├── Vali-Flow.NoSql.Firestore/  Google Cloud Firestore adapter
 ├── Vali-Flow.Abstractions/     Shared interfaces
-├── Vali-Flow.Benchmarks/       BenchmarkDotNet benchmarks
+├── Vali-Flow.Benchmarks/       BenchmarkDotNet benchmarks (InMemory, Sql, EF Core)
 ├── Vali-Flow.Tests/            EF Core evaluator tests
 ├── Vali-Flow.InMemory.Tests/   InMemory evaluator tests
 ├── Vali-Flow.Sql.Tests/        SQL translator tests
-├── Vali-Flow.NoSql.Tests/      NoSQL base tests
-└── Vali-Flow.NoSql.DynamoDB.Tests/  DynamoDB tests
+├── Vali-Flow.NoSql.Tests/      NoSQL base + MongoDB tests
+├── Vali-Flow.NoSql.DynamoDB.Tests/
+├── Vali-Flow.NoSql.Elasticsearch.Tests/
+├── Vali-Flow.NoSql.Redis.Tests/
+├── Vali-Flow.NoSql.Couchbase.Tests/
+├── Vali-Flow.NoSql.CosmosDb.Tests/
+├── Vali-Flow.NoSql.Firestore.Tests/
+└── Vali-Flow.Abstractions.Tests/
 ```
 
 All packages target `net8.0` and `net9.0`.

@@ -1,6 +1,6 @@
 # Vali-Flow Benchmarks
 
-The `Vali-Flow.Benchmarks` project measures the performance of the InMemory evaluator and the SQL builder using [BenchmarkDotNet](https://benchmarkdotnet.org/).
+The `Vali-Flow.Benchmarks` project measures the performance of the InMemory evaluator, the SQL builder, and the EF Core evaluator using [BenchmarkDotNet](https://benchmarkdotnet.org/).
 
 ---
 
@@ -20,6 +20,7 @@ To run a specific benchmark class:
 ```bash
 dotnet run --configuration Release -- --filter "*InMemoryFilter*"
 dotnet run --configuration Release -- --filter "*SqlBuilder*"
+dotnet run --configuration Release -- --filter "*EfCore*"
 ```
 
 ---
@@ -44,6 +45,14 @@ All InMemory benchmarks parameterize over `N ∈ { 1 000, 10 000, 100 000 }` to 
 | Class | What it measures |
 |-------|-----------------|
 | `SqlBuilderBenchmarks` | `SqlQueryBuilder` SELECT with JOINs, INSERT, UPDATE — construction cost only (no DB round-trip) |
+
+### EF Core evaluator
+
+Uses the EF Core **InMemory provider** (`Microsoft.EntityFrameworkCore.InMemory`) — this measures the overhead of `ValiFlowEvaluator<T>` / `QuerySpecificationBuilder<T>` (query construction + LINQ translation), not real database I/O. Parameterized over `N ∈ { 1 000, 10 000, 100 000 }`.
+
+| Class | What it measures |
+|-------|-----------------|
+| `EfCoreBenchmarks` | `EvaluateQueryAsync` filter (baseline: raw LINQ `.Where()` on the same `DbContext`), `EvaluatePagedAsync`, `EvaluateCountAsync` |
 
 ---
 
@@ -76,8 +85,8 @@ BenchmarkDotNet reports:
 
 ## Known limitations
 
-- **No NoSQL benchmarks** — `Vali-Flow.NoSql.*` translators are not benchmarked. Translation is CPU-only (no I/O) and the trees are small, so overhead is expected to be sub-microsecond.
-- **No EF Core benchmarks** — EF Core performance is dominated by the database round-trip, not the Vali-Flow layer. Profiling should be done with actual query plans, not microbenchmarks.
+- **No NoSQL benchmarks** — `Vali-Flow.NoSql.*` translators (7 providers) are not benchmarked. Translation is CPU-only (no I/O) and the trees are small, so overhead is expected to be sub-microsecond.
+- **EF Core benchmarks measure construction, not real I/O** — `EfCoreBenchmarks` uses the InMemory EF Core provider, so it isolates `ValiFlowEvaluator<T>`/`QuerySpecificationBuilder<T>` overhead. Real database performance is dominated by the round-trip and query plan, not this layer — profile actual query plans against a real provider for that.
 
 ---
 
