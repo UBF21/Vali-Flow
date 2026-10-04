@@ -63,12 +63,18 @@ internal class InMemoryWriteStore<T, TProperty> where T : class where TProperty 
                 dataSource.FirstOrDefault(e => EqualityComparer<TProperty>.Default.Equals(_getId(e), _getId(entity)));
             if (existing != null)
             {
-                _updatedEntities.Add(entity);
                 if (entities is List<T> list)
                 {
+                    // Explicit external list: apply immediately, never queue — queuing here would
+                    // leak this update into the internal store (or another list) on a later bare
+                    // SaveChanges()/SaveChanges(otherList) call that has nothing to do with this one.
                     var index = list.FindIndex(e =>
                         EqualityComparer<TProperty>.Default.Equals(_getId(e), _getId(entity)));
                     if (index >= 0) list[index] = entity;
+                }
+                else
+                {
+                    _updatedEntities.Add(entity);
                 }
 
                 return entity;

@@ -27,7 +27,8 @@ public interface IInMemoryQueryable<T> where T : class
         bool ascending = true,
         IEnumerable<InMemoryThenBy<T, TKey>>? thenBys = null,
         ValiFlow<T>? valiFlow = null,
-        bool negateCondition = false
+        bool negateCondition = false,
+        string? tag = null
     );
 
     /// <summary>
@@ -45,7 +46,8 @@ public interface IInMemoryQueryable<T> where T : class
         Func<T, TKey>? orderBy = null,
         bool ascending = true,
         IEnumerable<InMemoryThenBy<T, TKey>>? thenBys = null,
-        ValiFlow<T>? valiFlow = null
+        ValiFlow<T>? valiFlow = null,
+        string? tag = null
     );
 
     /// <summary>
@@ -69,7 +71,8 @@ public interface IInMemoryQueryable<T> where T : class
         bool ascending = true,
         IEnumerable<InMemoryThenBy<T, TKey>>? thenBys = null,
         ValiFlow<T>? valiFlow = null,
-        bool negateCondition = false
+        bool negateCondition = false,
+        string? tag = null
     );
 
     /// <summary>
@@ -93,7 +96,8 @@ public interface IInMemoryQueryable<T> where T : class
         bool ascending = true,
         IEnumerable<InMemoryThenBy<T, TKey>>? thenBys = null,
         ValiFlow<T>? valiFlow = null,
-        bool negateCondition = false
+        bool negateCondition = false,
+        string? tag = null
     );
 
     /// <summary>
@@ -115,7 +119,8 @@ public interface IInMemoryQueryable<T> where T : class
         bool ascending = true,
         IEnumerable<InMemoryThenBy<T, TKey>>? thenBys = null,
         ValiFlow<T>? valiFlow = null,
-        bool negateCondition = false
+        bool negateCondition = false,
+        string? tag = null
     );
 
     /// <summary>
@@ -137,7 +142,8 @@ public interface IInMemoryQueryable<T> where T : class
         bool ascending = true,
         IEnumerable<InMemoryThenBy<T, TKey>>? thenBys = null,
         ValiFlow<T>? valiFlow = null,
-        bool negateCondition = false
+        bool negateCondition = false,
+        string? tag = null
     );
 
     /// <summary>
@@ -159,7 +165,8 @@ public interface IInMemoryQueryable<T> where T : class
         bool ascending = true,
         IEnumerable<InMemoryThenBy<T, TKey>>? thenBys = null,
         ValiFlow<T>? valiFlow = null,
-        bool negateCondition = false
+        bool negateCondition = false,
+        string? tag = null
     );
 
     /// <summary>
@@ -179,7 +186,8 @@ public interface IInMemoryQueryable<T> where T : class
         bool ascending = true,
         IEnumerable<InMemoryThenBy<T, TKey>>? thenBys = null,
         ValiFlow<T>? valiFlow = null,
-        bool negateCondition = false
+        bool negateCondition = false,
+        string? tag = null
     );
 
     /// <summary>
@@ -199,7 +207,8 @@ public interface IInMemoryQueryable<T> where T : class
         bool ascending = true,
         IEnumerable<InMemoryThenBy<T, TKey>>? thenBys = null,
         ValiFlow<T>? valiFlow = null,
-        bool negateCondition = false
+        bool negateCondition = false,
+        string? tag = null
     );
 
     /// <summary>
@@ -219,7 +228,8 @@ public interface IInMemoryQueryable<T> where T : class
         bool ascending = true,
         IEnumerable<InMemoryThenBy<T, TKey>>? thenBys = null,
         ValiFlow<T>? valiFlow = null,
-        bool negateCondition = false
+        bool negateCondition = false,
+        string? tag = null
     );
 
     /// <summary>
@@ -237,6 +247,7 @@ public interface IInMemoryQueryable<T> where T : class
         Func<T, TKey>? orderBy = null,
         bool ascending = true,
         IEnumerable<InMemoryThenBy<T, TKey>>? thenBys = null,
-        ValiFlow<T>? valiFlow = null
+        ValiFlow<T>? valiFlow = null,
+        string? tag = null
     );
 }
