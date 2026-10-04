@@ -1,4 +1,6 @@
+using System.Diagnostics;
 using System.Linq.Expressions;
+using Vali_Flow.Abstractions.Diagnostics;
 using Vali_Flow.Sql.Dialects;
 using Vali_Flow.Sql.Models;
 
@@ -19,6 +21,7 @@ public sealed class SqlMergeBuilder<TTarget, TSource>
     private readonly List<(string TargetCol, string SourceExpr)> _matchedUpdateClauses = new();
     private readonly List<(string TargetCol, string SourceExpr)> _notMatchedInsertClauses = new();
     private bool _whenNotMatchedBySourceDelete;
+    private bool _allowDeleteUnmatched;
     private string? _tag;
     private readonly Dictionary<string, object> _parameters = new();
     private int _paramIndex;
@@ -32,16 +35,16 @@ public sealed class SqlMergeBuilder<TTarget, TSource>
     /// <summary>Sets the target table for the MERGE.</summary>
     public SqlMergeBuilder<TTarget, TSource> Into(string tableName, string? schema = null)
     {
-        _targetTable = tableName ?? throw new ArgumentNullException(nameof(tableName));
-        _targetSchema = schema;
+        _targetTable = SqlIdentifierGuard.EnsureValidIdentifier(tableName, nameof(tableName));
+        _targetSchema = schema == null ? null : SqlIdentifierGuard.EnsureValidIdentifier(schema, nameof(schema));
         return this;
     }
 
     /// <summary>Sets the source table name and alias used in the USING clause.</summary>
     public SqlMergeBuilder<TTarget, TSource> Using(string sourceTable, string alias = "src")
     {
-        _sourceTable = sourceTable ?? throw new ArgumentNullException(nameof(sourceTable));
-        _sourceAlias = alias;
+        _sourceTable = SqlIdentifierGuard.EnsureValidIdentifier(sourceTable, nameof(sourceTable));
+        _sourceAlias = SqlIdentifierGuard.EnsureValidIdentifier(alias, nameof(alias));
         return this;
     }
 
@@ -151,6 +154,20 @@ public sealed class SqlMergeBuilder<TTarget, TSource>
         return this;
     }
 
+    // ── Safety guard ──────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Explicitly allows WHEN NOT MATCHED BY SOURCE THEN DELETE to be generated.
+    /// Without this, Build() throws — that clause deletes every target row that has no
+    /// matching source row, which can wipe an entire table if the source is empty,
+    /// filtered, or mismatched. Call this only when deleting unmatched rows is intentional.
+    /// </summary>
+    public SqlMergeBuilder<TTarget, TSource> AllowDeleteUnmatched()
+    {
+        _allowDeleteUnmatched = true;
+        return this;
+    }
+
     // ── Tag ────────────────────────────────────────────────────────────────────
 
     /// <summary>Adds a SQL comment header and console tag for traceability.</summary>
@@ -166,6 +183,23 @@ public sealed class SqlMergeBuilder<TTarget, TSource>
 
     /// <summary>Builds and returns the parameterized MERGE statement.</summary>
     public SqlQueryResult Build()
+    {
+        using var activity = ValiFlowDiagnostics.StartActivity(
+            "Vali-Flow.Sql.SqlMergeBuilder.Build", tag: _tag, entityType: typeof(TTarget).Name);
+        try
+        {
+            SqlQueryResult result = BuildCore();
+            activity?.SetTag("vali_flow.has_delete_unmatched", _whenNotMatchedBySourceDelete);
+            return result;
+        }
+        catch (Exception ex)
+        {
+            ValiFlowDiagnostics.RecordException(activity, ex);
+            throw;
+        }
+    }
+
+    private SqlQueryResult BuildCore()
     {
         if (!_dialect.SupportsMerge)
             throw new InvalidOperationException(
@@ -184,6 +218,12 @@ public sealed class SqlMergeBuilder<TTarget, TSource>
         if (_matchedUpdateClauses.Count == 0 && _notMatchedInsertClauses.Count == 0 && !_whenNotMatchedBySourceDelete)
             throw new InvalidOperationException(
                 "At least one of WhenMatchedUpdate(), WhenNotMatchedInsert(), or WhenNotMatchedBySourceDelete() must be called.");
+
+        if (_whenNotMatchedBySourceDelete && !_allowDeleteUnmatched)
+            throw new InvalidOperationException(
+                "WhenNotMatchedBySourceDelete() deletes every target row with no matching source row. " +
+                "This can wipe the entire table if the source is empty, filtered, or mismatched. " +
+                "Call AllowDeleteUnmatched() to explicitly confirm this is intentional.");
 
         var parameters = new Dictionary<string, object>(_parameters);
         var sb = new System.Text.StringBuilder();

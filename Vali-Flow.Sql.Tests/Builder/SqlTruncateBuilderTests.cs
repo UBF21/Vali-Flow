@@ -1,4 +1,6 @@
+using System.Diagnostics;
 using FluentAssertions;
+using Vali_Flow.Abstractions.Diagnostics;
 using Vali_Flow.Sql.Builder;
 using Vali_Flow.Sql.Dialects;
 using Vali_Flow.Sql.Tests.Models;
@@ -23,6 +25,14 @@ public sealed class SqlTruncateBuilderTests
             .Build();
 
         result.Sql.Should().Be("TRUNCATE TABLE [Users]");
+    }
+
+    [Fact]
+    public void Table_UnsafeTableName_ThrowsArgumentException()
+    {
+        var act = () => new SqlTruncateBuilder<TestUser>(Sql).Table("Users]; DROP TABLE Users;--");
+
+        act.Should().Throw<ArgumentException>().WithParameterName("tableName");
     }
 
     [Fact]
@@ -118,5 +128,50 @@ public sealed class SqlTruncateBuilderTests
     {
         var act = () => new SqlTruncateBuilder<TestUser>(null!);
         act.Should().Throw<ArgumentNullException>();
+    }
+
+    // ── Observability ─────────────────────────────────────────────────────────
+
+    [Fact]
+    public void Build_WithTag_RecordsActivityWithTagAndEntityType()
+    {
+        Activity? seen = null;
+        using var listener = new ActivityListener
+        {
+            ShouldListenTo = source => source.Name == ValiFlowDiagnostics.SourceName,
+            Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllData,
+            ActivityStopped = activity => seen = activity
+        };
+        ActivitySource.AddActivityListener(listener);
+
+        new SqlTruncateBuilder<TestUser>(Sql)
+            .Table("Users")
+            .Tag("Truncate users")
+            .Build();
+
+        seen.Should().NotBeNull();
+        seen!.GetTagItem("vali_flow.tag").Should().Be("Truncate users");
+        seen.GetTagItem("vali_flow.entity_type").Should().Be("TestUser");
+        seen.Status.Should().Be(ActivityStatusCode.Unset);
+    }
+
+    [Fact]
+    public void Build_UnsupportedDialect_RecordsErrorStatus()
+    {
+        Activity? seen = null;
+        using var listener = new ActivityListener
+        {
+            ShouldListenTo = source => source.Name == ValiFlowDiagnostics.SourceName,
+            Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllData,
+            ActivityStopped = activity => seen = activity
+        };
+        ActivitySource.AddActivityListener(listener);
+
+        // SQLite does not support TRUNCATE TABLE, triggering the existing guard in Build().
+        var act = () => new SqlTruncateBuilder<TestUser>(Sqlite).Table("Users").Build();
+
+        act.Should().Throw<InvalidOperationException>();
+        seen.Should().NotBeNull();
+        seen!.Status.Should().Be(ActivityStatusCode.Error);
     }
 }
