@@ -1,5 +1,4 @@
 using BenchmarkDotNet.Attributes;
-using BenchmarkDotNet.Engines;
 using Vali_Flow.Benchmarks.Models;
 using Vali_Flow.Core.Builder;
 using Vali_Flow.InMemory.Classes.Evaluators;
@@ -16,8 +15,7 @@ public class InMemoryAggregateBenchmarks
     [Params(1_000, 10_000, 100_000)]
     public int N;
 
-    private List<BenchmarkOrder> _data     = null!;
-    private readonly Consumer    _consumer = new();
+    private List<BenchmarkOrder> _data = null!;
 
     private ValiFlowEvaluator<BenchmarkOrder, int> _evalIsActive = null!;
 
