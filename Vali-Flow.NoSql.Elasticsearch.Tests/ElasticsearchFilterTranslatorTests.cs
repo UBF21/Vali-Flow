@@ -1,6 +1,8 @@
+using System.Diagnostics;
 using System.Linq.Expressions;
 using Elastic.Clients.Elasticsearch;
 using Elastic.Clients.Elasticsearch.QueryDsl;
+using Vali_Flow.Abstractions.Diagnostics;
 using Vali_Flow.Core.Builder;
 using Vali_Flow.NoSql.Elasticsearch.Extensions;
 using Vali_Flow.NoSql.Elasticsearch.Translators;
@@ -11,6 +13,49 @@ namespace Vali_Flow.NoSql.Elasticsearch.Tests;
 
 public sealed class ElasticsearchFilterTranslatorTests
 {
+    private static ActivityListener AttachListener()
+    {
+        var listener = new ActivityListener
+        {
+            ShouldListenTo = source => source.Name == ValiFlowDiagnostics.SourceName,
+            Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllData
+        };
+        ActivitySource.AddActivityListener(listener);
+        return listener;
+    }
+
+    [Fact]
+    public void ToElasticsearch_WithTag_SetsTagAndEntityTypeOnActivity()
+    {
+        using var listener = AttachListener();
+        Activity? captured = null;
+        listener.ActivityStopped = a => captured = a;
+
+        var flow = new ValiFlow<TestDocument>().EqualTo(x => x.Name, "Alice");
+
+        flow.ToElasticsearch(tag: "report-x");
+
+        captured.Should().NotBeNull();
+        captured!.GetTagItem("vali_flow.tag").Should().Be("report-x");
+        captured.GetTagItem("vali_flow.entity_type").Should().Be(nameof(TestDocument));
+    }
+
+    [Fact]
+    public void Translate_UnsupportedComparisonOp_SetsErrorStatusOnActivity()
+    {
+        using var listener = AttachListener();
+        Activity? captured = null;
+        listener.ActivityStopped = a => captured = a;
+
+        var node = new ComparisonNode("Age", 18, (ComparisonOp)999);
+
+        Action act = () => ElasticsearchFilterTranslator.Translate(node);
+
+        act.Should().Throw<NotSupportedException>();
+        captured.Should().NotBeNull();
+        captured!.Status.Should().Be(ActivityStatusCode.Error);
+    }
+
     // ── Equality ──────────────────────────────────────────────────────────────
 
     [Fact]
@@ -313,6 +358,19 @@ public sealed class ElasticsearchFilterTranslatorTests
         bool_!.Must.Should().HaveCount(2);
     }
 
+    // ── Error handling ───────────────────────────────────────────────────────
+
+    [Fact]
+    public void Translate_ComparisonWithNonConvertibleValue_PreservesInnerException()
+    {
+        var node = new ComparisonNode("Age", "not-a-number", ComparisonOp.GreaterThan);
+
+        Action act = () => ElasticsearchFilterTranslator.Translate(node);
+
+        act.Should().Throw<NotSupportedException>()
+            .WithInnerException<FormatException>();
+    }
+
     // ── Null guards ───────────────────────────────────────────────────────────
 
     [Fact]
@@ -536,6 +594,30 @@ public sealed class ElasticsearchFilterTranslatorTests
         terms.Should().NotBeNull();
         terms!.Field.ToString().Should().Be("Id");
         terms.Term.Should().NotBeNull();
+    }
+
+    // ── Límite práctico de terms query (index.max_terms_count) ──────────────────
+
+    [Fact]
+    public void ToElasticsearch_ListWithMoreThan65536Items_ThrowsInvalidOperationException()
+    {
+        var ids = Enumerable.Range(1, 65_537).Cast<object?>().ToList();
+        var node = new InNode("Id", ids);
+
+        Action act = () => ElasticsearchFilterTranslator.Translate(node);
+
+        act.Should().Throw<InvalidOperationException>().WithMessage("*65536*");
+    }
+
+    [Fact]
+    public void ToElasticsearch_ListWithExactly65536Items_DoesNotThrow()
+    {
+        var ids = Enumerable.Range(1, 65_536).Cast<object?>().ToList();
+        var node = new InNode("Id", ids);
+
+        Action act = () => ElasticsearchFilterTranslator.Translate(node);
+
+        act.Should().NotThrow();
     }
 
     // ── Decimal range ─────────────────────────────────────────────────────────
