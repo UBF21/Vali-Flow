@@ -213,6 +213,29 @@ public sealed class ValiFlowEfWriteTests
         rows[0].Total.Should().Be(222m);
     }
 
+    [Fact]
+    public async Task UpsertRangeAsync_IncomingEntityHasDifferentIdThanExistingRow_UpdatesInPlaceWithoutThrowing()
+    {
+        // Regression test: callers upserting by a business key (CustomerName here) normally build a
+        // fresh entity per request and have no reason to know -- or preserve -- the existing row's PK.
+        // Before the PartitionUpsertRange fix, EF's CurrentValues.SetValues(entity) tried to overwrite
+        // the tracked entity's Id with the incoming (unrelated, freshly-generated) Id and threw
+        // InvalidOperationException ("... is part of a key and so cannot be modified"), found while
+        // stress-testing UpsertRangeAsync with realistic upsert payloads (Vali-Flow EF Core stress run).
+        await using var ctx = await CreateSeededContextAsync();
+        var ev = new ValiFlowEvaluator<TestOrder>(ctx);
+
+        var incoming = new TestOrder { Id = 999, CustomerName = "Alice", Total = 999m, IsShipped = true, CreatedAt = DateTime.UtcNow };
+
+        var act = async () => await ev.UpsertRangeAsync(new[] { incoming }, o => o.CustomerName);
+        await act.Should().NotThrowAsync();
+
+        var rows = await ctx.Orders.AsNoTracking().Where(o => o.CustomerName == "Alice").ToListAsync();
+        rows.Should().HaveCount(1);
+        rows[0].Id.Should().Be(1); // existing PK preserved, not overwritten by the incoming Id=999
+        rows[0].Total.Should().Be(999m); // non-key fields still applied
+    }
+
     // ── SaveChangesAsync — deferred ───────────────────────────────────────────
 
     [Fact]
