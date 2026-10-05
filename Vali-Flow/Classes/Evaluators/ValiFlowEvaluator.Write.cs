@@ -385,7 +385,27 @@ public partial class ValiFlowEvaluator<T>
             TProperty key = keySelectorFn(entity);
             if (existingEntityDict.TryGetValue(key, out var existingEntity))
             {
-                _dbContext.Entry(existingEntity).CurrentValues.SetValues(entity);
+                var entry = _dbContext.Entry(existingEntity);
+
+                // CurrentValues.SetValues(entity) copies every scalar property by name, including the
+                // primary key. When the caller's incoming entity carries its own (new) Id -- the normal
+                // case when upserting by a business key like a Sku rather than by the PK -- EF throws
+                // "The property '...' is part of a key and so cannot be modified" instead of updating in
+                // place. Align the incoming entity's PK value(s) with the tracked entity's PK first, so
+                // SetValues sees no change on the key and only applies the real (non-key) updates.
+                var primaryKey = entry.Metadata.FindPrimaryKey();
+                if (primaryKey != null)
+                {
+                    foreach (var keyProperty in primaryKey.Properties)
+                    {
+                        var propertyInfo = keyProperty.PropertyInfo;
+                        if (propertyInfo == null) continue;
+                        var existingKeyValue = propertyInfo.GetValue(existingEntity);
+                        propertyInfo.SetValue(entity, existingKeyValue);
+                    }
+                }
+
+                entry.CurrentValues.SetValues(entity);
             }
             else
             {
