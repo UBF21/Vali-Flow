@@ -483,5 +483,36 @@ public sealed class ValiFlowEfBulkTests
         (await ctx.Orders.CountAsync()).Should().Be(10);
     }
 
+    [Fact]
+    public async Task BulkInsertOrUpdateAsync_ConcurrentCallsSameEntityType_SerializedWithoutExceptions()
+    {
+        // Regression test for the in-process gate added around BulkInsertOrUpdateAsync (see
+        // ValiFlowEvaluator.Write.cs, GetBulkUpsertGate/RunGatedBulkInsertOrUpdateAsync). Found against
+        // a real Postgres instance via the Vali-Flow stress-test harness: EFCore.BulkExtensions'
+        // PostgreSQL adapter upserts through a deterministic temp unique index name
+        // (tempUniqueIndex_{schema}_{table}_{column}); concurrent calls targeting the same table/key
+        // race on create/drop of that shared index and fail with
+        // "42704: index tempUniqueIndex_... does not exist". SQLite doesn't share that adapter
+        // internals, so this test can't reproduce the exact exception, but it does verify the new
+        // gate doesn't corrupt results or deadlock under real concurrent callers.
+        await using var sqlCtx = SqliteTestContext.Create();
+        var ctx = sqlCtx.Context;
+        var evaluator = new ValiFlowEvaluator<TestOrder>(ctx);
+
+        // No explicit BulkConfig.UpdateByProperties -- falls back to the PK, same gate key ("__pk__")
+        // for every call, which is exactly the shared-key scenario the gate serializes.
+        const int concurrentCallers = 8;
+        var tasks = Enumerable.Range(0, concurrentCallers).Select(i => evaluator.BulkInsertOrUpdateAsync(
+            new List<TestOrder>
+            {
+                new() { Id = 1000 + i, CustomerName = $"Concurrent{i}", Total = i, IsShipped = false, CreatedAt = DateTime.UtcNow }
+            }));
+
+        Func<Task> act = async () => await Task.WhenAll(tasks);
+        await act.Should().NotThrowAsync();
+
+        (await ctx.Orders.CountAsync(o => o.CustomerName!.StartsWith("Concurrent"))).Should().Be(concurrentCallers);
+    }
+
     private static void ctx_seed(TestDbContext ctx) => ctx.Orders.AddRange(SeedOrders());
 }
