@@ -701,6 +701,52 @@ public partial class ValiFlowEvaluator<T>
     }
 
     /// <summary>
+    /// Per-(entity type, UpdateByProperties) in-process gate for <see cref="BulkInsertOrUpdateAsync"/>.
+    /// <c>EFCore.BulkExtensions</c>' PostgreSQL adapter implements the upsert via a temporary unique
+    /// index whose name is deterministic (<c>tempUniqueIndex_{schema}_{table}_{column}</c>), created
+    /// then dropped around the merge. Two concurrent calls against the same table/key columns race on
+    /// that shared temp index (one drops it mid-merge of the other), surfacing as
+    /// <c>42704: index "tempUniqueIndex_..." does not exist</c> — reproduced with as few as 8 parallel
+    /// single-row requests in the same process. Serializing same-key calls in-process avoids the race.
+    /// This does NOT cover cross-process concurrency (multiple API instances) — that collision still
+    /// exists at the database level and needs a Postgres advisory lock or equivalent if it matters.
+    /// </summary>
+    private const int BulkUpsertGatePermits = 1;
+    private const string BulkUpsertGatePrimaryKeyToken = "__pk__";
+
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, SemaphoreSlim> BulkUpsertGates = new();
+
+    private static SemaphoreSlim GetBulkUpsertGate(BulkConfig? bulkConfig)
+    {
+        var keyColumns = bulkConfig?.UpdateByProperties is { Count: > 0 } props
+            ? string.Join(",", props)
+            : BulkUpsertGatePrimaryKeyToken;
+        var key = $"{typeof(T).FullName}:{keyColumns}";
+        return BulkUpsertGates.GetOrAdd(key, static _ => new SemaphoreSlim(BulkUpsertGatePermits, BulkUpsertGatePermits));
+    }
+
+    private async Task RunGatedBulkInsertOrUpdateAsync(
+        List<T> entityList, BulkConfig? bulkConfig, CancellationToken cancellationToken)
+    {
+        var gate = GetBulkUpsertGate(bulkConfig);
+        await gate.WaitAsync(cancellationToken);
+        try
+        {
+            await ExecuteWithExceptionHandlingAsync(
+                async () =>
+                {
+                    await _dbContext.BulkInsertOrUpdateAsync(entityList, bulkConfig, cancellationToken: cancellationToken);
+                    return 0;
+                },
+                nameof(BulkInsertOrUpdateAsync));
+        }
+        finally
+        {
+            gate.Release();
+        }
+    }
+
+    /// <summary>
     /// Inserts or updates a large collection of entities in bulk using <c>EFCore.BulkExtensions</c>.
     /// Each entity is inserted if it does not exist, or updated if it does, based on the configured primary key or <see cref="BulkConfig"/> properties.
     /// </summary>
@@ -726,13 +772,7 @@ public partial class ValiFlowEvaluator<T>
 
             activity?.SetTag("vali_flow.entity_count", entityList.Count);
 
-            await ExecuteWithExceptionHandlingAsync(
-                async () =>
-                {
-                    await _dbContext.BulkInsertOrUpdateAsync(entityList, bulkConfig, cancellationToken: cancellationToken);
-                    return 0;
-                },
-                nameof(BulkInsertOrUpdateAsync));
+            await RunGatedBulkInsertOrUpdateAsync(entityList, bulkConfig, cancellationToken);
         }
         catch (Exception ex)
         {
