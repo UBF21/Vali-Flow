@@ -38,6 +38,15 @@ jobs:
             8.0.x
             9.0.x
 
+      - name: Prime local feed with in-repo packages not yet published
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p local-feed
+          dotnet nuget add source "$(pwd)/local-feed" --name local-feed
+          dotnet pack Vali-Flow.Abstractions/Vali-Flow.Abstractions.csproj -c Release -o local-feed
+          dotnet pack Vali-Flow.NoSql/Vali-Flow.NoSql.csproj -c Release -o local-feed
+
       - name: Restore
         run: dotnet restore vali-flow.sln
 
@@ -70,6 +79,15 @@ jobs:
             uname -a || true
             dotnet --info
           } 2>&1 | tee logs/00-environment.log
+
+      - name: Prime local feed with in-repo packages not yet published
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p local-feed
+          dotnet nuget add source "$(pwd)/local-feed" --name local-feed
+          dotnet pack Vali-Flow.Abstractions/Vali-Flow.Abstractions.csproj -c Release -o local-feed 2>&1 | tee logs/00b-prime-feed-abstractions.log
+          dotnet pack Vali-Flow.NoSql/Vali-Flow.NoSql.csproj -c Release -o local-feed 2>&1 | tee logs/00c-prime-feed-nosql.log
 
       - name: Restore
         shell: bash
@@ -297,8 +315,17 @@ jobs:
           </Project>
           XML
 
+      - name: Add local artifacts folder as a NuGet source
+        run: |
+          mkdir -p artifacts
+          dotnet nuget add source "$(pwd)/artifacts" --name local-artifacts
+
       - name: Pack every package in dependency order
         run: |
+          # artifacts/ is registered as a NuGet source above, and this loop packs leaf packages
+          # (Abstractions, then NoSql) before anything that references them, so each subsequent
+          # pack's restore resolves the in-repo version from the folder instead of requiring it to
+          # already be published on NuGet.org.
           for project in Vali-Flow.Abstractions Vali-Flow Vali-Flow.InMemory Vali-Flow.Sql Vali-Flow.NoSql Vali-Flow.NoSql.MongoDB Vali-Flow.NoSql.Elasticsearch Vali-Flow.NoSql.Redis Vali-Flow.NoSql.DynamoDB Vali-Flow.NoSql.Couchbase Vali-Flow.NoSql.CosmosDb Vali-Flow.NoSql.Firestore; do
             dotnet pack "$project/$project.csproj" -c Release -o artifacts ${VERSION_SUFFIX:+-p:PrereleaseLabel="$VERSION_SUFFIX"}
           done
