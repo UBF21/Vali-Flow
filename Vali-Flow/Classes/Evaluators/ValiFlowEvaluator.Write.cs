@@ -644,13 +644,9 @@ public partial class ValiFlowEvaluator<T>
 
             activity?.SetTag("vali_flow.entity_count", entityList.Count);
 
-            await ExecuteWithExceptionHandlingAsync(
-                async () =>
-                {
-                    await _dbContext.BulkUpdateAsync(entityList, bulkConfig, cancellationToken: cancellationToken);
-                    return 0;
-                },
-                nameof(BulkUpdateAsync));
+            await RunGatedBulkUpsertAsync(
+                () => _dbContext.BulkUpdateAsync(entityList, bulkConfig, cancellationToken: cancellationToken),
+                bulkConfig, nameof(BulkUpdateAsync), cancellationToken, activity);
         }
         catch (Exception ex)
         {
@@ -701,15 +697,15 @@ public partial class ValiFlowEvaluator<T>
     }
 
     /// <summary>
-    /// Per-(entity type, UpdateByProperties) in-process gate for <see cref="BulkInsertOrUpdateAsync"/>.
-    /// <c>EFCore.BulkExtensions</c>' PostgreSQL adapter implements the upsert via a temporary unique
-    /// index whose name is deterministic (<c>tempUniqueIndex_{schema}_{table}_{column}</c>), created
-    /// then dropped around the merge. Two concurrent calls against the same table/key columns race on
-    /// that shared temp index (one drops it mid-merge of the other), surfacing as
-    /// <c>42704: index "tempUniqueIndex_..." does not exist</c> — reproduced with as few as 8 parallel
-    /// single-row requests in the same process. Serializing same-key calls in-process avoids the race.
-    /// This does NOT cover cross-process concurrency (multiple API instances) — that collision still
-    /// exists at the database level and needs a Postgres advisory lock or equivalent if it matters.
+    /// Per-(entity type, UpdateByProperties) in-process gate + generic transient retry for
+    /// <see cref="BulkInsertOrUpdateAsync"/> and <see cref="BulkUpdateAsync"/>. Both delegate to
+    /// <c>EFCore.BulkExtensions</c>, which — for PostgreSQL/MySQL matching by a custom
+    /// <see cref="BulkConfig.UpdateByProperties"/>, or for a SQL Server merge deadlock — can fail
+    /// transiently under real concurrency; see <see cref="BulkUpsertRetryPolicy"/> for the full
+    /// per-engine rationale. The semaphore serializes same-process callers for the same
+    /// type+key-columns (reproduced with as few as 8 parallel single-row requests); the retry on top
+    /// covers what the semaphore cannot: cross-process concurrency (multiple API instances), where the
+    /// collision still exists at the database level.
     /// </summary>
     private const int BulkUpsertGatePermits = 1;
     private const string BulkUpsertGatePrimaryKeyToken = "__pk__";
@@ -725,8 +721,9 @@ public partial class ValiFlowEvaluator<T>
         return BulkUpsertGates.GetOrAdd(key, static _ => new SemaphoreSlim(BulkUpsertGatePermits, BulkUpsertGatePermits));
     }
 
-    private async Task RunGatedBulkInsertOrUpdateAsync(
-        List<T> entityList, BulkConfig? bulkConfig, CancellationToken cancellationToken)
+    private async Task RunGatedBulkUpsertAsync(
+        Func<Task> bulkOperation, BulkConfig? bulkConfig, string operationName,
+        CancellationToken cancellationToken, Activity? activity)
     {
         var gate = GetBulkUpsertGate(bulkConfig);
         await gate.WaitAsync(cancellationToken);
@@ -735,10 +732,13 @@ public partial class ValiFlowEvaluator<T>
             await ExecuteWithExceptionHandlingAsync(
                 async () =>
                 {
-                    await _dbContext.BulkInsertOrUpdateAsync(entityList, bulkConfig, cancellationToken: cancellationToken);
+                    await BulkUpsertRetryPolicy.ExecuteAsync(
+                        bulkOperation,
+                        cancellationToken,
+                        onRetry: (attempt, _) => activity?.SetTag("vali_flow.bulk_upsert_retry_count", attempt));
                     return 0;
                 },
-                nameof(BulkInsertOrUpdateAsync));
+                operationName);
         }
         finally
         {
@@ -772,7 +772,9 @@ public partial class ValiFlowEvaluator<T>
 
             activity?.SetTag("vali_flow.entity_count", entityList.Count);
 
-            await RunGatedBulkInsertOrUpdateAsync(entityList, bulkConfig, cancellationToken);
+            await RunGatedBulkUpsertAsync(
+                () => _dbContext.BulkInsertOrUpdateAsync(entityList, bulkConfig, cancellationToken: cancellationToken),
+                bulkConfig, nameof(BulkInsertOrUpdateAsync), cancellationToken, activity);
         }
         catch (Exception ex)
         {
