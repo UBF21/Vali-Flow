@@ -407,3 +407,5 @@ CLAUDE.md
 .claudeignore
 .guardian.json
 .codegraph/
+
+.superpowers/
