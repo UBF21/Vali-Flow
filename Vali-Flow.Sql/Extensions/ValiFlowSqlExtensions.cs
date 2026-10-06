@@ -77,7 +77,9 @@ public static class ValiFlowSqlExtensions
     {
         if (dialect == null) throw new ArgumentNullException(nameof(dialect));
 
-        string table = dialect.QuoteTable(tableName ?? typeof(T).Name);
+        string table = dialect.QuoteTable(tableName == null
+            ? typeof(T).Name
+            : SqlIdentifierGuard.EnsureValidIdentifier(tableName, nameof(tableName)));
         var parameters = new Dictionary<string, object>();
         string whereClause = string.Empty;
 
@@ -138,7 +140,9 @@ public static class ValiFlowSqlExtensions
     {
         if (dialect == null) throw new ArgumentNullException(nameof(dialect));
 
-        string table = dialect.QuoteTable(tableName ?? typeof(T).Name);
+        string table = dialect.QuoteTable(tableName == null
+            ? typeof(T).Name
+            : SqlIdentifierGuard.EnsureValidIdentifier(tableName, nameof(tableName)));
         var parameters = new Dictionary<string, object>();
         string whereClause = string.Empty;
 

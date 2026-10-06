@@ -53,6 +53,8 @@ public partial class ValiFlowEvaluator<T>
         IQueryable<T> query = _dbContext.Set<T>().AsNoTracking();
         if (filter != null) query = query.Where(filter.Build());
         if (!await query.AnyAsync(cancellationToken))
+            // TResult : INumber<TResult> is effectively always a value type in practice (int, double, decimal, ...),
+            // so default(TResult) here is a real number (e.g. 0), not a hidden null — see XML doc on the interface.
             return default(TResult)!;
         return await query.MinAsync(selector, cancellationToken);
     }

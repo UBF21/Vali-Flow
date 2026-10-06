@@ -22,7 +22,8 @@ public interface IInMemoryAggregator<T> where T : class
         IEnumerable<T>? entities,
         Func<T, TResult> selector,
         ValiFlow<T>? valiFlow = null,
-        bool negateCondition = false
+        bool negateCondition = false,
+        string? tag = null
     ) where TResult : INumber<TResult>;
 
     /// <summary>
@@ -38,7 +39,8 @@ public interface IInMemoryAggregator<T> where T : class
         IEnumerable<T>? entities,
         Func<T, TResult> selector,
         ValiFlow<T>? valiFlow = null,
-        bool negateCondition = false
+        bool negateCondition = false,
+        string? tag = null
     ) where TResult : INumber<TResult>;
 
     /// <summary>
@@ -54,7 +56,8 @@ public interface IInMemoryAggregator<T> where T : class
         IEnumerable<T>? entities,
         Func<T, TResult> selector,
         ValiFlow<T>? valiFlow = null,
-        bool negateCondition = false
+        bool negateCondition = false,
+        string? tag = null
     ) where TResult : INumber<TResult>;
 
     /// <summary>
@@ -70,7 +73,8 @@ public interface IInMemoryAggregator<T> where T : class
         IEnumerable<T>? entities,
         Func<T, TResult> selector,
         ValiFlow<T>? valiFlow = null,
-        bool negateCondition = false
+        bool negateCondition = false,
+        string? tag = null
     ) where TResult : INumber<TResult>;
 
     /// <summary>
@@ -88,6 +92,7 @@ public interface IInMemoryAggregator<T> where T : class
         Func<T, TResult> selector,
         Func<TResult, TResult, TResult> aggregator,
         ValiFlow<T>? valiFlow = null,
-        bool negateCondition = false
+        bool negateCondition = false,
+        string? tag = null
     ) where TResult : INumber<TResult>;
 }

@@ -1,6 +1,8 @@
+using System.Diagnostics;
 using System.Linq.Expressions;
 using EFCore.BulkExtensions;
 using Microsoft.EntityFrameworkCore;
+using Vali_Flow.Abstractions.Diagnostics;
 using Vali_Flow.Utils;
 
 namespace Vali_Flow.Classes.Evaluators;
@@ -21,14 +23,25 @@ public partial class ValiFlowEvaluator<T>
         CancellationToken cancellationToken = default
     )
     {
-        Validation.ValidateEntityNotNull(entity);
+        using var activity = ValiFlowDiagnostics.StartActivity(
+            "Vali-Flow.AddAsync", tag: null, entityType: typeof(T).Name);
+        try
+        {
+            Validation.ValidateEntityNotNull(entity);
+            activity?.SetTag("vali_flow.save_changes", saveChanges);
 
-        var addedEntity = await ExecuteWithExceptionHandlingAsync(
-            async () => (await _dbContext.Set<T>().AddAsync(entity, cancellationToken)).Entity,
-            nameof(AddAsync));
+            var addedEntity = await ExecuteWithExceptionHandlingAsync(
+                async () => (await _dbContext.Set<T>().AddAsync(entity, cancellationToken)).Entity,
+                nameof(AddAsync));
 
-        await SaveChangesIfRequestedAsync(saveChanges, cancellationToken, nameof(AddAsync));
-        return addedEntity;
+            await SaveChangesIfRequestedAsync(saveChanges, cancellationToken, nameof(AddAsync));
+            return addedEntity;
+        }
+        catch (Exception ex)
+        {
+            ValiFlowDiagnostics.RecordException(activity, ex);
+            throw;
+        }
     }
 
     /// <summary>
@@ -45,21 +58,34 @@ public partial class ValiFlowEvaluator<T>
         CancellationToken cancellationToken = default
     )
     {
-        if (entities == null) throw new ArgumentNullException(nameof(entities));
-        IEnumerable<T> entityList = entities.ToList();
+        using var activity = ValiFlowDiagnostics.StartActivity(
+            "Vali-Flow.AddRangeAsync", tag: null, entityType: typeof(T).Name);
+        try
+        {
+            if (entities == null) throw new ArgumentNullException(nameof(entities));
+            IEnumerable<T> entityList = entities.ToList();
 
-        Validation.ValidateEntitiesNotNull(entityList);
-        Validation.ValidateEntitiesEmpty(entityList);
+            Validation.ValidateEntitiesNotNull(entityList);
+            Validation.ValidateEntitiesEmpty(entityList);
 
-        await ExecuteWithExceptionHandlingAsync(
-            async () =>
-            {
-                await _dbContext.Set<T>().AddRangeAsync(entityList, cancellationToken);
-                return entityList;
-            }, nameof(AddRangeAsync));
+            activity?.SetTag("vali_flow.save_changes", saveChanges);
+            activity?.SetTag("vali_flow.entity_count", entityList.Count());
 
-        await SaveChangesIfRequestedAsync(saveChanges, cancellationToken, nameof(AddRangeAsync));
-        return entityList;
+            await ExecuteWithExceptionHandlingAsync(
+                async () =>
+                {
+                    await _dbContext.Set<T>().AddRangeAsync(entityList, cancellationToken);
+                    return entityList;
+                }, nameof(AddRangeAsync));
+
+            await SaveChangesIfRequestedAsync(saveChanges, cancellationToken, nameof(AddRangeAsync));
+            return entityList;
+        }
+        catch (Exception ex)
+        {
+            ValiFlowDiagnostics.RecordException(activity, ex);
+            throw;
+        }
     }
 
     /// <summary>
@@ -76,11 +102,22 @@ public partial class ValiFlowEvaluator<T>
         CancellationToken cancellationToken = default
     )
     {
-        Validation.ValidateEntityNotNull(entity);
-        _dbContext.Set<T>().Update(entity);
+        using var activity = ValiFlowDiagnostics.StartActivity(
+            "Vali-Flow.UpdateAsync", tag: null, entityType: typeof(T).Name);
+        try
+        {
+            Validation.ValidateEntityNotNull(entity);
+            activity?.SetTag("vali_flow.save_changes", saveChanges);
+            _dbContext.Set<T>().Update(entity);
 
-        await SaveChangesIfRequestedAsync(saveChanges, cancellationToken, nameof(UpdateAsync));
-        return entity;
+            await SaveChangesIfRequestedAsync(saveChanges, cancellationToken, nameof(UpdateAsync));
+            return entity;
+        }
+        catch (Exception ex)
+        {
+            ValiFlowDiagnostics.RecordException(activity, ex);
+            throw;
+        }
     }
 
     /// <summary>
@@ -97,16 +134,29 @@ public partial class ValiFlowEvaluator<T>
         CancellationToken cancellationToken = default
     )
     {
-        if (entities == null) throw new ArgumentNullException(nameof(entities));
-        IEnumerable<T> entityList = entities.ToList();
+        using var activity = ValiFlowDiagnostics.StartActivity(
+            "Vali-Flow.UpdateRangeAsync", tag: null, entityType: typeof(T).Name);
+        try
+        {
+            if (entities == null) throw new ArgumentNullException(nameof(entities));
+            IEnumerable<T> entityList = entities.ToList();
 
-        Validation.ValidateEntitiesNotNull(entityList);
-        Validation.ValidateEntitiesEmpty(entityList);
+            Validation.ValidateEntitiesNotNull(entityList);
+            Validation.ValidateEntitiesEmpty(entityList);
 
-        _dbContext.Set<T>().UpdateRange(entityList);
+            activity?.SetTag("vali_flow.save_changes", saveChanges);
+            activity?.SetTag("vali_flow.entity_count", entityList.Count());
 
-        await SaveChangesIfRequestedAsync(saveChanges, cancellationToken, nameof(UpdateRangeAsync));
-        return entityList;
+            _dbContext.Set<T>().UpdateRange(entityList);
+
+            await SaveChangesIfRequestedAsync(saveChanges, cancellationToken, nameof(UpdateRangeAsync));
+            return entityList;
+        }
+        catch (Exception ex)
+        {
+            ValiFlowDiagnostics.RecordException(activity, ex);
+            throw;
+        }
     }
 
     /// <summary>
@@ -122,10 +172,21 @@ public partial class ValiFlowEvaluator<T>
         CancellationToken cancellationToken = default
     )
     {
-        Validation.ValidateEntityNotNull(entity);
-        _dbContext.Set<T>().Remove(entity);
+        using var activity = ValiFlowDiagnostics.StartActivity(
+            "Vali-Flow.DeleteAsync", tag: null, entityType: typeof(T).Name);
+        try
+        {
+            Validation.ValidateEntityNotNull(entity);
+            activity?.SetTag("vali_flow.save_changes", saveChanges);
+            _dbContext.Set<T>().Remove(entity);
 
-        await SaveChangesIfRequestedAsync(saveChanges, cancellationToken, nameof(DeleteAsync));
+            await SaveChangesIfRequestedAsync(saveChanges, cancellationToken, nameof(DeleteAsync));
+        }
+        catch (Exception ex)
+        {
+            ValiFlowDiagnostics.RecordException(activity, ex);
+            throw;
+        }
     }
 
     /// <summary>
@@ -141,15 +202,28 @@ public partial class ValiFlowEvaluator<T>
         CancellationToken cancellationToken = default
     )
     {
-        if (entities == null) throw new ArgumentNullException(nameof(entities));
-        IEnumerable<T> entityList = entities.ToList();
+        using var activity = ValiFlowDiagnostics.StartActivity(
+            "Vali-Flow.DeleteRangeAsync", tag: null, entityType: typeof(T).Name);
+        try
+        {
+            if (entities == null) throw new ArgumentNullException(nameof(entities));
+            IEnumerable<T> entityList = entities.ToList();
 
-        Validation.ValidateEntitiesNotNull(entityList);
-        Validation.ValidateEntitiesEmpty(entityList);
+            Validation.ValidateEntitiesNotNull(entityList);
+            Validation.ValidateEntitiesEmpty(entityList);
 
-        _dbContext.Set<T>().RemoveRange(entityList);
+            activity?.SetTag("vali_flow.save_changes", saveChanges);
+            activity?.SetTag("vali_flow.entity_count", entityList.Count());
 
-        await SaveChangesIfRequestedAsync(saveChanges, cancellationToken, nameof(DeleteRangeAsync));
+            _dbContext.Set<T>().RemoveRange(entityList);
+
+            await SaveChangesIfRequestedAsync(saveChanges, cancellationToken, nameof(DeleteRangeAsync));
+        }
+        catch (Exception ex)
+        {
+            ValiFlowDiagnostics.RecordException(activity, ex);
+            throw;
+        }
     }
 
     /// <summary>
@@ -159,8 +233,18 @@ public partial class ValiFlowEvaluator<T>
     /// <param name="cancellationToken">Cancellation token.</param>
     public async Task SaveChangesAsync(CancellationToken cancellationToken = default)
     {
-        await ExecuteWithExceptionHandlingAsync(() => _dbContext.SaveChangesAsync(cancellationToken),
-            nameof(SaveChangesAsync));
+        using var activity = ValiFlowDiagnostics.StartActivity(
+            "Vali-Flow.SaveChangesAsync", tag: null, entityType: typeof(T).Name);
+        try
+        {
+            await ExecuteWithExceptionHandlingAsync(() => _dbContext.SaveChangesAsync(cancellationToken),
+                nameof(SaveChangesAsync));
+        }
+        catch (Exception ex)
+        {
+            ValiFlowDiagnostics.RecordException(activity, ex);
+            throw;
+        }
     }
 
     /// <summary>
@@ -180,21 +264,34 @@ public partial class ValiFlowEvaluator<T>
         CancellationToken cancellationToken = default
     )
     {
-        Validation.ValidateEntityNotNull(entity);
-        if (matchCondition == null) throw new ArgumentNullException(nameof(matchCondition));
-        T? existingEntity = await _dbContext.Set<T>().FirstOrDefaultAsync(matchCondition, cancellationToken);
-
-        if (existingEntity == null)
+        using var activity = ValiFlowDiagnostics.StartActivity(
+            "Vali-Flow.UpsertAsync", tag: null, entityType: typeof(T).Name);
+        try
         {
-            await _dbContext.Set<T>().AddAsync(entity, cancellationToken);
-        }
-        else
-        {
-            _dbContext.Entry(existingEntity).CurrentValues.SetValues(entity);
-        }
+            Validation.ValidateEntityNotNull(entity);
+            if (matchCondition == null) throw new ArgumentNullException(nameof(matchCondition));
+            activity?.SetTag("vali_flow.save_changes", saveChanges);
 
-        await SaveChangesIfRequestedAsync(saveChanges, cancellationToken, nameof(UpsertAsync));
-        return entity;
+            T? existingEntity = await _dbContext.Set<T>().FirstOrDefaultAsync(matchCondition, cancellationToken);
+            activity?.SetTag("vali_flow.upsert_matched_existing", existingEntity != null);
+
+            if (existingEntity == null)
+            {
+                await _dbContext.Set<T>().AddAsync(entity, cancellationToken);
+            }
+            else
+            {
+                _dbContext.Entry(existingEntity).CurrentValues.SetValues(entity);
+            }
+
+            await SaveChangesIfRequestedAsync(saveChanges, cancellationToken, nameof(UpsertAsync));
+            return entity;
+        }
+        catch (Exception ex)
+        {
+            ValiFlowDiagnostics.RecordException(activity, ex);
+            throw;
+        }
     }
 
     /// <summary>
@@ -216,56 +313,107 @@ public partial class ValiFlowEvaluator<T>
         CancellationToken cancellationToken = default
     ) where TProperty : notnull
     {
-        if (entities == null) throw new ArgumentNullException(nameof(entities));
-        if (keySelector == null) throw new ArgumentNullException(nameof(keySelector));
-        IEnumerable<T> entityList = entities.ToList();
+        using var activity = ValiFlowDiagnostics.StartActivity(
+            "Vali-Flow.UpsertRangeAsync", tag: null, entityType: typeof(T).Name);
+        try
+        {
+            if (entities == null) throw new ArgumentNullException(nameof(entities));
+            if (keySelector == null) throw new ArgumentNullException(nameof(keySelector));
+            IEnumerable<T> entityList = entities.ToList();
 
-        Validation.ValidateEntitiesNotNull(entityList);
-        Validation.ValidateEntitiesEmpty(entityList);
+            Validation.ValidateEntitiesNotNull(entityList);
+            Validation.ValidateEntitiesEmpty(entityList);
 
-        // Compile keySelector once for in-memory use
-        var keySelectorFn = keySelector.Compile();
+            activity?.SetTag("vali_flow.save_changes", saveChanges);
+            activity?.SetTag("vali_flow.entity_count", entityList.Count());
 
-        // Materialize keys as a concrete List<TProperty> — EF can translate .Contains() on a local collection
-        List<TProperty> keys = entityList.Select(keySelectorFn).ToList();
+            // Compile keySelector once for in-memory use
+            var keySelectorFn = keySelector.Compile();
 
-        // Build a predicate that EF can translate: e => keys.Contains(e.Prop)
-        var param = keySelector.Parameters[0];
-        var body = Expression.Call(
-            typeof(Enumerable),
-            nameof(Enumerable.Contains),
-            [typeof(TProperty)],
-            Expression.Constant(keys),
-            keySelector.Body
-        );
-        var predicate = Expression.Lambda<Func<T, bool>>(body, param);
+            // Materialize keys as a concrete List<TProperty> — EF can translate .Contains() on a local collection
+            List<TProperty> keys = entityList.Select(keySelectorFn).ToList();
 
-        IEnumerable<T> existingEntities = await _dbContext.Set<T>()
-            .Where(predicate)
-            .ToListAsync(cancellationToken);
+            // Build a predicate that EF can translate: e => keys.Contains(e.Prop)
+            var param = keySelector.Parameters[0];
+            var body = Expression.Call(
+                typeof(Enumerable),
+                nameof(Enumerable.Contains),
+                [typeof(TProperty)],
+                Expression.Constant(keys),
+                keySelector.Body
+            );
+            var predicate = Expression.Lambda<Func<T, bool>>(body, param);
 
-        Dictionary<TProperty, T> existingEntityDict = existingEntities.ToDictionary(keySelectorFn, e => e);
+            IEnumerable<T> existingEntities = await _dbContext.Set<T>()
+                .Where(predicate)
+                .ToListAsync(cancellationToken);
 
-        var newEntities = new List<T>();
+            Dictionary<TProperty, T> existingEntityDict = existingEntities.ToDictionary(keySelectorFn, e => e);
+
+            Dictionary<TProperty, T> newEntitiesByKey =
+                PartitionUpsertRange(entityList, keySelectorFn, existingEntityDict);
+
+            if (newEntitiesByKey.Count > 0)
+                await _dbContext.Set<T>().AddRangeAsync(newEntitiesByKey.Values, cancellationToken);
+
+            await SaveChangesIfRequestedAsync(saveChanges, cancellationToken, nameof(UpsertRangeAsync));
+            return entityList;
+        }
+        catch (Exception ex)
+        {
+            ValiFlowDiagnostics.RecordException(activity, ex);
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Splits <paramref name="entityList"/> into entities to insert, applying in-place updates to the ones
+    /// that already exist in <paramref name="existingEntityDict"/> as a side effect.
+    /// Keyed by <typeparamref name="TProperty"/> (not a List) so duplicate keys within the same incoming
+    /// batch collapse into a single pending insert instead of each being added separately — last occurrence
+    /// in the batch wins, matching the "update in place" semantics used for keys that already exist in the database.
+    /// </summary>
+    private Dictionary<TProperty, T> PartitionUpsertRange<TProperty>(
+        IEnumerable<T> entityList,
+        Func<T, TProperty> keySelectorFn,
+        Dictionary<TProperty, T> existingEntityDict) where TProperty : notnull
+    {
+        var newEntitiesByKey = new Dictionary<TProperty, T>();
 
         foreach (T entity in entityList)
         {
             TProperty key = keySelectorFn(entity);
             if (existingEntityDict.TryGetValue(key, out var existingEntity))
             {
-                _dbContext.Entry(existingEntity).CurrentValues.SetValues(entity);
+                var entry = _dbContext.Entry(existingEntity);
+
+                // CurrentValues.SetValues(entity) copies every scalar property by name, including the
+                // primary key. When the caller's incoming entity carries its own (new) Id -- the normal
+                // case when upserting by a business key like a Sku rather than by the PK -- EF throws
+                // "The property '...' is part of a key and so cannot be modified" instead of updating in
+                // place. Align the incoming entity's PK value(s) with the tracked entity's PK first, so
+                // SetValues sees no change on the key and only applies the real (non-key) updates.
+                var primaryKey = entry.Metadata.FindPrimaryKey();
+                if (primaryKey != null)
+                {
+                    foreach (var keyProperty in primaryKey.Properties)
+                    {
+                        var propertyInfo = keyProperty.PropertyInfo;
+                        if (propertyInfo == null) continue;
+                        var existingKeyValue = propertyInfo.GetValue(existingEntity);
+                        propertyInfo.SetValue(entity, existingKeyValue);
+                    }
+                }
+
+                entry.CurrentValues.SetValues(entity);
             }
             else
             {
-                newEntities.Add(entity);
+                newEntitiesByKey[key] = entity;
             }
         }
 
-        if (newEntities.Any())
-            await _dbContext.Set<T>().AddRangeAsync(newEntities, cancellationToken);
-
-        await SaveChangesIfRequestedAsync(saveChanges, cancellationToken, nameof(UpsertRangeAsync));
-        return entityList;
+        return newEntitiesByKey;
     }
 
     /// <summary>
@@ -282,29 +430,43 @@ public partial class ValiFlowEvaluator<T>
     )
     {
         if (condition == null) throw new ArgumentNullException(nameof(condition));
-        await ExecuteWithExceptionHandlingAsync(async () =>
-            {
-                bool isInMemory = _dbContext.Database.ProviderName
-                    ?.Contains("InMemory", StringComparison.OrdinalIgnoreCase) == true;
+        using var activity = ValiFlowDiagnostics.StartActivity(
+            "Vali-Flow.DeleteByConditionAsync", tag: null, entityType: typeof(T).Name);
+        try
+        {
+            await ExecuteWithExceptionHandlingAsync(
+                () => DeleteByConditionCoreAsync(condition, cancellationToken),
+                nameof(DeleteByConditionAsync));
+        }
+        catch (Exception ex)
+        {
+            ValiFlowDiagnostics.RecordException(activity, ex);
+            throw;
+        }
+    }
 
-                if (!isInMemory)
-                {
-                    // ExecuteDeleteAsync translates directly to DELETE FROM … WHERE — no round-trip to load entities
-                    await _dbContext.Set<T>().Where(condition).ExecuteDeleteAsync(cancellationToken);
-                }
-                else
-                {
-                    // Fallback for providers that do not support ExecuteDeleteAsync (e.g., InMemory)
-                    var entities = await _dbContext.Set<T>().Where(condition).ToListAsync(cancellationToken);
-                    if (entities.Count > 0)
-                    {
-                        _dbContext.Set<T>().RemoveRange(entities);
-                        await _dbContext.SaveChangesAsync(cancellationToken);
-                    }
-                }
-                return 0;
-            },
-            nameof(DeleteByConditionAsync));
+    private async Task<int> DeleteByConditionCoreAsync(
+        Expression<Func<T, bool>> condition,
+        CancellationToken cancellationToken)
+    {
+        bool isInMemory = _dbContext.Database.ProviderName
+            ?.Contains("InMemory", StringComparison.OrdinalIgnoreCase) == true;
+
+        if (!isInMemory)
+        {
+            // ExecuteDeleteAsync translates directly to DELETE FROM … WHERE — no round-trip to load entities
+            await _dbContext.Set<T>().Where(condition).ExecuteDeleteAsync(cancellationToken);
+            return 0;
+        }
+
+        // Fallback for providers that do not support ExecuteDeleteAsync (e.g., InMemory)
+        var entities = await _dbContext.Set<T>().Where(condition).ToListAsync(cancellationToken);
+        if (entities.Count > 0)
+        {
+            _dbContext.Set<T>().RemoveRange(entities);
+            await _dbContext.SaveChangesAsync(cancellationToken);
+        }
+        return 0;
     }
 
     /// <summary>
@@ -341,37 +503,78 @@ public partial class ValiFlowEvaluator<T>
     public async Task ExecuteTransactionAsync(Func<Task> operations, CancellationToken cancellationToken = default)
     {
         if (operations == null) throw new ArgumentNullException(nameof(operations));
-        if (_dbContext.Database.CurrentTransaction != null)
+        using var activity = ValiFlowDiagnostics.StartActivity(
+            "Vali-Flow.ExecuteTransactionAsync", tag: null, entityType: typeof(T).Name);
+
+        bool reusedExistingTransaction = _dbContext.Database.CurrentTransaction != null;
+        activity?.SetTag("vali_flow.reused_existing_transaction", reusedExistingTransaction);
+
+        if (reusedExistingTransaction)
         {
-            await operations();
+            await RunWithinExistingTransactionAsync(operations, activity);
             return;
         }
 
-        await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
+        await RunWithinNewTransactionAsync(operations, activity, cancellationToken);
+    }
 
+    private async Task RunWithinExistingTransactionAsync(Func<Task> operations, Activity? activity)
+    {
         try
         {
             await operations();
-            await transaction.CommitAsync(cancellationToken);
         }
         catch (Exception ex)
         {
+            ValiFlowDiagnostics.RecordException(activity, ex);
+            throw;
+        }
+    }
+
+    private async Task RunWithinNewTransactionAsync(
+        Func<Task> operations, Activity? activity, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
+
             try
             {
-                await transaction.RollbackAsync(cancellationToken);
+                await operations();
+                await transaction.CommitAsync(cancellationToken);
             }
-            catch (Exception rollbackEx)
+            catch (Exception ex)
             {
-                throw new AggregateException(
-                    $"Transaction failed and rollback also failed in {nameof(ExecuteTransactionAsync)}.",
-                    ex,
-                    rollbackEx);
+                Exception failure = await RollbackTransactionAsync(transaction, ex, cancellationToken);
+                throw failure;
             }
-
-            throw new InvalidOperationException(
-                $"Error executing transaction in {nameof(ExecuteTransactionAsync)}.",
-                ex);
         }
+        catch (Exception ex)
+        {
+            ValiFlowDiagnostics.RecordException(activity, ex);
+            throw;
+        }
+    }
+
+    private async Task<Exception> RollbackTransactionAsync(
+        Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction transaction, Exception ex,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await transaction.RollbackAsync(cancellationToken);
+        }
+        catch (Exception rollbackEx)
+        {
+            return new AggregateException(
+                $"Transaction failed and rollback also failed in {nameof(ExecuteTransactionAsync)}.",
+                ex,
+                rollbackEx);
+        }
+
+        return new InvalidOperationException(
+            $"Error executing transaction in {nameof(ExecuteTransactionAsync)}.",
+            ex);
     }
 
     /// <summary>
@@ -388,19 +591,31 @@ public partial class ValiFlowEvaluator<T>
         CancellationToken cancellationToken = default
     )
     {
-        if (entities == null) throw new ArgumentNullException(nameof(entities));
-        var entityList = entities.ToList();
+        using var activity = ValiFlowDiagnostics.StartActivity(
+            "Vali-Flow.BulkInsertAsync", tag: null, entityType: typeof(T).Name);
+        try
+        {
+            if (entities == null) throw new ArgumentNullException(nameof(entities));
+            var entityList = entities.ToList();
 
-        Validation.ValidateEntitiesNotNull(entityList);
-        Validation.ValidateEntitiesEmpty(entityList);
+            Validation.ValidateEntitiesNotNull(entityList);
+            Validation.ValidateEntitiesEmpty(entityList);
 
-        await ExecuteWithExceptionHandlingAsync(
-            async () =>
-            {
-                await _dbContext.BulkInsertAsync(entityList, bulkConfig, cancellationToken: cancellationToken);
-                return 0;
-            },
-            nameof(BulkInsertAsync));
+            activity?.SetTag("vali_flow.entity_count", entityList.Count);
+
+            await ExecuteWithExceptionHandlingAsync(
+                async () =>
+                {
+                    await _dbContext.BulkInsertAsync(entityList, bulkConfig, cancellationToken: cancellationToken);
+                    return 0;
+                },
+                nameof(BulkInsertAsync));
+        }
+        catch (Exception ex)
+        {
+            ValiFlowDiagnostics.RecordException(activity, ex);
+            throw;
+        }
     }
 
     /// <summary>
@@ -417,19 +632,27 @@ public partial class ValiFlowEvaluator<T>
         CancellationToken cancellationToken = default
     )
     {
-        if (entities == null) throw new ArgumentNullException(nameof(entities));
-        var entityList = entities.ToList();
+        using var activity = ValiFlowDiagnostics.StartActivity(
+            "Vali-Flow.BulkUpdateAsync", tag: null, entityType: typeof(T).Name);
+        try
+        {
+            if (entities == null) throw new ArgumentNullException(nameof(entities));
+            var entityList = entities.ToList();
 
-        Validation.ValidateEntitiesNotNull(entityList);
-        Validation.ValidateEntitiesEmpty(entityList);
+            Validation.ValidateEntitiesNotNull(entityList);
+            Validation.ValidateEntitiesEmpty(entityList);
 
-        await ExecuteWithExceptionHandlingAsync(
-            async () =>
-            {
-                await _dbContext.BulkUpdateAsync(entityList, bulkConfig, cancellationToken: cancellationToken);
-                return 0;
-            },
-            nameof(BulkUpdateAsync));
+            activity?.SetTag("vali_flow.entity_count", entityList.Count);
+
+            await RunGatedBulkUpsertAsync(
+                () => _dbContext.BulkUpdateAsync(entityList, bulkConfig, cancellationToken: cancellationToken),
+                nameof(BulkUpdateAsync), cancellationToken, activity);
+        }
+        catch (Exception ex)
+        {
+            ValiFlowDiagnostics.RecordException(activity, ex);
+            throw;
+        }
     }
 
     /// <summary>
@@ -446,19 +669,86 @@ public partial class ValiFlowEvaluator<T>
         CancellationToken cancellationToken = default
     )
     {
-        if (entities == null) throw new ArgumentNullException(nameof(entities));
-        var entityList = entities.ToList();
+        using var activity = ValiFlowDiagnostics.StartActivity(
+            "Vali-Flow.BulkDeleteAsync", tag: null, entityType: typeof(T).Name);
+        try
+        {
+            if (entities == null) throw new ArgumentNullException(nameof(entities));
+            var entityList = entities.ToList();
 
-        Validation.ValidateEntitiesNotNull(entityList);
-        Validation.ValidateEntitiesEmpty(entityList);
+            Validation.ValidateEntitiesNotNull(entityList);
+            Validation.ValidateEntitiesEmpty(entityList);
 
-        await ExecuteWithExceptionHandlingAsync(
-            async () =>
-            {
-                await _dbContext.BulkDeleteAsync(entityList, bulkConfig, cancellationToken: cancellationToken);
-                return 0;
-            },
-            nameof(BulkDeleteAsync));
+            activity?.SetTag("vali_flow.entity_count", entityList.Count);
+
+            await ExecuteWithExceptionHandlingAsync(
+                async () =>
+                {
+                    await _dbContext.BulkDeleteAsync(entityList, bulkConfig, cancellationToken: cancellationToken);
+                    return 0;
+                },
+                nameof(BulkDeleteAsync));
+        }
+        catch (Exception ex)
+        {
+            ValiFlowDiagnostics.RecordException(activity, ex);
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Per-(entity type, UpdateByProperties) in-process gate + generic transient retry for
+    /// <see cref="BulkInsertOrUpdateAsync"/> and <see cref="BulkUpdateAsync"/>. Both delegate to
+    /// <c>EFCore.BulkExtensions</c>, which — for PostgreSQL/MySQL matching by a custom
+    /// <see cref="BulkConfig.UpdateByProperties"/>, or for a SQL Server merge deadlock — can fail
+    /// transiently under real concurrency; see <see cref="BulkUpsertRetryPolicy"/> for the full
+    /// per-engine rationale.
+    /// </summary>
+    /// <remarks>
+    /// Gated per entity type (table), <b>not</b> per <see cref="BulkConfig.UpdateByProperties"/> key set.
+    /// A stress run that swept the shared-key pool from 15 up to 10,000 SKUs found the retry activation
+    /// rate stayed flat across every pool size — ruling out key collision as the cause. The real
+    /// contention is PostgreSQL's <c>CREATE INDEX CONCURRENTLY</c> (part of the merge EFCore.BulkExtensions
+    /// runs for a non-PK match), which serializes against *any* other transaction on the *same table*,
+    /// regardless of which rows/columns either one touches. Gating by key set would let two same-process
+    /// calls with different <c>UpdateByProperties</c> on the same table run concurrently and still race —
+    /// gating by type alone is what actually matches the real contention boundary. The retry on top covers
+    /// what the semaphore cannot: cross-process concurrency (multiple API instances), where the collision
+    /// still exists at the database level.
+    /// </remarks>
+    private const int BulkUpsertGatePermits = 1;
+
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, SemaphoreSlim> BulkUpsertGates = new();
+
+    private static SemaphoreSlim GetBulkUpsertGate()
+    {
+        var key = typeof(T).FullName!;
+        return BulkUpsertGates.GetOrAdd(key, static _ => new SemaphoreSlim(BulkUpsertGatePermits, BulkUpsertGatePermits));
+    }
+
+    private async Task RunGatedBulkUpsertAsync(
+        Func<Task> bulkOperation, string operationName,
+        CancellationToken cancellationToken, Activity? activity)
+    {
+        var gate = GetBulkUpsertGate();
+        await gate.WaitAsync(cancellationToken);
+        try
+        {
+            await ExecuteWithExceptionHandlingAsync(
+                async () =>
+                {
+                    await BulkUpsertRetryPolicy.ExecuteAsync(
+                        bulkOperation,
+                        cancellationToken,
+                        onRetry: (attempt, _) => activity?.SetTag("vali_flow.bulk_upsert_retry_count", attempt));
+                    return 0;
+                },
+                operationName);
+        }
+        finally
+        {
+            gate.Release();
+        }
     }
 
     /// <summary>
@@ -475,18 +765,26 @@ public partial class ValiFlowEvaluator<T>
         CancellationToken cancellationToken = default
     )
     {
-        if (entities == null) throw new ArgumentNullException(nameof(entities));
-        var entityList = entities.ToList();
+        using var activity = ValiFlowDiagnostics.StartActivity(
+            "Vali-Flow.BulkInsertOrUpdateAsync", tag: null, entityType: typeof(T).Name);
+        try
+        {
+            if (entities == null) throw new ArgumentNullException(nameof(entities));
+            var entityList = entities.ToList();
 
-        Validation.ValidateEntitiesNotNull(entityList);
-        Validation.ValidateEntitiesEmpty(entityList);
+            Validation.ValidateEntitiesNotNull(entityList);
+            Validation.ValidateEntitiesEmpty(entityList);
 
-        await ExecuteWithExceptionHandlingAsync(
-            async () =>
-            {
-                await _dbContext.BulkInsertOrUpdateAsync(entityList, bulkConfig, cancellationToken: cancellationToken);
-                return 0;
-            },
-            nameof(BulkInsertOrUpdateAsync));
+            activity?.SetTag("vali_flow.entity_count", entityList.Count);
+
+            await RunGatedBulkUpsertAsync(
+                () => _dbContext.BulkInsertOrUpdateAsync(entityList, bulkConfig, cancellationToken: cancellationToken),
+                nameof(BulkInsertOrUpdateAsync), cancellationToken, activity);
+        }
+        catch (Exception ex)
+        {
+            ValiFlowDiagnostics.RecordException(activity, ex);
+            throw;
+        }
     }
 }

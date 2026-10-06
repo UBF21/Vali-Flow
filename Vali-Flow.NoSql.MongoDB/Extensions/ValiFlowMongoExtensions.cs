@@ -24,6 +24,7 @@ public static class ValiFlowMongoExtensions
     /// </summary>
     /// <typeparam name="T">The entity / document type.</typeparam>
     /// <param name="flow">The ValiFlow builder containing the conditions.</param>
+    /// <param name="customConverter">Optional override to convert a value into a <see cref="BsonValue"/> for types the default conversion doesn't handle.</param>
     /// <returns>
     /// A <see cref="BsonDocument"/> filter ready to pass to <c>Find</c>, <c>CountDocuments</c>, etc.
     /// </returns>
@@ -37,21 +38,21 @@ public static class ValiFlowMongoExtensions
     /// var users = await collection.Find(mongoFilter).ToListAsync();
     /// </code>
     /// </example>
-    public static BsonDocument ToMongo<T>(this ValiFlow<T> flow, Func<object?, BsonValue?>? customConverter = null) where T : class
+    public static BsonDocument ToMongo<T>(this ValiFlow<T> flow, Func<object?, BsonValue?>? customConverter = null, string? tag = null) where T : class
     {
         if (flow == null) throw new ArgumentNullException(nameof(flow));
 
-        return MongoFilterTranslator.Translate(flow.ToNoSqlIR(), customConverter);
+        return MongoFilterTranslator.Translate(flow.ToNoSqlIR(), customConverter, tag, typeof(T).Name);
     }
 
     /// <summary>
     /// Translates a prebuilt <see cref="Expression{TDelegate}"/> into a MongoDB filter.
     /// Use this overload when you already have a compiled expression.
     /// </summary>
-    public static BsonDocument ToMongo<T>(this Expression<Func<T, bool>> expression, Func<object?, BsonValue?>? customConverter = null)
+    public static BsonDocument ToMongo<T>(this Expression<Func<T, bool>> expression, Func<object?, BsonValue?>? customConverter = null, string? tag = null)
     {
         if (expression == null) throw new ArgumentNullException(nameof(expression));
 
-        return MongoFilterTranslator.Translate(expression.ToNoSqlIR(), customConverter);
+        return MongoFilterTranslator.Translate(expression.ToNoSqlIR(), customConverter, tag, typeof(T).Name);
     }
 }

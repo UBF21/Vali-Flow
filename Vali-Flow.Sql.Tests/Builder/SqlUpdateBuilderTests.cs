@@ -1,4 +1,6 @@
+using System.Diagnostics;
 using FluentAssertions;
+using Vali_Flow.Abstractions.Diagnostics;
 using Vali_Flow.Core.Builder;
 using Vali_Flow.Sql.Builder;
 using Vali_Flow.Sql.Dialects;
@@ -13,6 +15,27 @@ public sealed class SqlUpdateBuilderTests
     private static readonly ISqlDialect Pg = new PostgreSqlDialect();
     private static readonly ISqlDialect My = new MySqlDialect();
 
+    // Parents every captured activity under a private root so concurrently running tests (xunit
+    // parallelizes test classes by default) can never pollute this test's capture, even though they
+    // share the same process-wide ValiFlowDiagnostics.Source.
+    private static (ActivityListener Listener, Activity Root, List<Activity> Captured) AttachScopedListener()
+    {
+        var captured = new List<Activity>();
+        var listener = new ActivityListener
+        {
+            ShouldListenTo = source => source.Name == ValiFlowDiagnostics.SourceName,
+            Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllData,
+            ActivityStopped = captured.Add
+        };
+        ActivitySource.AddActivityListener(listener);
+
+        var root = new Activity("TestRoot").Start();
+        return (listener, root, captured);
+    }
+
+    private static Activity GetOwn(List<Activity> captured, Activity root)
+        => captured.Single(a => a.ParentId == root.Id);
+
     // ── Basic UPDATE ──────────────────────────────────────────────────────────
 
     [Fact]
@@ -26,6 +49,24 @@ public sealed class SqlUpdateBuilderTests
 
         result.Sql.Should().Be("UPDATE [Users] SET [Name] = @pu0");
         result.Parameters["pu0"].Should().Be("Alice");
+    }
+
+    [Fact]
+    public void Table_UnsafeTableName_ThrowsArgumentException()
+    {
+        var act = () => new SqlUpdateBuilder<TestUser>(Sql).Table("Users]; DROP TABLE Users;--");
+
+        act.Should().Throw<ArgumentException>().WithParameterName("tableName");
+    }
+
+    [Fact]
+    public void FromTable_UnsafeSourceTable_ThrowsArgumentException()
+    {
+        var builder = new SqlUpdateBuilder<TestUser>(Sql).Table("Users");
+
+        var act = () => builder.FromTable("Orders]; DROP TABLE Orders;--");
+
+        act.Should().Throw<ArgumentException>().WithParameterName("sourceTable");
     }
 
     [Fact]
@@ -108,6 +149,47 @@ public sealed class SqlUpdateBuilderTests
 
         result.Sql.Should().Contain("WHERE");
         result.Sql.Should().Contain("[IsActive]");
+    }
+
+    [Fact]
+    public void Where_SqlWhereBuilder_CalledTwice_ThrowsInvalidOperationException()
+    {
+        var builder = new SqlUpdateBuilder<TestUser>(Sql)
+            .Table("Users")
+            .Set(x => x.Name, "A")
+            .Where(w => w.EqualTo(x => x.Id, 1));
+
+        builder.Invoking(b => b.Where(w => w.EqualTo(x => x.Id, 2)))
+            .Should().Throw<InvalidOperationException>();
+    }
+
+    [Fact]
+    public void Where_LambdaExpression_CalledTwice_ThrowsInvalidOperationException()
+    {
+        // Previously this silently overwrote the first predicate with the second one
+        // with no error — inconsistent with the SqlWhereBuilder overload above, which
+        // already guards against being set twice.
+        var builder = new SqlUpdateBuilder<TestUser>(Sql)
+            .Table("Users")
+            .Set(x => x.Name, "A")
+            .Where(x => x.Age > 18);
+
+        builder.Invoking(b => b.Where(x => x.Age < 65))
+            .Should().Throw<InvalidOperationException>();
+    }
+
+    [Fact]
+    public void Where_ValiFlow_CalledTwice_ThrowsInvalidOperationException()
+    {
+        var filter1 = new ValiFlow<TestUser>().EqualTo(x => x.IsActive, true);
+        var filter2 = new ValiFlow<TestUser>().EqualTo(x => x.IsActive, false);
+        var builder = new SqlUpdateBuilder<TestUser>(Sql)
+            .Table("Users")
+            .Set(x => x.Name, "A")
+            .Where(filter1);
+
+        builder.Invoking(b => b.Where(filter2))
+            .Should().Throw<InvalidOperationException>();
     }
 
     // ── Table + schema ────────────────────────────────────────────────────────
@@ -441,5 +523,106 @@ public sealed class SqlUpdateBuilderTests
 
         builder.Invoking(b => b.JoinOn("", "condition"))
             .Should().Throw<ArgumentException>();
+    }
+
+    // ── SetAllFrom ────────────────────────────────────────────────────────────
+
+    [Fact]
+    public void SetAllFrom_MapsAllPropertiesExceptPrimaryKey()
+    {
+        var entity = new TestUser
+        {
+            Id = 42,
+            Name = "Alice",
+            Email = "alice@test.com",
+            Age = 30,
+            IsActive = true
+        };
+
+        var result = new SqlUpdateBuilder<TestUser>(Sql)
+            .Table("Users")
+            .SetAllFrom(entity, x => x.Id)
+            .AllowUpdateAll()
+            .Build();
+
+        result.Sql.Should().NotContain("[Id] =");
+        result.Sql.Should().Contain("[Name] =");
+        result.Parameters.Values.Should().Contain("Alice");
+        result.Parameters.Values.Should().Contain(30);
+    }
+
+    [Fact]
+    public void SetAllFrom_WithWhere_CombinesWithPkFilter()
+    {
+        var entity = new TestUser { Id = 7, Name = "Bob" };
+
+        var result = new SqlUpdateBuilder<TestUser>(Sql)
+            .Table("Users")
+            .SetAllFrom(entity, x => x.Id)
+            .Where(w => w.EqualTo(x => x.Id, entity.Id))
+            .Build();
+
+        result.Sql.Should().Contain("WHERE [Id] = @pw0");
+        result.Parameters["pw0"].Should().Be(7);
+    }
+
+    [Fact]
+    public void SetAllFrom_NullPropertyValue_StoresDbNull()
+    {
+        var entity = new TestUser { Id = 1, Name = "Carl", Email = null! };
+
+        var result = new SqlUpdateBuilder<TestUser>(Sql)
+            .Table("Users")
+            .SetAllFrom(entity, x => x.Id)
+            .AllowUpdateAll()
+            .Build();
+
+        result.Parameters.Values.Should().Contain(DBNull.Value);
+    }
+
+    [Fact]
+    public void SetAllFrom_NullEntity_ThrowsArgumentNullException()
+    {
+        var builder = new SqlUpdateBuilder<TestUser>(Sql).Table("Users");
+
+        builder.Invoking(b => b.SetAllFrom(null!))
+            .Should().Throw<ArgumentNullException>().WithParameterName("entity");
+    }
+
+    // ── Observability ─────────────────────────────────────────────────────────
+
+    [Fact]
+    public void Build_WithTag_RecordsActivityWithTagAndEntityType()
+    {
+        var (listener, root, captured) = AttachScopedListener();
+        using var l = listener;
+        using var r = root;
+
+        new SqlUpdateBuilder<TestUser>(Sql)
+            .Table("Users")
+            .Set(x => x.Name, "Bob")
+            .AllowUpdateAll()
+            .Tag("Update user name")
+            .Build();
+
+        var seen = GetOwn(captured, root);
+        seen.GetTagItem("vali_flow.tag").Should().Be("Update user name");
+        seen.GetTagItem("vali_flow.entity_type").Should().Be("TestUser");
+        seen.GetTagItem("vali_flow.has_where").Should().Be(false);
+        seen.Status.Should().Be(ActivityStatusCode.Unset);
+    }
+
+    [Fact]
+    public void Build_WithoutWhereOrAllowUpdateAll_RecordsErrorStatus()
+    {
+        var (listener, root, captured) = AttachScopedListener();
+        using var l = listener;
+        using var r = root;
+
+        // No Where() and no AllowUpdateAll() triggers the existing safety guard in Build().
+        var act = () => new SqlUpdateBuilder<TestUser>(Sql).Table("Users").Set(x => x.Name, "Bob").Build();
+
+        act.Should().Throw<InvalidOperationException>();
+        GetOwn(captured, root).Status.Should().Be(ActivityStatusCode.Error);
     }
 }

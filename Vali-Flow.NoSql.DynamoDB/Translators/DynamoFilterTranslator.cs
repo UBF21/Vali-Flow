@@ -1,5 +1,6 @@
 using System.Globalization;
 using Amazon.DynamoDBv2.Model;
+using Vali_Flow.Abstractions.Diagnostics;
 using Vali_Flow.NoSql.DynamoDB.Models;
 using Vali_Flow.NoSql.IR;
 using Vali_Flow.NoSql.Translators;
@@ -37,14 +38,23 @@ public static class DynamoFilterTranslator
     /// <returns>
     /// A <see cref="DynamoFilterExpression"/> ready to apply to a <c>ScanRequest</c> or <c>QueryRequest</c>.
     /// </returns>
-    public static DynamoFilterExpression Translate(IConditionNode node, Func<object?, AttributeValue?>? customConverter = null)
+    public static DynamoFilterExpression Translate(IConditionNode node, Func<object?, AttributeValue?>? customConverter = null, string? tag = null, string? entityType = null)
     {
         if (node == null) throw new ArgumentNullException(nameof(node));
 
-        var ctx = new TranslationContext();
-        var visitor = new DynamoVisitor(ctx, customConverter);
-        var expression = node.Accept(visitor);
-        return new DynamoFilterExpression(expression, ctx.Names, ctx.Values);
+        using var activity = ValiFlowDiagnostics.StartActivity("Vali-Flow.NoSql.DynamoDB.Translate", tag, entityType);
+        try
+        {
+            var ctx = new TranslationContext();
+            var visitor = new DynamoVisitor(ctx, customConverter);
+            var expression = node.Accept(visitor);
+            return new DynamoFilterExpression(expression, ctx.Names, ctx.Values);
+        }
+        catch (Exception ex)
+        {
+            ValiFlowDiagnostics.RecordException(activity, ex);
+            throw;
+        }
     }
 
     private sealed class DynamoVisitor(TranslationContext ctx, Func<object?, AttributeValue?>? customConverter)

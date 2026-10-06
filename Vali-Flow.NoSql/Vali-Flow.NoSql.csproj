@@ -6,7 +6,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>Vali_Flow.NoSql</RootNamespace>
     <PackageId>Vali-Flow.NoSql</PackageId>
-    <Version>1.1.0</Version>
+    <Version>1.1.1</Version>
     <Authors>Felipe Rafael Montenegro Morriberon</Authors>
     <Description>Provider-agnostic NoSql IR for Vali-Flow.Core — converts expression trees to a neutral condition node tree that can be translated to MongoDB, Elasticsearch, or any document store.</Description>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
@@ -22,13 +22,13 @@
     <DebugType>embedded</DebugType>
     <IncludeSymbols>true</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
-    <PackageReleaseNotes>v1.1.0 — Enhanced documentation and contracts alignment, improved adapter integration pattern.</PackageReleaseNotes>
+    <PackageReleaseNotes>v1.1.1 — Fix: x.Field == nullVariable (a closure-captured null) now translates to NullNode like the x.Field == null literal path instead of throwing ArgumentNullException. No breaking changes.</PackageReleaseNotes>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All" />
     <PackageReference Include="Vali-Flow.Core" Version="2.0.0" />
-    <PackageReference Include="Vali-Flow.Abstractions" Version="1.1.0" />
+    <PackageReference Include="Vali-Flow.Abstractions" Version="1.2.0" />
   </ItemGroup>
 
   <ItemGroup>

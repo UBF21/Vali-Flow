@@ -24,6 +24,7 @@ public static class ValiFlowDynamoExtensions
     /// </summary>
     /// <typeparam name="T">The entity / document type.</typeparam>
     /// <param name="flow">The ValiFlow builder containing the conditions.</param>
+    /// <param name="customConverter">Optional override to convert a value into an <see cref="AttributeValue"/> for types the default conversion doesn't handle.</param>
     /// <returns>
     /// A <see cref="DynamoFilterExpression"/> ready to apply to a <c>ScanRequest</c> or <c>QueryRequest</c>.
     /// </returns>
@@ -43,21 +44,21 @@ public static class ValiFlowDynamoExtensions
     /// };
     /// </code>
     /// </example>
-    public static DynamoFilterExpression ToDynamoDB<T>(this ValiFlow<T> flow, Func<object?, AttributeValue?>? customConverter = null) where T : class
+    public static DynamoFilterExpression ToDynamoDB<T>(this ValiFlow<T> flow, Func<object?, AttributeValue?>? customConverter = null, string? tag = null) where T : class
     {
         if (flow == null) throw new ArgumentNullException(nameof(flow));
 
-        return DynamoFilterTranslator.Translate(flow.ToNoSqlIR(), customConverter);
+        return DynamoFilterTranslator.Translate(flow.ToNoSqlIR(), customConverter, tag, typeof(T).Name);
     }
 
     /// <summary>
     /// Translates a prebuilt <see cref="Expression{TDelegate}"/> into a DynamoDB <see cref="DynamoFilterExpression"/>.
     /// Use this overload when you already have a compiled expression.
     /// </summary>
-    public static DynamoFilterExpression ToDynamoDB<T>(this Expression<Func<T, bool>> expression, Func<object?, AttributeValue?>? customConverter = null)
+    public static DynamoFilterExpression ToDynamoDB<T>(this Expression<Func<T, bool>> expression, Func<object?, AttributeValue?>? customConverter = null, string? tag = null)
     {
         if (expression == null) throw new ArgumentNullException(nameof(expression));
 
-        return DynamoFilterTranslator.Translate(expression.ToNoSqlIR(), customConverter);
+        return DynamoFilterTranslator.Translate(expression.ToNoSqlIR(), customConverter, tag, typeof(T).Name);
     }
 }

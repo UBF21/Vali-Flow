@@ -94,6 +94,13 @@ public sealed class ValiFlowSqlExtensionsTests
         act.Should().Throw<ArgumentNullException>().WithParameterName("dialect");
     }
 
+    [Fact]
+    public void ToSqlCount_UnsafeTableName_ThrowsArgumentException()
+    {
+        var act = () => ((ValiFlow<TestUser>?)null).ToSqlCount(SqlServer, "Users]; DROP TABLE Users;--");
+        act.Should().Throw<ArgumentException>().WithParameterName("tableName");
+    }
+
     // ── ToSql (ValiFlowQuery<T> overload) ─────────────────────────────────────
 
     [Fact]
@@ -164,6 +171,13 @@ public sealed class ValiFlowSqlExtensionsTests
     {
         var act = () => ((ValiFlowQuery<TestUser>?)null).ToSqlCount(null!);
         act.Should().Throw<ArgumentNullException>().WithParameterName("dialect");
+    }
+
+    [Fact]
+    public void ToSqlCount_ValiFlowQuery_UnsafeTableName_ThrowsArgumentException()
+    {
+        var act = () => ((ValiFlowQuery<TestUser>?)null).ToSqlCount(SqlServer, "Users]; DROP TABLE Users;--");
+        act.Should().Throw<ArgumentException>().WithParameterName("tableName");
     }
 
     [Fact]

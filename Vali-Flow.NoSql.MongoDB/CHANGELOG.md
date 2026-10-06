@@ -12,7 +12,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) · Versioning: 
 ## [1.0.0] — Initial release
 
 ### Added
-- `MongoFilterTranslator` — translates Vali-Flow IR nodes into MongoDB `FilterDefinition<T>` (MongoDB.Driver)
-- Support for: equality, comparison, AND/OR/NOT, IN list, LIKE (regex-based), null checks
-- `ValiFlowMongoExtensions.ToMongoFilter<T>()` — extension method on `ValiFlow<T>`
+- `MongoFilterTranslator` — translates Vali-Flow IR nodes into a MongoDB `BsonDocument` filter (depends only on `MongoDB.Bson`, not the full `MongoDB.Driver`)
+- `ValiFlowMongoExtensions.ToMongo<T>()` — extension method on `ValiFlow<T>` and on `Expression<Func<T, bool>>`, with an optional `customConverter` hook for CLR types not handled by the built-in switch
+- Support for: equality/inequality, comparison (GT/GTE/LT/LTE), Contains/StartsWith/EndsWith (case-insensitive regex, special characters escaped), IN list, null checks, AND/OR/NOT
 - XML documentation on all public types and members
+
+### Fixed
+- Closure-captured `null` values now translate to the same `{ field: null }` node as a literal `null` (were previously inconsistent).
+- `.In(...)` value lists are now capped at 10,000 entries. See the root [CHANGELOG.md](../CHANGELOG.md) `[Unreleased]` entry for details.

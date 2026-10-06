@@ -89,6 +89,32 @@ public sealed class ExpressionToIRVisitorTests
         node.Check.Should().Be(NullCheckOp.IsNotNull);
     }
 
+    [Fact]
+    public void ToNoSqlIR_EqualNullVariable_ReturnsIsNullNode()
+    {
+        string? email = null;
+        Expression<Func<TestDocument, bool>> expr = x => x.Email == email;
+
+        var ir = expr.ToNoSqlIR();
+
+        var node = ir.Should().BeOfType<NullNode>().Subject;
+        node.Field.Should().Be("Email");
+        node.Check.Should().Be(NullCheckOp.IsNull);
+    }
+
+    [Fact]
+    public void ToNoSqlIR_NotEqualNullVariable_ReturnsIsNotNullNode()
+    {
+        string? email = null;
+        Expression<Func<TestDocument, bool>> expr = x => x.Email != email;
+
+        var ir = expr.ToNoSqlIR();
+
+        var node = ir.Should().BeOfType<NullNode>().Subject;
+        node.Field.Should().Be("Email");
+        node.Check.Should().Be(NullCheckOp.IsNotNull);
+    }
+
     // ── Comparison ────────────────────────────────────────────────────────────
 
     [Fact]

@@ -6,7 +6,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>Vali_Flow.NoSql.Elasticsearch</RootNamespace>
     <PackageId>Vali-Flow.NoSql.Elasticsearch</PackageId>
-    <Version>1.1.0</Version>
+    <Version>1.2.0</Version>
     <Authors>Felipe Rafael Montenegro Morriberon</Authors>
     <Title>Vali-Flow.NoSql.Elasticsearch</Title>
     <Description>Elasticsearch adapter for Vali-Flow.NoSql — translates the provider-agnostic IR tree into Elastic.Clients.Elasticsearch Query objects. Use .ToElasticsearch() on any ValiFlow&lt;T&gt; or Expression&lt;Func&lt;T, bool&gt;&gt;.</Description>
@@ -24,7 +24,7 @@
     <DebugType>embedded</DebugType>
     <IncludeSymbols>true</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
-    <PackageReleaseNotes>v1.1.0 — Enhanced documentation and adapter integration pattern alignment.</PackageReleaseNotes>
+    <PackageReleaseNotes>v1.2.0 — Fix a swallowed inner exception in ToDouble (now wrapped with context instead of lost). Add a MaxInValues cap (65,536, matching index.max_terms_count). Instrument Translate(...) with ValiFlowDiagnostics Activity tracing. No breaking changes.</PackageReleaseNotes>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
 
@@ -41,8 +41,8 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All" />
-    <PackageReference Include="Vali-Flow.NoSql" Version="1.1.0" />
     <PackageReference Include="Elastic.Clients.Elasticsearch" Version="8.15.0" />
+    <PackageReference Include="Vali-Flow.NoSql" Version="1.1.1" />
   </ItemGroup>
 
 </Project>

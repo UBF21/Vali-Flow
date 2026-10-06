@@ -1,4 +1,6 @@
+using System.Diagnostics;
 using FluentAssertions;
+using Vali_Flow.Abstractions.Diagnostics;
 using Vali_Flow.Sql.Builder;
 using Vali_Flow.Sql.Dialects;
 using Vali_Flow.Sql.Tests.Models;
@@ -12,6 +14,27 @@ public sealed class SqlInsertBuilderTests
     private static readonly ISqlDialect Pg = new PostgreSqlDialect();
     private static readonly ISqlDialect My = new MySqlDialect();
 
+    // Parents every captured activity under a private root so concurrently running tests (xunit
+    // parallelizes test classes by default) can never pollute this test's capture, even though they
+    // share the same process-wide ValiFlowDiagnostics.Source.
+    private static (ActivityListener Listener, Activity Root, List<Activity> Captured) AttachScopedListener()
+    {
+        var captured = new List<Activity>();
+        var listener = new ActivityListener
+        {
+            ShouldListenTo = source => source.Name == ValiFlowDiagnostics.SourceName,
+            Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllData,
+            ActivityStopped = captured.Add
+        };
+        ActivitySource.AddActivityListener(listener);
+
+        var root = new Activity("TestRoot").Start();
+        return (listener, root, captured);
+    }
+
+    private static Activity GetOwn(List<Activity> captured, Activity root)
+        => captured.Single(a => a.ParentId == root.Id);
+
     // ── Basic INSERT ──────────────────────────────────────────────────────────
 
     [Fact]
@@ -24,6 +47,22 @@ public sealed class SqlInsertBuilderTests
 
         result.Sql.Should().Be("INSERT INTO [Users] ([Name]) VALUES (@pi0)");
         result.Parameters["pi0"].Should().Be("Alice");
+    }
+
+    [Fact]
+    public void Into_UnsafeTableName_ThrowsArgumentException()
+    {
+        var act = () => new SqlInsertBuilder<TestUser>(Sql).Into("Users]; DROP TABLE Users;--");
+
+        act.Should().Throw<ArgumentException>().WithParameterName("tableName");
+    }
+
+    [Fact]
+    public void Into_UnsafeSchema_ThrowsArgumentException()
+    {
+        var act = () => new SqlInsertBuilder<TestUser>(Sql).Into("Users", "dbo]; DROP TABLE Users;--");
+
+        act.Should().Throw<ArgumentException>().WithParameterName("schema");
     }
 
     [Fact]
@@ -379,6 +418,37 @@ public sealed class SqlInsertBuilderTests
             .WithMessage("*SqlServer*");
     }
 
+    [Fact]
+    public void OrIgnore_MySql_ThrowsInvalidOperationException()
+    {
+        // MySQL does not support the SQLite-only "INSERT OR IGNORE INTO" syntax.
+        // MySqlDialect.InsertConflictPrefix is "IGNORE" (used for its own InsertIgnore() keyword),
+        // which previously made the OrIgnore() guard pass incorrectly and emit invalid SQL
+        // ("INSERT OR IGNORE INTO ..." instead of "INSERT IGNORE INTO ...").
+        var builder = new SqlInsertBuilder<TestUser>(My)
+            .Into("Users")
+            .Set(x => x.Name, "Alice");
+
+        builder.Invoking(b => b.OrIgnore())
+            .Should().Throw<InvalidOperationException>()
+            .WithMessage("*MySQL*");
+    }
+
+    [Fact]
+    public void OrReplace_PostgreSql_ThrowsInvalidOperationException()
+    {
+        // PostgreSQL does not support the SQLite-only "INSERT OR REPLACE INTO" syntax either.
+        // PostgreSqlDialect.SupportsOnConflict is true (for ON CONFLICT DO UPDATE/NOTHING),
+        // which previously made the OrReplace() guard pass incorrectly.
+        var builder = new SqlInsertBuilder<TestUser>(Pg)
+            .Into("Users")
+            .Set(x => x.Name, "Alice");
+
+        builder.Invoking(b => b.OrReplace())
+            .Should().Throw<InvalidOperationException>()
+            .WithMessage("*PostgreSQL*");
+    }
+
     // ── INSERT … SELECT ───────────────────────────────────────────────────────
 
     [Fact]
@@ -485,6 +555,25 @@ public sealed class SqlInsertBuilderTests
     }
 
     [Fact]
+    public void Set_AfterSelectFrom_ThrowsInvalidOperationException()
+    {
+        // Reverse of SelectFrom_AndSet_ThrowsInvalidOperationException: calling Set() after
+        // SelectFrom() was previously NOT guarded. Build() always checks _selectQuery first and
+        // routes into BuildInsertSelect(), silently discarding whatever was passed to Set() with
+        // no error raised to the caller — an asymmetric, order-dependent validation gap.
+        var select = new SqlQueryBuilder<TestUser>(Sql)
+            .From("Archive")
+            .Build();
+
+        var builder = new SqlInsertBuilder<TestUser>(Sql)
+            .Into("Users")
+            .SelectFrom(select);
+
+        builder.Invoking(b => b.Set(x => x.Name, "Alice"))
+            .Should().Throw<InvalidOperationException>();
+    }
+
+    [Fact]
     public void SelectFrom_NullQuery_ThrowsArgumentNullException()
     {
         var builder = new SqlInsertBuilder<TestUser>(Sql).Into("Users");
@@ -515,5 +604,111 @@ public sealed class SqlInsertBuilderTests
 
         result.Sql.Should().StartWith("INSERT INTO `Users`");
         result.Sql.Should().Contain("(`Name`)");
+    }
+
+    // ── SetAllFrom ────────────────────────────────────────────────────────────
+
+    [Fact]
+    public void SetAllFrom_MapsAllPublicProperties()
+    {
+        var entity = new TestUser
+        {
+            Id = 1,
+            Name = "Alice",
+            Email = "alice@test.com",
+            Age = 30,
+            IsActive = true,
+            CreatedAt = new DateTime(2024, 1, 1),
+            Department = "Eng",
+            Salary = 1000m,
+            Status = 1,
+            Counter = 0,
+            NameBackup = "AliceBackup",
+            UpdatedAt = new DateTime(2024, 1, 2)
+        };
+
+        var result = new SqlInsertBuilder<TestUser>(Sql)
+            .Into("Users")
+            .SetAllFrom(entity)
+            .Build();
+
+        result.Sql.Should().Contain("[Id]").And.Contain("[Name]").And.Contain("[Email]");
+        result.Parameters.Values.Should().Contain("Alice");
+        result.Parameters.Values.Should().Contain("alice@test.com");
+        result.Parameters.Values.Should().Contain(30);
+        result.Parameters.Values.Should().Contain(true);
+    }
+
+    [Fact]
+    public void SetAllFrom_WithExclusions_SkipsExcludedColumns()
+    {
+        var entity = new TestUser { Id = 1, Name = "Bob", Email = "bob@test.com" };
+
+        var result = new SqlInsertBuilder<TestUser>(Sql)
+            .Into("Users")
+            .SetAllFrom(entity, x => x.Id, x => x.CreatedAt, x => x.UpdatedAt)
+            .Build();
+
+        result.Sql.Should().NotContain("[Id]");
+        result.Sql.Should().NotContain("[CreatedAt]");
+        result.Sql.Should().NotContain("[UpdatedAt]");
+        result.Sql.Should().Contain("[Name]");
+    }
+
+    [Fact]
+    public void SetAllFrom_NullPropertyValue_StoresDbNull()
+    {
+        var entity = new TestUser { Id = 1, Name = "Carl", Email = null! };
+
+        var result = new SqlInsertBuilder<TestUser>(Sql)
+            .Into("Users")
+            .SetAllFrom(entity)
+            .Build();
+
+        result.Parameters.Values.Should().Contain(DBNull.Value);
+    }
+
+    [Fact]
+    public void SetAllFrom_NullEntity_ThrowsArgumentNullException()
+    {
+        var builder = new SqlInsertBuilder<TestUser>(Sql).Into("Users");
+
+        builder.Invoking(b => b.SetAllFrom(null!))
+            .Should().Throw<ArgumentNullException>().WithParameterName("entity");
+    }
+
+    // ── Observability ─────────────────────────────────────────────────────────
+
+    [Fact]
+    public void Build_WithTag_RecordsActivityWithTagAndEntityType()
+    {
+        var (listener, root, captured) = AttachScopedListener();
+        using var l = listener;
+        using var r = root;
+
+        new SqlInsertBuilder<TestUser>(Sql)
+            .Into("Users")
+            .Set(x => x.Name, "Alice")
+            .Tag("Insert new user")
+            .Build();
+
+        var seen = GetOwn(captured, root);
+        seen.GetTagItem("vali_flow.tag").Should().Be("Insert new user");
+        seen.GetTagItem("vali_flow.entity_type").Should().Be("TestUser");
+        seen.Status.Should().Be(ActivityStatusCode.Unset);
+    }
+
+    [Fact]
+    public void Build_WhenValidationThrows_RecordsErrorStatus()
+    {
+        var (listener, root, captured) = AttachScopedListener();
+        using var l = listener;
+        using var r = root;
+
+        // No Set() calls at all triggers the existing "at least one column" guard in Build().
+        var act = () => new SqlInsertBuilder<TestUser>(Sql).Into("Users").Build();
+
+        act.Should().Throw<InvalidOperationException>();
+        GetOwn(captured, root).Status.Should().Be(ActivityStatusCode.Error);
     }
 }

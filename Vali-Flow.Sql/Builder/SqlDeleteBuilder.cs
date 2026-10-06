@@ -1,4 +1,6 @@
+using System.Diagnostics;
 using System.Linq.Expressions;
+using Vali_Flow.Abstractions.Diagnostics;
 using Vali_Flow.Core.Builder;
 using Vali_Flow.Sql.Dialects;
 using Vali_Flow.Sql.Models;
@@ -44,10 +46,8 @@ public sealed class SqlDeleteBuilder<T> where T : class
     /// <summary>Sets the target table name and optional schema.</summary>
     public SqlDeleteBuilder<T> From(string tableName, string? schema = null)
     {
-        if (string.IsNullOrWhiteSpace(tableName))
-            throw new ArgumentException("Table name cannot be null or empty.", nameof(tableName));
-        _tableName = tableName;
-        _schema = schema;
+        _tableName = SqlIdentifierGuard.EnsureValidIdentifier(tableName, nameof(tableName));
+        _schema = schema == null ? null : SqlIdentifierGuard.EnsureValidIdentifier(schema, nameof(schema));
         return this;
     }
 
@@ -78,7 +78,11 @@ public sealed class SqlDeleteBuilder<T> where T : class
     /// both conditions are combined with AND in the final SQL.</remarks>
     public SqlDeleteBuilder<T> Where(Expression<Func<T, bool>> predicate)
     {
-        _wherePredicate = predicate ?? throw new ArgumentNullException(nameof(predicate));
+        if (predicate == null) throw new ArgumentNullException(nameof(predicate));
+        if (_wherePredicate != null)
+            throw new InvalidOperationException(
+                "Where predicate already set. Combine conditions within a single expression (e.g. with &&).");
+        _wherePredicate = predicate;
         return this;
     }
 
@@ -86,8 +90,7 @@ public sealed class SqlDeleteBuilder<T> where T : class
     public SqlDeleteBuilder<T> Where(ValiFlow<T> filter)
     {
         if (filter == null) throw new ArgumentNullException(nameof(filter));
-        _wherePredicate = filter.Build();
-        return this;
+        return Where(filter.Build());
     }
 
     // ── OUTPUT / RETURNING ────────────────────────────────────────────────────
@@ -141,6 +144,24 @@ public sealed class SqlDeleteBuilder<T> where T : class
 
     /// <summary>Assembles and returns the final <see cref="SqlQueryResult"/>.</summary>
     public SqlQueryResult Build()
+    {
+        using var activity = ValiFlowDiagnostics.StartActivity(
+            "Vali-Flow.Sql.SqlDeleteBuilder.Build", tag: _tag, entityType: typeof(T).Name);
+        try
+        {
+            SqlQueryResult result = BuildCore();
+            bool hasWhere = _wherePredicate != null || _whereBuilder != null;
+            activity?.SetTag("vali_flow.has_where", hasWhere);
+            return result;
+        }
+        catch (Exception ex)
+        {
+            ValiFlowDiagnostics.RecordException(activity, ex);
+            throw;
+        }
+    }
+
+    private SqlQueryResult BuildCore()
     {
         bool hasWhere = _wherePredicate != null || _whereBuilder != null;
         if (!hasWhere && !_allowDeleteAll)

@@ -168,6 +168,74 @@ public sealed class ValiFlowEfWriteTests
         result.Total.Should().Be(500m);
     }
 
+    // ── UpsertRangeAsync — duplicate keys within the same batch ──────────────
+
+    [Fact]
+    public async Task UpsertRangeAsync_DuplicateKeysNotYetInDatabase_InsertsOnlyOne()
+    {
+        await using var ctx = CreateContext();
+        var ev = new ValiFlowEvaluator<TestOrder>(ctx);
+
+        // Two incoming entities share the same business key (CustomerName) and neither
+        // exists in the DB yet. A correct upsert should collapse them into a single row
+        // (last one wins), not insert both.
+        var entities = new[]
+        {
+            new TestOrder { CustomerName = "Dup", Total = 10m, IsShipped = false, CreatedAt = DateTime.UtcNow },
+            new TestOrder { CustomerName = "Dup", Total = 20m, IsShipped = true,  CreatedAt = DateTime.UtcNow }
+        };
+
+        await ev.UpsertRangeAsync(entities, o => o.CustomerName);
+
+        var rows = await ctx.Orders.AsNoTracking().Where(o => o.CustomerName == "Dup").ToListAsync();
+        rows.Should().HaveCount(1);
+        rows[0].Total.Should().Be(20m); // last occurrence in the batch wins
+    }
+
+    [Fact]
+    public async Task UpsertRangeAsync_DuplicateKeysAgainstExistingRow_UpdatesOnceWithLastValue()
+    {
+        await using var ctx = await CreateSeededContextAsync();
+        var ev = new ValiFlowEvaluator<TestOrder>(ctx);
+
+        // Alice (Id=1) already exists. Two incoming entities target her by key; the
+        // batch should still result in exactly one row for Alice with the last value applied.
+        var entities = new[]
+        {
+            new TestOrder { Id = 1, CustomerName = "Alice", Total = 111m, IsShipped = false, CreatedAt = DateTime.UtcNow },
+            new TestOrder { Id = 1, CustomerName = "Alice", Total = 222m, IsShipped = true,  CreatedAt = DateTime.UtcNow }
+        };
+
+        await ev.UpsertRangeAsync(entities, o => o.CustomerName);
+
+        var rows = await ctx.Orders.AsNoTracking().Where(o => o.CustomerName == "Alice").ToListAsync();
+        rows.Should().HaveCount(1);
+        rows[0].Total.Should().Be(222m);
+    }
+
+    [Fact]
+    public async Task UpsertRangeAsync_IncomingEntityHasDifferentIdThanExistingRow_UpdatesInPlaceWithoutThrowing()
+    {
+        // Regression test: callers upserting by a business key (CustomerName here) normally build a
+        // fresh entity per request and have no reason to know -- or preserve -- the existing row's PK.
+        // Before the PartitionUpsertRange fix, EF's CurrentValues.SetValues(entity) tried to overwrite
+        // the tracked entity's Id with the incoming (unrelated, freshly-generated) Id and threw
+        // InvalidOperationException ("... is part of a key and so cannot be modified"), found while
+        // stress-testing UpsertRangeAsync with realistic upsert payloads (Vali-Flow EF Core stress run).
+        await using var ctx = await CreateSeededContextAsync();
+        var ev = new ValiFlowEvaluator<TestOrder>(ctx);
+
+        var incoming = new TestOrder { Id = 999, CustomerName = "Alice", Total = 999m, IsShipped = true, CreatedAt = DateTime.UtcNow };
+
+        var act = async () => await ev.UpsertRangeAsync(new[] { incoming }, o => o.CustomerName);
+        await act.Should().NotThrowAsync();
+
+        var rows = await ctx.Orders.AsNoTracking().Where(o => o.CustomerName == "Alice").ToListAsync();
+        rows.Should().HaveCount(1);
+        rows[0].Id.Should().Be(1); // existing PK preserved, not overwritten by the incoming Id=999
+        rows[0].Total.Should().Be(999m); // non-key fields still applied
+    }
+
     // ── SaveChangesAsync — deferred ───────────────────────────────────────────
 
     [Fact]

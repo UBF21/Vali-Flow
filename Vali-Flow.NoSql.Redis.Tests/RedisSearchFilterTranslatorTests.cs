@@ -1,4 +1,6 @@
+using System.Diagnostics;
 using System.Linq.Expressions;
+using Vali_Flow.Abstractions.Diagnostics;
 using Vali_Flow.Core.Builder;
 using Vali_Flow.NoSql.IR;
 using Vali_Flow.NoSql.Redis.Extensions;
@@ -9,6 +11,49 @@ namespace Vali_Flow.NoSql.Redis.Tests;
 
 public sealed class RedisSearchFilterTranslatorTests
 {
+    private static ActivityListener AttachListener()
+    {
+        var listener = new ActivityListener
+        {
+            ShouldListenTo = source => source.Name == ValiFlowDiagnostics.SourceName,
+            Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllData
+        };
+        ActivitySource.AddActivityListener(listener);
+        return listener;
+    }
+
+    [Fact]
+    public void ToRedisSearch_WithTag_SetsTagAndEntityTypeOnActivity()
+    {
+        using var listener = AttachListener();
+        Activity? captured = null;
+        listener.ActivityStopped = a => captured = a;
+
+        var flow = new ValiFlow<TestDocument>().EqualTo(x => x.Name, "Alice");
+
+        flow.ToRedisSearch(tag: "report-x");
+
+        captured.Should().NotBeNull();
+        captured!.GetTagItem("vali_flow.tag").Should().Be("report-x");
+        captured.GetTagItem("vali_flow.entity_type").Should().Be(nameof(TestDocument));
+    }
+
+    [Fact]
+    public void Translate_NullNode_SetsErrorStatusOnActivity()
+    {
+        using var listener = AttachListener();
+        Activity? captured = null;
+        listener.ActivityStopped = a => captured = a;
+
+        var node = new NullNode("DeletedAt", NullCheckOp.IsNull);
+
+        Action act = () => RedisSearchFilterTranslator.Translate(node);
+
+        act.Should().Throw<NotSupportedException>();
+        captured.Should().NotBeNull();
+        captured!.Status.Should().Be(ActivityStatusCode.Error);
+    }
+
     // ── Equality ──────────────────────────────────────────────────────────────
 
     [Fact]
@@ -180,6 +225,42 @@ public sealed class RedisSearchFilterTranslatorTests
         q.Should().Be("@Name:*ce");
     }
 
+    // ── Pattern match — query-syntax injection guard ────────────────────────────
+
+    [Fact]
+    public void ToRedisSearch_ContainsWithParenPipeAt_EscapesSpecialChars()
+    {
+        // A pattern containing RediSearch query-syntax characters must not be able to break
+        // out of this field's scope and inject another clause (e.g. "@other:{admin}").
+        Expression<Func<TestDocument, bool>> expr = x => x.Name.Contains(")|@other:{admin}");
+
+        string q = expr.ToRedisSearch();
+
+        q.Should().Be(@"@Name:*\)\|\@other\:\{admin\}*");
+    }
+
+    [Fact]
+    public void ToRedisSearch_StartsWithSpecialChars_EscapesBeforeTrailingWildcard()
+    {
+        Expression<Func<TestDocument, bool>> expr = x => x.Name.StartsWith("a-b.c");
+
+        string q = expr.ToRedisSearch();
+
+        q.Should().Be(@"@Name:a\-b\.c*");
+    }
+
+    [Fact]
+    public void ToRedisSearch_ContainsLiteralAsterisk_EscapesUserAsteriskButKeepsOwnWildcards()
+    {
+        // The '*' the user searches for must be escaped so it stays literal, while the
+        // wildcard '*' markers this translator adds around it remain unescaped.
+        Expression<Func<TestDocument, bool>> expr = x => x.Name.Contains("a*b");
+
+        string q = expr.ToRedisSearch();
+
+        q.Should().Be(@"@Name:*a\*b*");
+    }
+
     // ── Membership ────────────────────────────────────────────────────────────
 
     [Fact]
@@ -326,6 +407,57 @@ public sealed class RedisSearchFilterTranslatorTests
         q.Should().Be(@"@Name:{""Alice""}");
     }
 
+    [Fact]
+    public void CustomValueConverter_UsedForComparisonNode_AppliesToRangeBound()
+    {
+        // Regression: ComparisonNode (>, >=, <, <=) used to bypass customConverter entirely
+        // and go straight to the built-in numeric conversion.
+        Func<object?, string?> converter = v =>
+            v is decimal d ? (d * 100).ToString("0", System.Globalization.CultureInfo.InvariantCulture) : null;
+
+        var node = new ComparisonNode("Price", 9.99m, ComparisonOp.GreaterThan);
+        string q = RedisSearchFilterTranslator.Translate(node, converter);
+
+        q.Should().Be("@Price:[(999 +inf]");
+    }
+
+    [Fact]
+    public void CustomValueConverter_WhenReturnsNullForComparisonNode_FallsThroughToDefaultNumeric()
+    {
+        Func<object?, string?> converter = _ => null;
+
+        var node = new ComparisonNode("Age", 18, ComparisonOp.GreaterThanOrEqual);
+        string q = RedisSearchFilterTranslator.Translate(node, converter);
+
+        q.Should().Be("@Age:[18 +inf]");
+    }
+
+    [Fact]
+    public void CustomValueConverter_UsedForInNode_AppliesToEachNumericValue()
+    {
+        // Regression: InNode's numeric branch used to bypass customConverter entirely
+        // and go straight to the built-in numeric conversion for every value.
+        Func<object?, string?> converter = v =>
+            v is decimal d ? (d * 100).ToString("0", System.Globalization.CultureInfo.InvariantCulture) : null;
+
+        var node = new InNode("Price", new List<object?> { 1.5m, 2.5m });
+        string q = RedisSearchFilterTranslator.Translate(node, converter);
+
+        q.Should().Be("(@Price:[150 150]|@Price:[250 250])");
+    }
+
+    [Fact]
+    public void CustomValueConverter_UsedForInNode_AppliesToEachTagValue()
+    {
+        Func<object?, string?> converter = v =>
+            v is string s ? $"TAG_{s}" : null;
+
+        var node = new InNode("Category", new List<object?> { "a", "b" });
+        string q = RedisSearchFilterTranslator.Translate(node, converter);
+
+        q.Should().Be(@"@Category:{""TAG_a""|""TAG_b""}");
+    }
+
     // ── Direct node construction ──────────────────────────────────────────────
 
     [Fact]
@@ -390,6 +522,30 @@ public sealed class RedisSearchFilterTranslatorTests
         Action act = () => RedisSearchFilterTranslator.Translate(node);
         act.Should().Throw<InvalidOperationException>()
            .WithMessage("*mixed*");
+    }
+
+    // ── Límite práctico de IN (OR'd clauses) ─────────────────────────────────
+
+    [Fact]
+    public void ToRedisSearch_ListWithMoreThan1000Items_ThrowsInvalidOperationException()
+    {
+        var ids = Enumerable.Range(1, 1_001).Cast<object?>().ToList();
+        var node = new InNode("Id", ids);
+
+        Action act = () => RedisSearchFilterTranslator.Translate(node);
+
+        act.Should().Throw<InvalidOperationException>().WithMessage("*1000*");
+    }
+
+    [Fact]
+    public void ToRedisSearch_ListWithExactly1000Items_DoesNotThrow()
+    {
+        var ids = Enumerable.Range(1, 1_000).Cast<object?>().ToList();
+        var node = new InNode("Id", ids);
+
+        Action act = () => RedisSearchFilterTranslator.Translate(node);
+
+        act.Should().NotThrow();
     }
 
     // ── Type Coverage adicional ───────────────────────────────────────────────

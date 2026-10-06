@@ -1,4 +1,6 @@
+using System.Diagnostics;
 using FluentAssertions;
+using Vali_Flow.Abstractions.Diagnostics;
 using Vali_Flow.Sql.Builder;
 using Vali_Flow.Sql.Dialects;
 using Vali_Flow.Sql.Tests.Models;
@@ -13,6 +15,27 @@ public sealed class SqlTruncateBuilderTests
     private static readonly ISqlDialect My = new MySqlDialect();
     private static readonly ISqlDialect Sqlite = new SqliteDialect();
 
+    // Parents every captured activity under a private root so concurrently running tests (xunit
+    // parallelizes test classes by default) can never pollute this test's capture, even though they
+    // share the same process-wide ValiFlowDiagnostics.Source.
+    private static (ActivityListener Listener, Activity Root, List<Activity> Captured) AttachScopedListener()
+    {
+        var captured = new List<Activity>();
+        var listener = new ActivityListener
+        {
+            ShouldListenTo = source => source.Name == ValiFlowDiagnostics.SourceName,
+            Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllData,
+            ActivityStopped = captured.Add
+        };
+        ActivitySource.AddActivityListener(listener);
+
+        var root = new Activity("TestRoot").Start();
+        return (listener, root, captured);
+    }
+
+    private static Activity GetOwn(List<Activity> captured, Activity root)
+        => captured.Single(a => a.ParentId == root.Id);
+
     // ── Basic TRUNCATE ────────────────────────────────────────────────────────
 
     [Fact]
@@ -23,6 +46,14 @@ public sealed class SqlTruncateBuilderTests
             .Build();
 
         result.Sql.Should().Be("TRUNCATE TABLE [Users]");
+    }
+
+    [Fact]
+    public void Table_UnsafeTableName_ThrowsArgumentException()
+    {
+        var act = () => new SqlTruncateBuilder<TestUser>(Sql).Table("Users]; DROP TABLE Users;--");
+
+        act.Should().Throw<ArgumentException>().WithParameterName("tableName");
     }
 
     [Fact]
@@ -118,5 +149,39 @@ public sealed class SqlTruncateBuilderTests
     {
         var act = () => new SqlTruncateBuilder<TestUser>(null!);
         act.Should().Throw<ArgumentNullException>();
+    }
+
+    // ── Observability ─────────────────────────────────────────────────────────
+
+    [Fact]
+    public void Build_WithTag_RecordsActivityWithTagAndEntityType()
+    {
+        var (listener, root, captured) = AttachScopedListener();
+        using var l = listener;
+        using var r = root;
+
+        new SqlTruncateBuilder<TestUser>(Sql)
+            .Table("Users")
+            .Tag("Truncate users")
+            .Build();
+
+        var seen = GetOwn(captured, root);
+        seen.GetTagItem("vali_flow.tag").Should().Be("Truncate users");
+        seen.GetTagItem("vali_flow.entity_type").Should().Be("TestUser");
+        seen.Status.Should().Be(ActivityStatusCode.Unset);
+    }
+
+    [Fact]
+    public void Build_UnsupportedDialect_RecordsErrorStatus()
+    {
+        var (listener, root, captured) = AttachScopedListener();
+        using var l = listener;
+        using var r = root;
+
+        // SQLite does not support TRUNCATE TABLE, triggering the existing guard in Build().
+        var act = () => new SqlTruncateBuilder<TestUser>(Sqlite).Table("Users").Build();
+
+        act.Should().Throw<InvalidOperationException>();
+        GetOwn(captured, root).Status.Should().Be(ActivityStatusCode.Error);
     }
 }

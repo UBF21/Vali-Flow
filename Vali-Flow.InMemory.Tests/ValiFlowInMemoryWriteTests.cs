@@ -179,6 +179,23 @@ public sealed class ValiFlowInMemoryWriteTests
         inList.Name.Should().Be("Banana Split");
     }
 
+    [Fact]
+    public void Update_ToExplicitList_DoesNotLeakIntoInternalStoreOnNextBareSaveChanges()
+    {
+        // Update(entity, externalList) applies immediately to externalList — it must NOT also
+        // queue the change for replay against the internal store on a later bare SaveChanges().
+        var seed = CreateMutableSeed();
+        var evaluator = CreateEvaluator(seed); // internal store is a separate copy, also containing Id=2
+        var externalList = CreateMutableSeed(); // unrelated external list, happens to share the same IDs
+        var updated = new TestProduct { Id = 2, Name = "Banana Split", Category = "Fruit", Price = 0.9m, Stock = 155, IsActive = true };
+
+        evaluator.Update(updated, externalList);
+        evaluator.SaveChanges(); // targets the internal store, unrelated to externalList
+
+        TestProduct? internalEntry = evaluator.GetFirst(null, new ValiFlow<TestProduct>().EqualTo(p => p.Id, 2));
+        internalEntry!.Name.Should().Be("Banana", "the update was only meant for externalList, not the internal store");
+    }
+
     // -----------------------------------------------------------------------
     // UpdateRange
     // -----------------------------------------------------------------------

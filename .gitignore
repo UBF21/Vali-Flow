@@ -404,3 +404,8 @@ FodyWeavers.xsd
 .claude/
 claude-*.md
 CLAUDE.md
+.claudeignore
+.guardian.json
+.codegraph/
+
+.superpowers/

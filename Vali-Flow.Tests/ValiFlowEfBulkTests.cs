@@ -483,5 +483,58 @@ public sealed class ValiFlowEfBulkTests
         (await ctx.Orders.CountAsync()).Should().Be(10);
     }
 
+    [Fact]
+    public async Task BulkInsertOrUpdateAsync_ConcurrentCallsSameEntityType_SerializedWithoutExceptions()
+    {
+        // Regression test for the in-process gate added around BulkInsertOrUpdateAsync (see
+        // ValiFlowEvaluator.Write.cs, GetBulkUpsertGate/RunGatedBulkInsertOrUpdateAsync). Found against
+        // a real Postgres instance via the Vali-Flow stress-test harness: EFCore.BulkExtensions'
+        // PostgreSQL adapter upserts through a deterministic temp unique index name
+        // (tempUniqueIndex_{schema}_{table}_{column}); concurrent calls targeting the same table/key
+        // race on create/drop of that shared index and fail with
+        // "42704: index tempUniqueIndex_... does not exist". SQLite doesn't share that adapter
+        // internals, so this test can't reproduce the exact exception, but it does verify the new
+        // gate doesn't corrupt results or deadlock under real concurrent callers.
+        await using var sqlCtx = SqliteTestContext.Create();
+        var ctx = sqlCtx.Context;
+        var evaluator = new ValiFlowEvaluator<TestOrder>(ctx);
+
+        // The gate is keyed per entity type (table), not per UpdateByProperties -- every call below
+        // shares the same gate regardless of which key columns it matches on.
+        const int concurrentCallers = 8;
+        var tasks = Enumerable.Range(0, concurrentCallers).Select(i => evaluator.BulkInsertOrUpdateAsync(
+            new List<TestOrder>
+            {
+                new() { Id = 1000 + i, CustomerName = $"Concurrent{i}", Total = i, IsShipped = false, CreatedAt = DateTime.UtcNow }
+            }));
+
+        Func<Task> act = async () => await Task.WhenAll(tasks);
+        await act.Should().NotThrowAsync();
+
+        (await ctx.Orders.CountAsync(o => o.CustomerName!.StartsWith("Concurrent"))).Should().Be(concurrentCallers);
+    }
+
+    [Fact]
+    public async Task BulkUpdateAsync_ConcurrentCallsSameEntityType_SharesGateWithInsertOrUpdateAndDoesNotThrow()
+    {
+        // BulkUpdateAsync shares the exact same temp-index/deadlock exposure as BulkInsertOrUpdateAsync
+        // when matching by BulkConfig.UpdateByProperties (see BulkUpsertRetryPolicy) -- it now goes
+        // through the same gate+retry path (RunGatedBulkUpsertAsync). Verifies concurrent calls against
+        // the same entity type don't corrupt results or deadlock.
+        await using var sqlCtx = SqliteTestContext.Create();
+        var ctx = sqlCtx.Context;
+        ctx_seed(ctx);
+        await ctx.SaveChangesAsync();
+        var evaluator = new ValiFlowEvaluator<TestOrder>(ctx);
+
+        var seeded = await ctx.Orders.AsNoTracking().ToListAsync();
+        const int concurrentCallers = 8;
+        var tasks = seeded.Take(concurrentCallers).Select((o, i) => evaluator.BulkUpdateAsync(
+            new List<TestOrder> { new() { Id = o.Id, CustomerName = o.CustomerName, Total = 100 + i, IsShipped = true, CreatedAt = o.CreatedAt } }));
+
+        Func<Task> act = async () => await Task.WhenAll(tasks);
+        await act.Should().NotThrowAsync();
+    }
+
     private static void ctx_seed(TestDbContext ctx) => ctx.Orders.AddRange(SeedOrders());
 }

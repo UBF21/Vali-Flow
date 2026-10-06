@@ -1,5 +1,7 @@
+using System.Diagnostics;
 using System.Linq.Expressions;
 using FluentAssertions;
+using Vali_Flow.Abstractions.Diagnostics;
 using Vali_Flow.Sql.Builder;
 using Vali_Flow.Sql.Dialects;
 using Vali_Flow.Sql.Tests.Models;
@@ -23,6 +25,24 @@ public sealed class SqlQueryBuilderTests
         var result = Sql().From("Users").Build();
         result.Sql.Should().Be("SELECT * FROM [Users]");
         result.Parameters.Should().BeEmpty();
+    }
+
+    [Theory]
+    [InlineData("Users]; DROP TABLE Users;--")]
+    [InlineData("Users WHERE 1=1")]
+    public void From_UnsafeTableName_ThrowsArgumentException(string tableName)
+    {
+        var act = () => Sql().From(tableName);
+
+        act.Should().Throw<ArgumentException>().WithParameterName("tableName");
+    }
+
+    [Fact]
+    public void From_UnsafeSchema_ThrowsArgumentException()
+    {
+        var act = () => Sql().From("Users", "dbo]; DROP TABLE Users;--");
+
+        act.Should().Throw<ArgumentException>().WithParameterName("schema");
     }
 
     [Fact]
@@ -1414,6 +1434,14 @@ public sealed class SqlQueryBuilderTests
     }
 
     [Fact]
+    public void SelectCast_UnsafeTypeName_ThrowsArgumentException()
+    {
+        var act = () => Sql().From("Users").SelectCast(x => x.Age, "INT); DROP TABLE Users;--", "AgeInt");
+
+        act.Should().Throw<ArgumentException>().WithParameterName("typeName");
+    }
+
+    [Fact]
     public void SelectConcat_SqlServer_UsesPlus()
     {
         var result = Sql()
@@ -1786,5 +1814,57 @@ public sealed class SqlQueryBuilderTests
         var builder = Sql().From("Users");
         builder.Invoking(b => b.InnerJoinSubquery(subquery, "  ", "ON 1=1"))
             .Should().Throw<ArgumentException>();
+    }
+
+    // ── Observability ─────────────────────────────────────────────────────────
+
+    // Parents every captured activity under a private root so concurrently running tests (xunit
+    // parallelizes test classes by default) can never pollute this test's capture, even though they
+    // share the same process-wide ValiFlowDiagnostics.Source.
+    private static (ActivityListener Listener, Activity Root, List<Activity> Captured) AttachScopedListener()
+    {
+        var captured = new List<Activity>();
+        var listener = new ActivityListener
+        {
+            ShouldListenTo = source => source.Name == ValiFlowDiagnostics.SourceName,
+            Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllData,
+            ActivityStopped = captured.Add
+        };
+        ActivitySource.AddActivityListener(listener);
+
+        var root = new Activity("TestRoot").Start();
+        return (listener, root, captured);
+    }
+
+    private static Activity GetOwn(List<Activity> captured, Activity root)
+        => captured.Single(a => a.ParentId == root.Id);
+
+    [Fact]
+    public void Build_WithTag_RecordsActivityWithTagAndEntityType()
+    {
+        var (listener, root, captured) = AttachScopedListener();
+        using var l = listener;
+        using var r = root;
+
+        Sql().From("Users").Tag("Get active users").Build();
+
+        var seen = GetOwn(captured, root);
+        seen.GetTagItem("vali_flow.tag").Should().Be("Get active users");
+        seen.GetTagItem("vali_flow.entity_type").Should().Be("TestUser");
+        seen.Status.Should().Be(ActivityStatusCode.Unset);
+    }
+
+    [Fact]
+    public void Build_WhenValidationThrows_RecordsErrorStatus()
+    {
+        var (listener, root, captured) = AttachScopedListener();
+        using var l = listener;
+        using var r = root;
+
+        // Skip without Take/OrderBy triggers the existing pagination validation guard in Build().
+        var act = () => Sql().From("Users").Skip(10).Build();
+
+        act.Should().Throw<InvalidOperationException>();
+        GetOwn(captured, root).Status.Should().Be(ActivityStatusCode.Error);
     }
 }

@@ -1,4 +1,6 @@
+using System.Diagnostics;
 using FluentAssertions;
+using Vali_Flow.Abstractions.Diagnostics;
 using Vali_Flow.Sql.Builder;
 using Vali_Flow.Sql.Dialects;
 using Vali_Flow.Sql.Tests.Models;
@@ -9,6 +11,27 @@ namespace Vali_Flow.Sql.Tests.Builder;
 public sealed class SqlMergeBuilderTests
 {
     private static readonly ISqlDialect Sql = new SqlServerDialect();
+
+    // Parents every captured activity under a private root so concurrently running tests (xunit
+    // parallelizes test classes by default) can never pollute this test's capture, even though they
+    // share the same process-wide ValiFlowDiagnostics.Source.
+    private static (ActivityListener Listener, Activity Root, List<Activity> Captured) AttachScopedListener()
+    {
+        var captured = new List<Activity>();
+        var listener = new ActivityListener
+        {
+            ShouldListenTo = source => source.Name == ValiFlowDiagnostics.SourceName,
+            Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllData,
+            ActivityStopped = captured.Add
+        };
+        ActivitySource.AddActivityListener(listener);
+
+        var root = new Activity("TestRoot").Start();
+        return (listener, root, captured);
+    }
+
+    private static Activity GetOwn(List<Activity> captured, Activity root)
+        => captured.Single(a => a.ParentId == root.Id);
 
     // ── Basic MERGE ───────────────────────────────────────────────────────────
 
@@ -30,6 +53,24 @@ public sealed class SqlMergeBuilderTests
         result.Sql.Should().Contain("WHEN MATCHED THEN");
         result.Sql.Should().Contain("WHEN NOT MATCHED BY TARGET THEN");
         result.Sql.Should().EndWith(";");
+    }
+
+    [Fact]
+    public void Into_UnsafeTableName_ThrowsArgumentException()
+    {
+        var act = () => new SqlMergeBuilder<TestUser, TestUser>(Sql).Into("Users]; DROP TABLE Users;--");
+
+        act.Should().Throw<ArgumentException>().WithParameterName("tableName");
+    }
+
+    [Fact]
+    public void Using_UnsafeSourceTable_ThrowsArgumentException()
+    {
+        var act = () => new SqlMergeBuilder<TestUser, TestUser>(Sql)
+            .Into("Users")
+            .Using("StagingUsers]; DROP TABLE StagingUsers;--");
+
+        act.Should().Throw<ArgumentException>().WithParameterName("sourceTable");
     }
 
     // ── WHEN MATCHED UPDATE ───────────────────────────────────────────────────
@@ -82,6 +123,37 @@ public sealed class SqlMergeBuilderTests
             .Using("StagingUsers")
             .On(t => t.Id, s => s.Id)
             .WhenNotMatchedBySourceDelete()
+            .AllowDeleteUnmatched()
+            .Build();
+
+        result.Sql.Should().Contain("WHEN NOT MATCHED BY SOURCE THEN DELETE");
+    }
+
+    // ── AllowDeleteUnmatched guard ─────────────────────────────────────────────
+
+    [Fact]
+    public void Build_WhenNotMatchedBySourceDeleteWithoutGuard_ThrowsInvalidOperationException()
+    {
+        var builder = new SqlMergeBuilder<TestUser, TestUser>(Sql)
+            .Into("Users")
+            .Using("StagingUsers")
+            .On(t => t.Id, s => s.Id)
+            .WhenNotMatchedBySourceDelete();
+
+        builder.Invoking(b => b.Build())
+            .Should().Throw<InvalidOperationException>()
+            .WithMessage("*AllowDeleteUnmatched()*");
+    }
+
+    [Fact]
+    public void Build_WhenNotMatchedBySourceDeleteWithGuard_GeneratesDeleteClause()
+    {
+        var result = new SqlMergeBuilder<TestUser, TestUser>(Sql)
+            .Into("Users")
+            .Using("StagingUsers")
+            .On(t => t.Id, s => s.Id)
+            .WhenNotMatchedBySourceDelete()
+            .AllowDeleteUnmatched()
             .Build();
 
         result.Sql.Should().Contain("WHEN NOT MATCHED BY SOURCE THEN DELETE");
@@ -131,6 +203,7 @@ public sealed class SqlMergeBuilderTests
             .Using("StagingUsers")
             .On(t => t.Id, s => s.Id)
             .WhenNotMatchedBySourceDelete()
+            .AllowDeleteUnmatched()
             .Build();
 
         result.Sql.Should().Contain("MERGE INTO [dbo].[Users] AS target");
@@ -147,6 +220,7 @@ public sealed class SqlMergeBuilderTests
             .Using("StagingUsers")
             .On(t => t.Id, s => s.Id)
             .WhenNotMatchedBySourceDelete()
+            .AllowDeleteUnmatched()
             .Build();
 
         act.Should().Throw<InvalidOperationException>()
@@ -161,7 +235,8 @@ public sealed class SqlMergeBuilderTests
         var builder = new SqlMergeBuilder<TestUser, TestUser>(new PostgreSqlDialect())
             .Using("StagingUsers")
             .On(t => t.Id, s => s.Id)
-            .WhenNotMatchedBySourceDelete();
+            .WhenNotMatchedBySourceDelete()
+            .AllowDeleteUnmatched();
 
         builder.Invoking(b => b.Build())
             .Should().Throw<InvalidOperationException>()
@@ -176,7 +251,8 @@ public sealed class SqlMergeBuilderTests
         var builder = new SqlMergeBuilder<TestUser, TestUser>(Sql)
             .Into("Users")
             .Using("StagingUsers")
-            .WhenNotMatchedBySourceDelete();
+            .WhenNotMatchedBySourceDelete()
+            .AllowDeleteUnmatched();
 
         builder.Invoking(b => b.Build())
             .Should().Throw<InvalidOperationException>()
@@ -208,6 +284,7 @@ public sealed class SqlMergeBuilderTests
             .Using("StagingUsers")
             .On(t => t.Id, s => s.Id)
             .WhenNotMatchedBySourceDelete()
+            .AllowDeleteUnmatched()
             .Tag("Sync staging to production")
             .Build();
 
@@ -245,5 +322,48 @@ public sealed class SqlMergeBuilderTests
         // This test documents the actual behavior so regressions are caught.
         result.Sql.Should().Contain("target");
         result.Sql.Should().Contain("MERGE INTO");
+    }
+
+    // ── Observability ─────────────────────────────────────────────────────────
+
+    [Fact]
+    public void Build_WithTag_RecordsActivityWithTagAndTargetEntityType()
+    {
+        var (listener, root, captured) = AttachScopedListener();
+        using var l = listener;
+        using var r = root;
+
+        new SqlMergeBuilder<TestUser, TestUser>(Sql)
+            .Into("Users")
+            .Using("StagingUsers")
+            .On(t => t.Id, s => s.Id)
+            .WhenMatchedUpdate(b => b.MatchedSetColumn(t => t.Name, s => s.Name))
+            .Tag("Sync users")
+            .Build();
+
+        var seen = GetOwn(captured, root);
+        seen.GetTagItem("vali_flow.tag").Should().Be("Sync users");
+        seen.GetTagItem("vali_flow.entity_type").Should().Be("TestUser");
+        seen.GetTagItem("vali_flow.has_delete_unmatched").Should().Be(false);
+        seen.Status.Should().Be(ActivityStatusCode.Unset);
+    }
+
+    [Fact]
+    public void Build_DeleteUnmatchedWithoutAllow_RecordsErrorStatus()
+    {
+        var (listener, root, captured) = AttachScopedListener();
+        using var l = listener;
+        using var r = root;
+
+        // WhenNotMatchedBySourceDelete() without AllowDeleteUnmatched() triggers the existing safety guard.
+        var act = () => new SqlMergeBuilder<TestUser, TestUser>(Sql)
+            .Into("Users")
+            .Using("StagingUsers")
+            .On(t => t.Id, s => s.Id)
+            .WhenNotMatchedBySourceDelete()
+            .Build();
+
+        act.Should().Throw<InvalidOperationException>();
+        GetOwn(captured, root).Status.Should().Be(ActivityStatusCode.Error);
     }
 }

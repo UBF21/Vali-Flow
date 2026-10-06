@@ -1,3 +1,5 @@
+using System.Diagnostics;
+using Vali_Flow.Abstractions.Diagnostics;
 using Vali_Flow.Sql.Dialects;
 using Vali_Flow.Sql.Models;
 
@@ -26,10 +28,8 @@ public sealed class SqlTruncateBuilder<T>
     /// <param name="schema">Optional schema qualifier (e.g. "dbo").</param>
     public SqlTruncateBuilder<T> Table(string tableName, string? schema = null)
     {
-        if (string.IsNullOrWhiteSpace(tableName))
-            throw new ArgumentException("Table name cannot be null or whitespace.", nameof(tableName));
-        _tableName = tableName;
-        _schema = schema;
+        _tableName = SqlIdentifierGuard.EnsureValidIdentifier(tableName, nameof(tableName));
+        _schema = schema == null ? null : SqlIdentifierGuard.EnsureValidIdentifier(schema, nameof(schema));
         return this;
     }
 
@@ -47,18 +47,28 @@ public sealed class SqlTruncateBuilder<T>
     /// <returns>A <see cref="SqlQueryResult"/> with the SQL string and an empty parameters dictionary.</returns>
     public SqlQueryResult Build()
     {
-        if (!_dialect.SupportsTruncate)
-            throw new InvalidOperationException(
-                $"Dialect '{_dialect.DialectName}' does not support TRUNCATE TABLE. Use DELETE FROM instead.");
+        using var activity = ValiFlowDiagnostics.StartActivity(
+            "Vali-Flow.Sql.SqlTruncateBuilder.Build", tag: _tag, entityType: typeof(T).Name);
+        try
+        {
+            if (!_dialect.SupportsTruncate)
+                throw new InvalidOperationException(
+                    $"Dialect '{_dialect.DialectName}' does not support TRUNCATE TABLE. Use DELETE FROM instead.");
 
-        string quotedTable = _dialect.QuoteTable(_tableName ?? typeof(T).Name);
-        string tableSql = !string.IsNullOrEmpty(_schema)
-            ? $"{_dialect.QuoteTable(_schema)}.{quotedTable}"
-            : quotedTable;
+            string quotedTable = _dialect.QuoteTable(_tableName ?? typeof(T).Name);
+            string tableSql = !string.IsNullOrEmpty(_schema)
+                ? $"{_dialect.QuoteTable(_schema)}.{quotedTable}"
+                : quotedTable;
 
-        string sql = $"TRUNCATE TABLE {tableSql}";
-        string finalSql = _tag != null ? $"-- {_tag}\n{sql}" : sql;
+            string sql = $"TRUNCATE TABLE {tableSql}";
+            string finalSql = _tag != null ? $"-- {_tag}\n{sql}" : sql;
 
-        return new SqlQueryResult(finalSql, new Dictionary<string, object>(), _dialect.ParameterPrefix);
+            return new SqlQueryResult(finalSql, new Dictionary<string, object>(), _dialect.ParameterPrefix);
+        }
+        catch (Exception ex)
+        {
+            ValiFlowDiagnostics.RecordException(activity, ex);
+            throw;
+        }
     }
 }
