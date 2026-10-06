@@ -14,7 +14,7 @@ Vali-Flow is a comprehensive .NET library ecosystem for building reusable, compo
 
 All built on **Vali-Flow.Core** — a lightweight expression builder with zero additional dependencies.
 
-**Supported platforms:** .NET 8.0, .NET 9.0
+**Supported platforms:** .NET 8.0, .NET 9.0 — all packages also run unmodified on **.NET 10** thanks to .NET's forward compatibility (a library built for an earlier TFM runs fine under a newer runtime).
 
 ---
 

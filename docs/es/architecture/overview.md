@@ -143,7 +143,7 @@ Vali-Flow.sln
 └── Vali-Flow.NoSql.DynamoDB.Tests/  Tests de DynamoDB
 ```
 
-Todos los paquetes apuntan a `net8.0` y `net9.0`.
+Todos los paquetes apuntan a `net8.0` y `net9.0`, y tambien corren sin modificaciones en **.NET 10** gracias a la compatibilidad hacia adelante de .NET.
 
 ---
 
