@@ -15,6 +15,27 @@ public sealed class SqlTruncateBuilderTests
     private static readonly ISqlDialect My = new MySqlDialect();
     private static readonly ISqlDialect Sqlite = new SqliteDialect();
 
+    // Parents every captured activity under a private root so concurrently running tests (xunit
+    // parallelizes test classes by default) can never pollute this test's capture, even though they
+    // share the same process-wide ValiFlowDiagnostics.Source.
+    private static (ActivityListener Listener, Activity Root, List<Activity> Captured) AttachScopedListener()
+    {
+        var captured = new List<Activity>();
+        var listener = new ActivityListener
+        {
+            ShouldListenTo = source => source.Name == ValiFlowDiagnostics.SourceName,
+            Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllData,
+            ActivityStopped = captured.Add
+        };
+        ActivitySource.AddActivityListener(listener);
+
+        var root = new Activity("TestRoot").Start();
+        return (listener, root, captured);
+    }
+
+    private static Activity GetOwn(List<Activity> captured, Activity root)
+        => captured.Single(a => a.ParentId == root.Id);
+
     // ── Basic TRUNCATE ────────────────────────────────────────────────────────
 
     [Fact]
@@ -135,22 +156,17 @@ public sealed class SqlTruncateBuilderTests
     [Fact]
     public void Build_WithTag_RecordsActivityWithTagAndEntityType()
     {
-        Activity? seen = null;
-        using var listener = new ActivityListener
-        {
-            ShouldListenTo = source => source.Name == ValiFlowDiagnostics.SourceName,
-            Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllData,
-            ActivityStopped = activity => seen = activity
-        };
-        ActivitySource.AddActivityListener(listener);
+        var (listener, root, captured) = AttachScopedListener();
+        using var l = listener;
+        using var r = root;
 
         new SqlTruncateBuilder<TestUser>(Sql)
             .Table("Users")
             .Tag("Truncate users")
             .Build();
 
-        seen.Should().NotBeNull();
-        seen!.GetTagItem("vali_flow.tag").Should().Be("Truncate users");
+        var seen = GetOwn(captured, root);
+        seen.GetTagItem("vali_flow.tag").Should().Be("Truncate users");
         seen.GetTagItem("vali_flow.entity_type").Should().Be("TestUser");
         seen.Status.Should().Be(ActivityStatusCode.Unset);
     }
@@ -158,20 +174,14 @@ public sealed class SqlTruncateBuilderTests
     [Fact]
     public void Build_UnsupportedDialect_RecordsErrorStatus()
     {
-        Activity? seen = null;
-        using var listener = new ActivityListener
-        {
-            ShouldListenTo = source => source.Name == ValiFlowDiagnostics.SourceName,
-            Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllData,
-            ActivityStopped = activity => seen = activity
-        };
-        ActivitySource.AddActivityListener(listener);
+        var (listener, root, captured) = AttachScopedListener();
+        using var l = listener;
+        using var r = root;
 
         // SQLite does not support TRUNCATE TABLE, triggering the existing guard in Build().
         var act = () => new SqlTruncateBuilder<TestUser>(Sqlite).Table("Users").Build();
 
         act.Should().Throw<InvalidOperationException>();
-        seen.Should().NotBeNull();
-        seen!.Status.Should().Be(ActivityStatusCode.Error);
+        GetOwn(captured, root).Status.Should().Be(ActivityStatusCode.Error);
     }
 }
