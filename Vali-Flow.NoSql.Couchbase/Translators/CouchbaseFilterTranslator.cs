@@ -1,4 +1,3 @@
-using System.Globalization;
 using Vali_Flow.Abstractions.Diagnostics;
 using Vali_Flow.NoSql.Couchbase.Models;
 using Vali_Flow.NoSql.IR;
@@ -127,7 +126,11 @@ public static class CouchbaseFilterTranslator
                 long l    => l,
                 double d  => d,
                 float f   => (double)f,
-                decimal m => m.ToString(CultureInfo.InvariantCulture),
+                // Bound as a native N1QL number, not a string — Couchbase/N1QL has no decimal
+                // type and does NOT coerce between string and number in comparisons (number <
+                // string in its collation order), so a string-bound parameter silently matches
+                // zero rows against a numeric field for every op (=, <>, <, <=, >, >=).
+                decimal m => m,
                 Guid g    => g.ToString(),
                 Enum e    => Convert.ToInt64(e),
                 _         => v!.ToString()!
