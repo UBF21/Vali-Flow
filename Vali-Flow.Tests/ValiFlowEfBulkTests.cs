@@ -499,8 +499,8 @@ public sealed class ValiFlowEfBulkTests
         var ctx = sqlCtx.Context;
         var evaluator = new ValiFlowEvaluator<TestOrder>(ctx);
 
-        // No explicit BulkConfig.UpdateByProperties -- falls back to the PK, same gate key ("__pk__")
-        // for every call, which is exactly the shared-key scenario the gate serializes.
+        // The gate is keyed per entity type (table), not per UpdateByProperties -- every call below
+        // shares the same gate regardless of which key columns it matches on.
         const int concurrentCallers = 8;
         var tasks = Enumerable.Range(0, concurrentCallers).Select(i => evaluator.BulkInsertOrUpdateAsync(
             new List<TestOrder>

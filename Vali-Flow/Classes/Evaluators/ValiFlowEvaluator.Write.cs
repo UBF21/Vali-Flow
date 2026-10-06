@@ -646,7 +646,7 @@ public partial class ValiFlowEvaluator<T>
 
             await RunGatedBulkUpsertAsync(
                 () => _dbContext.BulkUpdateAsync(entityList, bulkConfig, cancellationToken: cancellationToken),
-                bulkConfig, nameof(BulkUpdateAsync), cancellationToken, activity);
+                nameof(BulkUpdateAsync), cancellationToken, activity);
         }
         catch (Exception ex)
         {
@@ -702,30 +702,35 @@ public partial class ValiFlowEvaluator<T>
     /// <c>EFCore.BulkExtensions</c>, which — for PostgreSQL/MySQL matching by a custom
     /// <see cref="BulkConfig.UpdateByProperties"/>, or for a SQL Server merge deadlock — can fail
     /// transiently under real concurrency; see <see cref="BulkUpsertRetryPolicy"/> for the full
-    /// per-engine rationale. The semaphore serializes same-process callers for the same
-    /// type+key-columns (reproduced with as few as 8 parallel single-row requests); the retry on top
-    /// covers what the semaphore cannot: cross-process concurrency (multiple API instances), where the
-    /// collision still exists at the database level.
+    /// per-engine rationale.
     /// </summary>
+    /// <remarks>
+    /// Gated per entity type (table), <b>not</b> per <see cref="BulkConfig.UpdateByProperties"/> key set.
+    /// A stress run that swept the shared-key pool from 15 up to 10,000 SKUs found the retry activation
+    /// rate stayed flat across every pool size — ruling out key collision as the cause. The real
+    /// contention is PostgreSQL's <c>CREATE INDEX CONCURRENTLY</c> (part of the merge EFCore.BulkExtensions
+    /// runs for a non-PK match), which serializes against *any* other transaction on the *same table*,
+    /// regardless of which rows/columns either one touches. Gating by key set would let two same-process
+    /// calls with different <c>UpdateByProperties</c> on the same table run concurrently and still race —
+    /// gating by type alone is what actually matches the real contention boundary. The retry on top covers
+    /// what the semaphore cannot: cross-process concurrency (multiple API instances), where the collision
+    /// still exists at the database level.
+    /// </remarks>
     private const int BulkUpsertGatePermits = 1;
-    private const string BulkUpsertGatePrimaryKeyToken = "__pk__";
 
     private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, SemaphoreSlim> BulkUpsertGates = new();
 
-    private static SemaphoreSlim GetBulkUpsertGate(BulkConfig? bulkConfig)
+    private static SemaphoreSlim GetBulkUpsertGate()
     {
-        var keyColumns = bulkConfig?.UpdateByProperties is { Count: > 0 } props
-            ? string.Join(",", props)
-            : BulkUpsertGatePrimaryKeyToken;
-        var key = $"{typeof(T).FullName}:{keyColumns}";
+        var key = typeof(T).FullName!;
         return BulkUpsertGates.GetOrAdd(key, static _ => new SemaphoreSlim(BulkUpsertGatePermits, BulkUpsertGatePermits));
     }
 
     private async Task RunGatedBulkUpsertAsync(
-        Func<Task> bulkOperation, BulkConfig? bulkConfig, string operationName,
+        Func<Task> bulkOperation, string operationName,
         CancellationToken cancellationToken, Activity? activity)
     {
-        var gate = GetBulkUpsertGate(bulkConfig);
+        var gate = GetBulkUpsertGate();
         await gate.WaitAsync(cancellationToken);
         try
         {
@@ -774,7 +779,7 @@ public partial class ValiFlowEvaluator<T>
 
             await RunGatedBulkUpsertAsync(
                 () => _dbContext.BulkInsertOrUpdateAsync(entityList, bulkConfig, cancellationToken: cancellationToken),
-                bulkConfig, nameof(BulkInsertOrUpdateAsync), cancellationToken, activity);
+                nameof(BulkInsertOrUpdateAsync), cancellationToken, activity);
         }
         catch (Exception ex)
         {
