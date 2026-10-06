@@ -4,7 +4,7 @@ Esta guía te lleva a través de la instalación y uso del ecosistema Vali-Flow 
 
 ## Requisitos previos
 
-- .NET 8 o .NET 9
+- .NET 8 o .NET 9 (tambien corre en .NET 10 por compatibilidad hacia adelante)
 - Un proyecto C# (cualquier tipo: Web API, consola, proyecto de tests, etc.)
 
 ---

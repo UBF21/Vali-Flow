@@ -78,7 +78,7 @@ dotnet add package Vali-Flow
 
 **Requisitos**
 
-- .NET 8 o superior
+- .NET 8, 9 o 10 (compilado para net8.0/net9.0, corre sin modificaciones en .NET 10 por compatibilidad hacia adelante)
 - Entity Framework Core 8 o superior
 
 ---

@@ -158,7 +158,7 @@ Vali-Flow.sln
 └── Vali-Flow.Abstractions.Tests/
 ```
 
-All packages target `net8.0` and `net9.0`.
+All packages target `net8.0` and `net9.0`, and also run unmodified on **.NET 10** thanks to .NET's forward compatibility.
 
 ---
 
