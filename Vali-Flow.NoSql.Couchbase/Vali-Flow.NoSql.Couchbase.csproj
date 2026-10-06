@@ -6,7 +6,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>Vali_Flow.NoSql.Couchbase</RootNamespace>
     <PackageId>Vali-Flow.NoSql.Couchbase</PackageId>
-    <Version>1.0.0</Version>
+    <Version>1.1.0</Version>
     <Authors>Felipe Rafael Montenegro Morriberon</Authors>
     <Title>Vali-Flow.NoSql.Couchbase</Title>
     <Description>Couchbase adapter for Vali-Flow.NoSql — translates the provider-agnostic IR tree into a parameterized N1QL (SQL++) WHERE clause fragment. Use .ToCouchbase() on any ValiFlow&lt;T&gt; or Expression&lt;Func&lt;T, bool&gt;&gt;.</Description>
@@ -19,7 +19,7 @@
     <PackageIcon>VF_logo.png</PackageIcon>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageTags>vali;vali-flow;couchbase;n1ql;sqlpp;filter;nosql;dotnet</PackageTags>
-    <PackageReleaseNotes>v1.0.0 — Initial release. N1QL (SQL++) WHERE clause translator.</PackageReleaseNotes>
+    <PackageReleaseNotes>v1.1.0 — Fix: decimal values were bound as N1QL string parameters instead of native numbers, making every comparison operator (=, &lt;&gt;, &gt;, &gt;=, &lt;, &lt;=) against a decimal field silently match zero rows (N1QL does not coerce between string and number). Add a MaxInValues cap. Instrument Translate(...) with ValiFlowDiagnostics Activity tracing. No breaking changes.</PackageReleaseNotes>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <EmbedUntrackedSources>true</EmbedUntrackedSources>
@@ -41,7 +41,7 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All" />
-    <PackageReference Include="Vali-Flow.NoSql" Version="1.1.0" />
+    <PackageReference Include="Vali-Flow.NoSql" Version="1.1.1" />
   </ItemGroup>
 
 </Project>

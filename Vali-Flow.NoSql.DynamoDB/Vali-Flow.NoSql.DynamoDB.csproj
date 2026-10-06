@@ -6,7 +6,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>Vali_Flow.NoSql.DynamoDB</RootNamespace>
     <PackageId>Vali-Flow.NoSql.DynamoDB</PackageId>
-    <Version>1.1.0</Version>
+    <Version>1.2.0</Version>
     <Authors>Felipe Rafael Montenegro Morriberon</Authors>
     <Title>Vali-Flow.NoSql.DynamoDB</Title>
     <Description>AWS DynamoDB adapter for Vali-Flow.NoSql — translates the provider-agnostic IR tree into DynamoDB FilterExpression strings with ExpressionAttributeNames and ExpressionAttributeValues. Use .ToDynamoDB() on any ValiFlow&lt;T&gt; or Expression&lt;Func&lt;T, bool&gt;&gt;.</Description>
@@ -19,7 +19,7 @@
     <PackageIcon>VF_logo.png</PackageIcon>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageTags>vali;vali-flow;dynamodb;aws;filter;nosql;dotnet</PackageTags>
-    <PackageReleaseNotes>v1.1.0 — Enhanced documentation and adapter integration pattern alignment.</PackageReleaseNotes>
+    <PackageReleaseNotes>v1.2.0 — Add a MaxInValues cap. Instrument Translate(...) with ValiFlowDiagnostics Activity tracing (tag + entityType). No breaking changes.</PackageReleaseNotes>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <EmbedUntrackedSources>true</EmbedUntrackedSources>
@@ -41,8 +41,8 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All" />
-    <PackageReference Include="Vali-Flow.NoSql" Version="1.1.0" />
     <PackageReference Include="AWSSDK.DynamoDBv2" Version="3.7.406.1" />
+    <PackageReference Include="Vali-Flow.NoSql" Version="1.1.1" />
   </ItemGroup>
 
 </Project>
