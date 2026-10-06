@@ -1818,34 +1818,38 @@ public sealed class SqlQueryBuilderTests
 
     // ── Observability ─────────────────────────────────────────────────────────
 
-    private static ActivityListener AttachListener()
+    // Parents every captured activity under a private root so concurrently running tests (xunit
+    // parallelizes test classes by default) can never pollute this test's capture, even though they
+    // share the same process-wide ValiFlowDiagnostics.Source.
+    private static (ActivityListener Listener, Activity Root, List<Activity> Captured) AttachScopedListener()
     {
+        var captured = new List<Activity>();
         var listener = new ActivityListener
         {
             ShouldListenTo = source => source.Name == ValiFlowDiagnostics.SourceName,
-            Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllData
+            Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllData,
+            ActivityStopped = captured.Add
         };
         ActivitySource.AddActivityListener(listener);
-        return listener;
+
+        var root = new Activity("TestRoot").Start();
+        return (listener, root, captured);
     }
+
+    private static Activity GetOwn(List<Activity> captured, Activity root)
+        => captured.Single(a => a.ParentId == root.Id);
 
     [Fact]
     public void Build_WithTag_RecordsActivityWithTagAndEntityType()
     {
-        using var listener = AttachListener();
-        Activity? seen = null;
-        using var localListener = new ActivityListener
-        {
-            ShouldListenTo = source => source.Name == ValiFlowDiagnostics.SourceName,
-            Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllData,
-            ActivityStopped = activity => seen = activity
-        };
-        ActivitySource.AddActivityListener(localListener);
+        var (listener, root, captured) = AttachScopedListener();
+        using var l = listener;
+        using var r = root;
 
         Sql().From("Users").Tag("Get active users").Build();
 
-        seen.Should().NotBeNull();
-        seen!.GetTagItem("vali_flow.tag").Should().Be("Get active users");
+        var seen = GetOwn(captured, root);
+        seen.GetTagItem("vali_flow.tag").Should().Be("Get active users");
         seen.GetTagItem("vali_flow.entity_type").Should().Be("TestUser");
         seen.Status.Should().Be(ActivityStatusCode.Unset);
     }
@@ -1853,20 +1857,14 @@ public sealed class SqlQueryBuilderTests
     [Fact]
     public void Build_WhenValidationThrows_RecordsErrorStatus()
     {
-        Activity? seen = null;
-        using var listener = new ActivityListener
-        {
-            ShouldListenTo = source => source.Name == ValiFlowDiagnostics.SourceName,
-            Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllData,
-            ActivityStopped = activity => seen = activity
-        };
-        ActivitySource.AddActivityListener(listener);
+        var (listener, root, captured) = AttachScopedListener();
+        using var l = listener;
+        using var r = root;
 
         // Skip without Take/OrderBy triggers the existing pagination validation guard in Build().
         var act = () => Sql().From("Users").Skip(10).Build();
 
         act.Should().Throw<InvalidOperationException>();
-        seen.Should().NotBeNull();
-        seen!.Status.Should().Be(ActivityStatusCode.Error);
+        GetOwn(captured, root).Status.Should().Be(ActivityStatusCode.Error);
     }
 }

@@ -13,6 +13,27 @@ public sealed class SqlDeleteBuilderTests
 {
     private static readonly ISqlDialect Sql = new SqlServerDialect();
     private static readonly ISqlDialect Pg = new PostgreSqlDialect();
+
+    // Parents every captured activity under a private root so concurrently running tests (xunit
+    // parallelizes test classes by default) can never pollute this test's capture, even though they
+    // share the same process-wide ValiFlowDiagnostics.Source.
+    private static (ActivityListener Listener, Activity Root, List<Activity> Captured) AttachScopedListener()
+    {
+        var captured = new List<Activity>();
+        var listener = new ActivityListener
+        {
+            ShouldListenTo = source => source.Name == ValiFlowDiagnostics.SourceName,
+            Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllData,
+            ActivityStopped = captured.Add
+        };
+        ActivitySource.AddActivityListener(listener);
+
+        var root = new Activity("TestRoot").Start();
+        return (listener, root, captured);
+    }
+
+    private static Activity GetOwn(List<Activity> captured, Activity root)
+        => captured.Single(a => a.ParentId == root.Id);
     private static readonly ISqlDialect My = new MySqlDialect();
 
     // ── Basic DELETE ──────────────────────────────────────────────────────────
@@ -284,14 +305,9 @@ public sealed class SqlDeleteBuilderTests
     [Fact]
     public void Build_WithTag_RecordsActivityWithTagAndEntityType()
     {
-        Activity? seen = null;
-        using var listener = new ActivityListener
-        {
-            ShouldListenTo = source => source.Name == ValiFlowDiagnostics.SourceName,
-            Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllData,
-            ActivityStopped = activity => seen = activity
-        };
-        ActivitySource.AddActivityListener(listener);
+        var (listener, root, captured) = AttachScopedListener();
+        using var l = listener;
+        using var r = root;
 
         new SqlDeleteBuilder<TestUser>(Sql)
             .From("Users")
@@ -299,8 +315,8 @@ public sealed class SqlDeleteBuilderTests
             .Tag("Delete all users")
             .Build();
 
-        seen.Should().NotBeNull();
-        seen!.GetTagItem("vali_flow.tag").Should().Be("Delete all users");
+        var seen = GetOwn(captured, root);
+        seen.GetTagItem("vali_flow.tag").Should().Be("Delete all users");
         seen.GetTagItem("vali_flow.entity_type").Should().Be("TestUser");
         seen.GetTagItem("vali_flow.has_where").Should().Be(false);
         seen.Status.Should().Be(ActivityStatusCode.Unset);
@@ -309,20 +325,14 @@ public sealed class SqlDeleteBuilderTests
     [Fact]
     public void Build_WithoutWhereOrAllowDeleteAll_RecordsErrorStatus()
     {
-        Activity? seen = null;
-        using var listener = new ActivityListener
-        {
-            ShouldListenTo = source => source.Name == ValiFlowDiagnostics.SourceName,
-            Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllData,
-            ActivityStopped = activity => seen = activity
-        };
-        ActivitySource.AddActivityListener(listener);
+        var (listener, root, captured) = AttachScopedListener();
+        using var l = listener;
+        using var r = root;
 
         // No Where() and no AllowDeleteAll() triggers the existing safety guard in Build().
         var act = () => new SqlDeleteBuilder<TestUser>(Sql).From("Users").Build();
 
         act.Should().Throw<InvalidOperationException>();
-        seen.Should().NotBeNull();
-        seen!.Status.Should().Be(ActivityStatusCode.Error);
+        GetOwn(captured, root).Status.Should().Be(ActivityStatusCode.Error);
     }
 }
