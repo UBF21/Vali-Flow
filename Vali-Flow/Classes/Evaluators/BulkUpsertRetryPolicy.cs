@@ -5,10 +5,13 @@ namespace Vali_Flow.Classes.Evaluators;
 /// <c>EFCore.BulkExtensions</c> itself documents for the most common relational providers:
 /// <list type="bullet">
 /// <item><description><b>PostgreSQL / MySQL</b>: matching by <c>BulkConfig.UpdateByProperties</c> (instead of
-/// the primary key) makes the library create then drop a deterministically-named temporary unique
-/// index/constraint around the merge. Two concurrent calls against the same table/key columns can race on
-/// that shared object (one drops it mid-merge of the other), surfacing as e.g. PostgreSQL's
-/// <c>42704 "index ... does not exist"</c>.</description></item>
+/// the primary key) makes the library create then drop a temporary unique index/constraint around the merge
+/// via <c>CREATE INDEX CONCURRENTLY</c> (PostgreSQL) or an equivalent DDL statement (MySQL), which serializes
+/// against *any other transaction on the same table* — not just ones touching the same rows/columns. A
+/// stress run sweeping the shared-key pool from 15 up to 10,000 distinct keys found the retry activation
+/// rate unchanged across every pool size, ruling out key collision as the cause: this is table-level DDL
+/// contention proportional to concurrent request rate on that table, surfacing as e.g. PostgreSQL's
+/// <c>42704 "index ... does not exist"</c> when one caller's DDL interleaves with another's.</description></item>
 /// <item><description><b>SQL Server</b>: the library's own README documents deadlocks as a known concurrency
 /// issue for bulk merge operations (see upstream issue #46) — the server picks a victim transaction and kills
 /// it with <c>"Transaction (Process ID ...) was deadlocked ... and has been chosen as the deadlock victim"</c>,
