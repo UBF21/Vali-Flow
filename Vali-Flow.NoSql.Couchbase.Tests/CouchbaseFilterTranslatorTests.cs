@@ -377,13 +377,17 @@ public sealed class CouchbaseFilterTranslatorTests
     // ── Type coverage ─────────────────────────────────────────────────────────
 
     [Fact]
-    public void ToCouchbase_DecimalValue_ProducesStringParameter()
+    public void ToCouchbase_DecimalValue_ProducesNumericParameter()
     {
+        // Regression: N1QL has no implicit coercion between string and number — a decimal
+        // bound as a string silently matched zero rows against a numeric field for every
+        // comparison op, confirmed against a real Couchbase cluster. Must bind as a number.
         var node = new EqualNode("Price", 9.99m, false);
 
         CouchbaseFilterExpression f = CouchbaseFilterTranslator.Translate(node);
 
-        f.Parameters["$p0"].Should().Be("9.99");
+        f.Parameters["$p0"].Should().Be(9.99m);
+        f.Parameters["$p0"].Should().BeOfType<decimal>();
     }
 
     [Fact]
