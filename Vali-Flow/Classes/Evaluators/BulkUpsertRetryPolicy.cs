@@ -37,14 +37,23 @@ namespace Vali_Flow.Classes.Evaluators;
 /// </remarks>
 internal static class BulkUpsertRetryPolicy
 {
-    /// <summary>Default maximum attempts (1 initial try + up to 3 retries).</summary>
-    internal const int DefaultMaxAttempts = 4;
+    /// <summary>
+    /// Default maximum attempts (1 initial try + up to 6 retries). Raised from an initial 4 after a stress
+    /// run reproduced the real cross-process scenario this retry targets (2 API instances, 50 req/s combined,
+    /// 15 shared business keys): 4 attempts (~450ms total backoff budget) left ~2% of requests (8/405)
+    /// exhausting all retries and propagating a 500 under sustained contention. 7 attempts gives the losing
+    /// side of the race materially more chances to land after the winner releases the temp index/lock.
+    /// </summary>
+    internal const int DefaultMaxAttempts = 7;
 
     /// <summary>Base delay for the exponential backoff between retries.</summary>
     internal static readonly TimeSpan DefaultBaseDelay = TimeSpan.FromMilliseconds(50);
 
-    /// <summary>Upper bound on any single computed delay, so backoff never grows unbounded.</summary>
-    internal static readonly TimeSpan DefaultMaxDelay = TimeSpan.FromMilliseconds(400);
+    /// <summary>
+    /// Upper bound on any single computed delay, so backoff never grows unbounded. Raised from 400ms to 900ms
+    /// alongside <see cref="DefaultMaxAttempts"/> — see that constant's remarks for the measured rationale.
+    /// </summary>
+    internal static readonly TimeSpan DefaultMaxDelay = TimeSpan.FromMilliseconds(900);
 
     /// <summary>Upper bound (exclusive) of the random jitter added to each delay, to avoid a thundering herd of retries.</summary>
     internal const int DefaultJitterMs = 50;
