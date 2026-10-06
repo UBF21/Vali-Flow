@@ -514,5 +514,27 @@ public sealed class ValiFlowEfBulkTests
         (await ctx.Orders.CountAsync(o => o.CustomerName!.StartsWith("Concurrent"))).Should().Be(concurrentCallers);
     }
 
+    [Fact]
+    public async Task BulkUpdateAsync_ConcurrentCallsSameEntityType_SharesGateWithInsertOrUpdateAndDoesNotThrow()
+    {
+        // BulkUpdateAsync shares the exact same temp-index/deadlock exposure as BulkInsertOrUpdateAsync
+        // when matching by BulkConfig.UpdateByProperties (see BulkUpsertRetryPolicy) -- it now goes
+        // through the same gate+retry path (RunGatedBulkUpsertAsync). Verifies concurrent calls against
+        // the same entity type don't corrupt results or deadlock.
+        await using var sqlCtx = SqliteTestContext.Create();
+        var ctx = sqlCtx.Context;
+        ctx_seed(ctx);
+        await ctx.SaveChangesAsync();
+        var evaluator = new ValiFlowEvaluator<TestOrder>(ctx);
+
+        var seeded = await ctx.Orders.AsNoTracking().ToListAsync();
+        const int concurrentCallers = 8;
+        var tasks = seeded.Take(concurrentCallers).Select((o, i) => evaluator.BulkUpdateAsync(
+            new List<TestOrder> { new() { Id = o.Id, CustomerName = o.CustomerName, Total = 100 + i, IsShipped = true, CreatedAt = o.CreatedAt } }));
+
+        Func<Task> act = async () => await Task.WhenAll(tasks);
+        await act.Should().NotThrowAsync();
+    }
+
     private static void ctx_seed(TestDbContext ctx) => ctx.Orders.AddRange(SeedOrders());
 }
