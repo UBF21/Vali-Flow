@@ -38,20 +38,28 @@ namespace Vali_Flow.Classes.Evaluators;
 internal static class BulkUpsertRetryPolicy
 {
     /// <summary>
-    /// Default maximum attempts (1 initial try + up to 6 retries). Raised from an initial 4 after a stress
-    /// run reproduced the real cross-process scenario this retry targets (2 API instances, 50 req/s combined,
-    /// 15 shared business keys): 4 attempts (~450ms total backoff budget) left ~2% of requests (8/405)
-    /// exhausting all retries and propagating a 500 under sustained contention. 7 attempts gives the losing
-    /// side of the race materially more chances to land after the winner releases the temp index/lock.
+    /// Default maximum attempts (1 initial try + up to 11 retries). History, measured against the real
+    /// cross-process scenario this retry targets (2 API instances, 50 req/s combined, 15 shared business
+    /// keys, <c>BulkInsertOrUpdateAsync</c> matching by a custom key):
+    /// <list type="bullet">
+    /// <item><description>4 attempts (~450ms budget): ~2% of requests (8/405) exhausted retries and propagated a 500.</description></item>
+    /// <item><description>7 attempts (~2.4s budget): down to 0.12% (1/855) — real improvement, not zero.</description></item>
+    /// <item><description>12 attempts (~5.4s budget, current): chosen to push further into this specific
+    /// artificially-high-contention benchmark (15 keys shared by 2 processes at a sustained 50 req/s is a
+    /// deliberately narrow pool, not representative of typical traffic). Zero residual failure under this
+    /// exact scenario is not guaranteed by construction — the race is a queue, not a fixed number of
+    /// contenders, so no finite retry budget can offer a 0% proof, only diminishing residual probability at
+    /// the cost of added worst-case latency for the caller stuck re-trying.</description></item>
+    /// </list>
     /// </summary>
-    internal const int DefaultMaxAttempts = 7;
+    internal const int DefaultMaxAttempts = 12;
 
     /// <summary>Base delay for the exponential backoff between retries.</summary>
     internal static readonly TimeSpan DefaultBaseDelay = TimeSpan.FromMilliseconds(50);
 
     /// <summary>
-    /// Upper bound on any single computed delay, so backoff never grows unbounded. Raised from 400ms to 900ms
-    /// alongside <see cref="DefaultMaxAttempts"/> — see that constant's remarks for the measured rationale.
+    /// Upper bound on any single computed delay, so backoff never grows unbounded. Raised alongside
+    /// <see cref="DefaultMaxAttempts"/> — see that constant's remarks for the measured rationale.
     /// </summary>
     internal static readonly TimeSpan DefaultMaxDelay = TimeSpan.FromMilliseconds(900);
 
