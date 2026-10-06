@@ -11,7 +11,7 @@
         <PackageId>Vali-Flow.Sql</PackageId>
         <Title>Vali-Flow.Sql</Title>
         <Product>Vali-Flow.Sql</Product>
-        <Version>1.1.1</Version>
+        <Version>1.2.0</Version>
         <Authors>Felipe Rafael Montenegro Morriberon</Authors>
         <Copyright>Copyright © 2026 - FM. All rights reserved.</Copyright>
 
@@ -37,7 +37,9 @@
         <SymbolPackageFormat>snupkg</SymbolPackageFormat>
 
         <Description>SQL translator for Vali-Flow.Core — converts ValiFlow&lt;T&gt; expression trees to parameterized SQL for Dapper and ADO.NET. Supports SQL Server, PostgreSQL, MySQL, and SQLite dialects.</Description>
-        <PackageReleaseNotes>v1.1.1 — Updated Vali-Flow.Core dependency to 2.0.2 (fixes IsNull/NotNull WHERE 0=1 bug with EF Core GlobalQueryFilter). No API changes.
+        <PackageReleaseNotes>v1.2.0 — Add SqlIdentifierGuard (regex whitelist validation for table/schema/type names) to every builder, fixing a SQL injection vector. Add SetAllFrom(entity, exclude...) reflection-based bulk column mapper to Insert/Update builders. Fix OrIgnore/OrReplace dialect guard, Set()-after-SelectFrom() silent data loss, and Where()-called-twice silent overwrite bugs. Instrument all 6 builders' Build() with ValiFlowDiagnostics Activity tracing. No breaking changes.
+
+v1.1.1 — Updated Vali-Flow.Core dependency to 2.0.2 (fixes IsNull/NotNull WHERE 0=1 bug with EF Core GlobalQueryFilter). No API changes.
 
 v1.1.0 — Initial release. Expression-to-SQL translator with dialect support for SQL Server, PostgreSQL, MySQL, and SQLite.</PackageReleaseNotes>
     </PropertyGroup>
@@ -45,7 +47,7 @@ v1.1.0 — Initial release. Expression-to-SQL translator with dialect support fo
     <ItemGroup>
         <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All" />
         <PackageReference Include="Vali-Flow.Core" Version="2.0.2" />
-        <PackageReference Include="Vali-Flow.Abstractions" Version="1.1.0" />
+        <PackageReference Include="Vali-Flow.Abstractions" Version="1.2.0" />
     </ItemGroup>
 
     <ItemGroup>

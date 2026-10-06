@@ -11,7 +11,7 @@
         <PackageId>Vali-Flow.InMemory</PackageId>
         <Title>Vali-Flow.InMemory</Title>
         <Product>Vali-Flow.InMemory</Product>
-        <Version>1.1.5</Version>
+        <Version>1.2.0</Version>
         <Authors>Felipe Rafael Montenegro Morriberon</Authors>
         <Copyright>Copyright © 2026 - FM. All rights reserved.</Copyright>
 
@@ -37,7 +37,9 @@
         <SymbolPackageFormat>snupkg</SymbolPackageFormat>
 
         <Description>Synchronous in-memory evaluator for Vali-Flow.Core — filter, page, aggregate and write in-memory collections using the same fluent ValiFlow&lt;T&gt; specification API. Ideal for unit testing and caching layers without a database dependency.</Description>
-        <PackageReleaseNotes>v1.1.5 — Updated Vali-Flow.Core dependency to 2.0.2 (fixes IsNull/NotNull WHERE 0=1 bug with EF Core GlobalQueryFilter). No API changes.
+        <PackageReleaseNotes>v1.2.0 — Fix Update(entity, externalList) leaking into the internal store on a later bare SaveChanges() call. Split ValiFlowEvaluator&lt;T,TProperty&gt; into partial files (Bridge/Read/Write/Grouped). Add an optional tag parameter across read/write/grouped methods, wired to ValiFlowDiagnostics Activity tracing. No breaking changes.
+
+v1.1.5 — Updated Vali-Flow.Core dependency to 2.0.2 (fixes IsNull/NotNull WHERE 0=1 bug with EF Core GlobalQueryFilter). No API changes.
 
 v1.1.4 — Remove sealed modifiers from all classes (ValiFlowEvaluator, AsyncInMemoryAdapter, InMemoryWriteStore, PagedResult). Now fully inheritable for custom implementations. No breaking changes.</PackageReleaseNotes>
     </PropertyGroup>
@@ -45,7 +47,7 @@ v1.1.4 — Remove sealed modifiers from all classes (ValiFlowEvaluator, AsyncInM
     <ItemGroup>
         <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All" />
         <PackageReference Include="Vali-Flow.Core" Version="2.0.2" />
-        <PackageReference Include="Vali-Flow.Abstractions" Version="1.1.0" />
+        <PackageReference Include="Vali-Flow.Abstractions" Version="1.2.0" />
     </ItemGroup>
 
     <ItemGroup>
