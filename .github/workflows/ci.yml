@@ -85,7 +85,9 @@ jobs:
         run: |
           set -o pipefail
           mkdir -p local-feed
-          dotnet nuget add source "$(pwd)/local-feed" --name local-feed
+          feed_dir="$(pwd)/local-feed"
+          if [[ "$RUNNER_OS" == "Windows" ]]; then feed_dir="$(cygpath -w "$feed_dir")"; fi
+          dotnet nuget add source "$feed_dir" --name local-feed
           dotnet pack Vali-Flow.Abstractions/Vali-Flow.Abstractions.csproj -c Release -o local-feed 2>&1 | tee logs/00b-prime-feed-abstractions.log
           dotnet pack Vali-Flow.NoSql/Vali-Flow.NoSql.csproj -c Release -o local-feed 2>&1 | tee logs/00c-prime-feed-nosql.log
 
@@ -111,7 +113,7 @@ jobs:
           projects="Vali-Flow.Abstractions.Tests Vali-Flow.Tests Vali-Flow.InMemory.Tests Vali-Flow.Sql.Tests Vali-Flow.NoSql.Tests Vali-Flow.NoSql.Elasticsearch.Tests Vali-Flow.NoSql.Redis.Tests Vali-Flow.NoSql.DynamoDB.Tests Vali-Flow.NoSql.Couchbase.Tests Vali-Flow.NoSql.CosmosDb.Tests Vali-Flow.NoSql.Firestore.Tests"
           for project in $projects; do
             echo "::group::$project on ${{ matrix.tfm }}"
-            dotnet test "$project" -c Release --no-build -f "${{ matrix.tfm }}" \
+            dotnet test "$project/$project.csproj" -c Release --no-build -f "${{ matrix.tfm }}" \
               --logger "console;verbosity=detailed" \
               --logger "trx;LogFileName=$project-${{ matrix.tfm }}.trx" \
               --collect:"XPlat Code Coverage" --results-directory "TestResults/${{ matrix.tfm }}/$project" \
