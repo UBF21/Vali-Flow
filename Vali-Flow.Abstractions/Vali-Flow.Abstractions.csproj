@@ -14,7 +14,7 @@
         <RepositoryType>git</RepositoryType>
         <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
         <Copyright>Copyright © 2025 - FM. All rights reserved.</Copyright>
-        <Version>1.1.0</Version>
+        <Version>1.2.0</Version>
         <PackageIcon>VF_logo.png</PackageIcon>
         <PackageId>Vali-Flow.Abstractions</PackageId>
         <Product>Vali-Flow.Abstractions</Product>
@@ -29,7 +29,9 @@
         <IncludeSymbols>true</IncludeSymbols>
         <SymbolPackageFormat>snupkg</SymbolPackageFormat>
 
-        <PackageReleaseNotes>v1.1.0 — Enhanced documentation and internal contracts alignment with ecosystem refactor.</PackageReleaseNotes>
+        <PackageReleaseNotes>v1.2.0 — Add ValiFlowDiagnostics: a shared ActivitySource-based observability helper (StartActivity/RecordException) used across every Vali-Flow package for Activity-based tracing. No breaking changes.
+
+v1.1.0 — Enhanced documentation and internal contracts alignment with ecosystem refactor.</PackageReleaseNotes>
     </PropertyGroup>
 
     <ItemGroup>
