@@ -33,8 +33,6 @@
         <PublishRepositoryUrl>true</PublishRepositoryUrl>
         <EmbedUntrackedSources>true</EmbedUntrackedSources>
         <DebugType>embedded</DebugType>
-        <IncludeSymbols>true</IncludeSymbols>
-        <SymbolPackageFormat>snupkg</SymbolPackageFormat>
 
         <Description>SQL translator for Vali-Flow.Core — converts ValiFlow&lt;T&gt; expression trees to parameterized SQL for Dapper and ADO.NET. Supports SQL Server, PostgreSQL, MySQL, and SQLite dialects.</Description>
         <PackageReleaseNotes>v1.2.0 — Add SqlIdentifierGuard (regex whitelist validation for table/schema/type names) to every builder, fixing a SQL injection vector. Add SetAllFrom(entity, exclude...) reflection-based bulk column mapper to Insert/Update builders. Fix OrIgnore/OrReplace dialect guard, Set()-after-SelectFrom() silent data loss, and Where()-called-twice silent overwrite bugs. Instrument all 6 builders' Build() with ValiFlowDiagnostics Activity tracing. No breaking changes.

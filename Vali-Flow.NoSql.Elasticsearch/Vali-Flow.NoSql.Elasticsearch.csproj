@@ -22,8 +22,6 @@
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <EmbedUntrackedSources>true</EmbedUntrackedSources>
     <DebugType>embedded</DebugType>
-    <IncludeSymbols>true</IncludeSymbols>
-    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
     <PackageReleaseNotes>v1.2.0 — Fix a swallowed inner exception in ToDouble (now wrapped with context instead of lost). Add a MaxInValues cap (65,536, matching index.max_terms_count). Instrument Translate(...) with ValiFlowDiagnostics Activity tracing. No breaking changes.</PackageReleaseNotes>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
