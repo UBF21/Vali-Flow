@@ -1,31 +1,31 @@
 # Vali-Flow
 
-**English** | [Español](README.es.md)
+[English](README.md) | **Español**
 
-## Overview
+## Descripción general
 
-Vali-Flow is a comprehensive .NET library ecosystem for building reusable, composable query criteria with a fluent API. It enables you to define filter logic once using a simple, expression-based DSL and translate it into:
+Vali-Flow es un ecosistema completo de librerías .NET para construir criterios de consulta reutilizables y componibles mediante una API fluida. Permite definir la lógica de filtrado una sola vez usando un DSL simple basado en expresiones, y traducirla a:
 
-- **Entity Framework Core** queries (async)
-- **Parameterized SQL** for Dapper / ADO.NET (SQL Server, PostgreSQL, MySQL, SQLite)
-- **MongoDB BSON** filters
+- Consultas de **Entity Framework Core** (async)
+- **SQL parametrizado** para Dapper / ADO.NET (SQL Server, PostgreSQL, MySQL, SQLite)
+- Filtros **MongoDB BSON**
 - **Elasticsearch Query DSL**
-- **Redis (RediSearch)** queries
-- **AWS DynamoDB** filter expressions
-- **In-memory** evaluation (LINQ-to-Objects)
+- Consultas **Redis (RediSearch)**
+- Expresiones de filtro de **AWS DynamoDB**
+- Evaluación **en memoria** (LINQ-to-Objects)
 
-All built on **Vali-Flow.Core** — a lightweight expression builder with zero additional dependencies.
+Todo construido sobre **Vali-Flow.Core** — un constructor de expresiones ligero, sin dependencias adicionales.
 
-**Supported platforms:** .NET 8.0, .NET 9.0 — all packages also run unmodified on **.NET 10** thanks to .NET's forward compatibility (a library built for an earlier TFM runs fine under a newer runtime).
+**Plataformas soportadas:** .NET 8.0, .NET 9.0 — todos los paquetes también corren sin modificaciones en **.NET 10** gracias a la compatibilidad hacia adelante de .NET (una librería construida para un TFM anterior funciona bien en un runtime más nuevo).
 
 ---
 
-## The Problem It Solves
+## El problema que resuelve
 
-When working with multiple data stores or ORM patterns, you typically scatter filter logic across repositories, duplicate predicates per store, or couple business logic to data access code:
+Cuando se trabaja con múltiples almacenes de datos o patrones de ORM, es habitual dispersar la lógica de filtrado entre repositorios, duplicar predicados por cada almacén, o acoplar la lógica de negocio al código de acceso a datos:
 
 ```csharp
-// ❌ Traditional approach: filter logic is scattered
+// ❌ Enfoque tradicional: la lógica de filtrado está dispersa
 public async Task<List<Order>> GetActiveOrdersEF(DbContext db, decimal minTotal)
 {
     return await db.Orders
@@ -51,15 +51,15 @@ public DataTable GetActiveOrdersSQL(SqlConnection conn, decimal minTotal)
 }
 ```
 
-**With Vali-Flow:**
+**Con Vali-Flow:**
 
 ```csharp
-// ✅ Single filter definition
+// ✅ Una sola definición de filtro
 var filter = new ValiFlow<Order>()
     .EqualTo(x => x.Status, "Active")
     .GreaterThan(x => x.Total, minTotal);
 
-// Use the same filter everywhere
+// Usa el mismo filtro en todas partes
 var efOrders = await new ValiFlowEvaluator<Order>(dbContext)
     .EvaluateQueryAsync(new BasicSpecification<Order>().WithFilter(filter));
 
@@ -73,60 +73,60 @@ var sqlOrders = await connection.QueryAsync<Order>(
 
 ---
 
-## Package Ecosystem
+## Ecosistema de paquetes
 
-### Core Package
+### Paquete principal
 
-| Package | Purpose | Version |
+| Paquete | Propósito | Versión |
 |---------|---------|---------|
-| **Vali-Flow.Core** | Fluent expression builder (`ValiFlow<T>`) - shared by all packages | [2.0.0](https://www.nuget.org/packages/Vali-Flow.Core) |
-| **Vali-Flow.Abstractions** | Provider-agnostic contracts shared by every package (`IQueryEvaluator`, `IExpressionTranslator`, `ExpressionInspector`) plus `ValiFlowDiagnostics`, an `ActivitySource`-based tracing helper for OpenTelemetry-compatible observability | [1.2.0](https://www.nuget.org/packages/Vali-Flow.Abstractions) |
+| **Vali-Flow.Core** | Constructor de expresiones fluido (`ValiFlow<T>`) - compartido por todos los paquetes | [2.0.0](https://www.nuget.org/packages/Vali-Flow.Core) |
+| **Vali-Flow.Abstractions** | Contratos agnósticos de proveedor compartidos por todos los paquetes (`IQueryEvaluator`, `IExpressionTranslator`, `ExpressionInspector`) más `ValiFlowDiagnostics`, un helper de trazabilidad basado en `ActivitySource` compatible con OpenTelemetry | [1.2.0](https://www.nuget.org/packages/Vali-Flow.Abstractions) |
 
-### Data Access Packages
+### Paquetes de acceso a datos
 
-| Package | Purpose | Target | Version |
+| Paquete | Propósito | Destino | Versión |
 |---------|---------|--------|---------|
-| **Vali-Flow** | EF Core async evaluator + specifications (read/write) | `DbContext` | [1.4.0](https://www.nuget.org/packages/Vali-Flow) |
-| **Vali-Flow.InMemory** | Synchronous in-memory evaluator for testing & caching | `IEnumerable<T>` | [1.2.0](https://www.nuget.org/packages/Vali-Flow.InMemory) |
-| **Vali-Flow.Sql** | SQL query builder for parameterized queries | Dapper / ADO.NET | [1.2.0](https://www.nuget.org/packages/Vali-Flow.Sql) |
+| **Vali-Flow** | Evaluador async de EF Core + especificaciones (lectura/escritura) | `DbContext` | [1.4.0](https://www.nuget.org/packages/Vali-Flow) |
+| **Vali-Flow.InMemory** | Evaluador síncrono en memoria para pruebas y caché | `IEnumerable<T>` | [1.2.0](https://www.nuget.org/packages/Vali-Flow.InMemory) |
+| **Vali-Flow.Sql** | Constructor de consultas SQL parametrizadas | Dapper / ADO.NET | [1.2.0](https://www.nuget.org/packages/Vali-Flow.Sql) |
 
-### NoSQL Packages
+### Paquetes NoSQL
 
-| Package | Database | Output Type | Version |
+| Paquete | Base de datos | Tipo de salida | Versión |
 |---------|----------|-------------|---------|
-| **Vali-Flow.NoSql** | Shared NoSQL IR + translator base used by every provider package below | — | [1.1.1](https://www.nuget.org/packages/Vali-Flow.NoSql) |
+| **Vali-Flow.NoSql** | IR y base de traducción NoSQL compartida, usada por todos los paquetes proveedor listados abajo | — | [1.1.1](https://www.nuget.org/packages/Vali-Flow.NoSql) |
 | **Vali-Flow.NoSql.MongoDB** | MongoDB | `BsonDocument` | [1.2.0](https://www.nuget.org/packages/Vali-Flow.NoSql.MongoDB) |
 | **Vali-Flow.NoSql.Elasticsearch** | Elasticsearch | `Query` (Elastic.Clients) | [1.2.0](https://www.nuget.org/packages/Vali-Flow.NoSql.Elasticsearch) |
-| **Vali-Flow.NoSql.Redis** | Redis (RediSearch) | Query string | [1.2.0](https://www.nuget.org/packages/Vali-Flow.NoSql.Redis) |
+| **Vali-Flow.NoSql.Redis** | Redis (RediSearch) | Cadena de consulta | [1.2.0](https://www.nuget.org/packages/Vali-Flow.NoSql.Redis) |
 | **Vali-Flow.NoSql.DynamoDB** | AWS DynamoDB | `DynamoFilterExpression` | [1.2.0](https://www.nuget.org/packages/Vali-Flow.NoSql.DynamoDB) |
-| **Vali-Flow.NoSql.Couchbase** | Couchbase | N1QL WHERE fragment + parameters | [1.1.0](https://www.nuget.org/packages/Vali-Flow.NoSql.Couchbase) |
-| **Vali-Flow.NoSql.CosmosDb** | Azure Cosmos DB (SQL API) | SQL WHERE fragment + parameters | [1.1.0](https://www.nuget.org/packages/Vali-Flow.NoSql.CosmosDb) |
+| **Vali-Flow.NoSql.Couchbase** | Couchbase | Fragmento WHERE en N1QL + parámetros | [1.1.0](https://www.nuget.org/packages/Vali-Flow.NoSql.Couchbase) |
+| **Vali-Flow.NoSql.CosmosDb** | Azure Cosmos DB (SQL API) | Fragmento WHERE en SQL + parámetros | [1.1.0](https://www.nuget.org/packages/Vali-Flow.NoSql.CosmosDb) |
 | **Vali-Flow.NoSql.Firestore** | Google Cloud Firestore | `Filter` (Google.Cloud.Firestore) | [1.1.0](https://www.nuget.org/packages/Vali-Flow.NoSql.Firestore) |
 
-### Architecture
+### Arquitectura
 
 ```
-Vali-Flow.Core  (expression builder — ValiFlow<T>)
+Vali-Flow.Core  (constructor de expresiones — ValiFlow<T>)
        │
        ├─── Vali-Flow                    (EF Core async)
-       ├─── Vali-Flow.InMemory           (sync in-memory)
+       ├─── Vali-Flow.InMemory           (en memoria, síncrono)
        ├─── Vali-Flow.Sql                (SQL: SQL Server, PostgreSQL, MySQL, SQLite, Oracle)
        │
        └─── Vali-Flow.NoSql
                ├─── Vali-Flow.NoSql.MongoDB        (MongoDB BSON)
                ├─── Vali-Flow.NoSql.Elasticsearch  (Elasticsearch Query DSL)
                ├─── Vali-Flow.NoSql.Redis          (RediSearch)
-               ├─── Vali-Flow.NoSql.DynamoDB       (DynamoDB filter expressions)
+               ├─── Vali-Flow.NoSql.DynamoDB       (expresiones de filtro de DynamoDB)
                ├─── Vali-Flow.NoSql.Couchbase      (N1QL / SQL++)
                ├─── Vali-Flow.NoSql.CosmosDb       (Cosmos DB SQL API)
-               └─── Vali-Flow.NoSql.Firestore      (Firestore native Filter)
+               └─── Vali-Flow.NoSql.Firestore      (Filter nativo de Firestore)
 ```
 
 ---
 
-## Quick Start
+## Inicio rápido
 
-### 1. Define a filter once
+### 1. Definir un filtro una sola vez
 
 ```csharp
 using Vali_Flow.Core;
@@ -137,7 +137,7 @@ var filter = new ValiFlow<Order>()
     .IsAfter(x => x.CreatedAt, DateTime.UtcNow.AddDays(-30));
 ```
 
-### 2. Use it with EF Core
+### 2. Usarlo con EF Core
 
 ```csharp
 using Vali_Flow;
@@ -151,7 +151,7 @@ var spec = new BasicSpecification<Order>()
 var orders = await evaluator.EvaluateQueryAsync(spec, cancellationToken);
 ```
 
-### 3. Or with SQL/Dapper
+### 3. O con SQL/Dapper
 
 ```csharp
 using Vali_Flow.Sql.Extensions;
@@ -164,7 +164,7 @@ var orders = await connection.QueryAsync<Order>(
     result.Parameters);
 ```
 
-### 4. Or with MongoDB
+### 4. O con MongoDB
 
 ```csharp
 using Vali_Flow.NoSql.MongoDB.Extensions;
@@ -173,7 +173,7 @@ var bsonFilter = filter.ToMongo();
 var orders = await collection.Find(bsonFilter).ToListAsync();
 ```
 
-### 5. Or in-memory (testing)
+### 5. O en memoria (pruebas)
 
 ```csharp
 using Vali_Flow.InMemory;
@@ -187,18 +187,18 @@ var filtered = evaluator.EvaluateAll<DateTime>(
 
 ---
 
-## Installation
+## Instalación
 
-**Install the package(s) you need:**
+**Instala el o los paquetes que necesites:**
 
 ```bash
-# EF Core (production)
+# EF Core (producción)
 dotnet add package Vali-Flow
 
-# In-memory (testing / caching)
+# En memoria (pruebas / caché)
 dotnet add package Vali-Flow.InMemory
 
-# SQL queries (Dapper / ADO.NET)
+# Consultas SQL (Dapper / ADO.NET)
 dotnet add package Vali-Flow.Sql
 
 # MongoDB
@@ -214,42 +214,42 @@ dotnet add package Vali-Flow.NoSql.Redis
 dotnet add package Vali-Flow.NoSql.DynamoDB
 ```
 
-All packages automatically include **Vali-Flow.Core** as a transitive dependency.
+Todos los paquetes incluyen automáticamente **Vali-Flow.Core** como dependencia transitiva.
 
 ---
 
-## Core Features
+## Características principales
 
-### Fluent Filter DSL (`ValiFlow<T>`)
+### DSL de filtros fluido (`ValiFlow<T>`)
 
-Build complex filters with a natural, chainable API:
+Construye filtros complejos con una API natural y encadenable:
 
 ```csharp
 var filter = new ValiFlow<Product>()
-    // Comparison
+    // Comparación
     .EqualTo(x => x.Category, "Electronics")
     .GreaterThanOrEqualTo(x => x.Price, 100m)
-    // String operations
+    // Operaciones de cadena
     .Contains(x => x.Name, "phone")
     .StartsWith(x => x.Sku, "PROD")
-    // Numeric ranges
+    // Rangos numéricos
     .Between(x => x.Quantity, 1, 1000)
-    // Dates
+    // Fechas
     .IsAfter(x => x.CreatedAt, DateTime.UtcNow.AddDays(-90))
-    // Collection
+    // Colección
     .NotEmpty(x => x.Reviews)
-    // Boolean
+    // Booleano
     .IsTrue(x => x.IsActive)
-    // Logical operators
+    // Operadores lógicos
     .Or()
     .EqualTo(x => x.Category, "Accessories");
 ```
 
-See [Vali-Flow.Core](https://github.com/UBF21/vali-flow-core) for the full list of 50+ predicates.
+Consulta [Vali-Flow.Core](https://github.com/UBF21/vali-flow-core) para la lista completa de más de 50 predicados.
 
-### Specifications
+### Especificaciones
 
-Encapsulate query criteria, ordering, pagination, and eager loading:
+Encapsulan criterios de consulta, ordenamiento, paginación y carga ansiosa (eager loading):
 
 ```csharp
 var spec = new QuerySpecification<Order>()
@@ -262,33 +262,33 @@ var spec = new QuerySpecification<Order>()
     .WithAsNoTracking(true);
 ```
 
-### EF Core: Read Operations
+### EF Core: operaciones de lectura
 
 ```csharp
 var evaluator = new ValiFlowEvaluator<Order>(dbContext);
 
-// Existence and count
+// Existencia y conteo
 bool exists = await evaluator.EvaluateAnyAsync(spec);
 int count   = await evaluator.EvaluateCountAsync(spec);
 
-// Single entities
+// Entidades individuales
 Order? first = await evaluator.EvaluateGetFirstAsync(spec);
 Order? last  = await evaluator.EvaluateGetLastAsync(spec);
 
-// Full query
+// Consulta completa
 IQueryable<Order> query = await evaluator.EvaluateQueryAsync(spec);
 
-// Distinct and duplicates
+// Distintos y duplicados
 IQueryable<Order> distinct   = await evaluator.EvaluateDistinctAsync(spec, x => x.CustomerId);
 IQueryable<Order> duplicates = await evaluator.EvaluateDuplicatesAsync(spec, x => x.CustomerId);
 
-// Aggregates
+// Agregados
 decimal minTotal = await evaluator.EvaluateMinAsync(spec, x => x.Total);
 decimal maxTotal = await evaluator.EvaluateMaxAsync(spec, x => x.Total);
 decimal avgTotal = await evaluator.EvaluateAverageAsync(spec, x => x.Total);
 decimal sumTotal = await evaluator.EvaluateSumAsync(spec, x => x.Total);
 
-// Grouped aggregates
+// Agregados agrupados
 Dictionary<string, int> countByStatus = 
     await evaluator.EvaluateCountByGroupAsync(spec, x => x.Status);
 
@@ -296,36 +296,36 @@ Dictionary<string, decimal> sumByStatus =
     await evaluator.EvaluateSumByGroupAsync(spec, x => x.Status, x => x.Total);
 ```
 
-### EF Core: Write Operations
+### EF Core: operaciones de escritura
 
 ```csharp
 var evaluator = new ValiFlowEvaluator<Order>(dbContext);
 
-// Single entity
+// Entidad individual
 var added   = await evaluator.AddAsync(order, saveChanges: true);
 var updated = await evaluator.UpdateAsync(order, saveChanges: true);
 await evaluator.DeleteAsync(order, saveChanges: true);
 
-// Batch
+// Por lotes
 await evaluator.AddRangeAsync(orders);
 await evaluator.UpdateRangeAsync(orders);
 await evaluator.DeleteRangeAsync(orders);
 
-// Conditional delete
+// Eliminación condicional
 await evaluator.DeleteByConditionAsync(
     condition: x => x.Status == "Expired" && x.CreatedAt < cutoffDate);
 
-// Upsert (insert if not found, update otherwise)
+// Upsert (inserta si no existe, actualiza si existe)
 var upserted = await evaluator.UpsertAsync(
     entity: order,
     matchCondition: x => x.Id == order.Id);
 
-// Bulk operations (via EFCore.BulkExtensions)
+// Operaciones masivas (vía EFCore.BulkExtensions)
 await evaluator.BulkInsertAsync(orders, new BulkConfig { BatchSize = 5000 });
 await evaluator.BulkUpdateAsync(orders, new BulkConfig { BatchSize = 5000 });
 await evaluator.BulkInsertOrUpdateAsync(orders);
 
-// Transactions
+// Transacciones
 await evaluator.ExecuteTransactionAsync(async () =>
 {
     await evaluator.AddAsync(order1, saveChanges: false);
@@ -334,18 +334,18 @@ await evaluator.ExecuteTransactionAsync(async () =>
 });
 ```
 
-### SQL Query Builder (Dapper / ADO.NET)
+### Constructor de consultas SQL (Dapper / ADO.NET)
 
-Four dialects out of the box: SQL Server, PostgreSQL, MySQL, SQLite.
+Cuatro dialectos listos para usar: SQL Server, PostgreSQL, MySQL, SQLite.
 
 ```csharp
-// Simple WHERE clause
+// Cláusula WHERE simple
 var result = filter.ToSql(new PostgreSqlDialect());
 var orders = await connection.QueryAsync<Order>(
     $"SELECT * FROM orders WHERE {result.Sql}",
     result.Parameters);
 
-// Full SELECT with JOIN, GROUP BY, aggregates
+// SELECT completo con JOIN, GROUP BY, agregados
 var query = new SqlQueryBuilder<Order>(new SqlServerDialect())
     .Select(x => x.Id, x => x.Status, x => x.Total)
     .From("orders")
@@ -356,9 +356,9 @@ var query = new SqlQueryBuilder<Order>(new SqlServerDialect())
 var result = query.Build();
 ```
 
-### In-Memory Evaluator (Testing / Caching)
+### Evaluador en memoria (pruebas / caché)
 
-Synchronous, dependency-free evaluation against `IEnumerable<T>`:
+Evaluación síncrona y sin dependencias contra `IEnumerable<T>`:
 
 ```csharp
 var evaluator = new ValiFlowEvaluator<Order, int>(orders, null, x => x.Id);
@@ -379,7 +379,7 @@ Dictionary<string, int> countByStatus =
 
 ---
 
-## NoSQL Support
+## Soporte NoSQL
 
 ### MongoDB
 
@@ -435,31 +435,31 @@ var request = new ScanRequest
 
 ---
 
-## Documentation
+## Documentación
 
-- **[Full Feature Guide](docs/FEATURES.md)** — Detailed examples for each package
-- **[Architecture Guide](docs/ARCHITECTURE.md)** — Design patterns and decision rationale
-- **[SQL Dialects Reference](Vali-Flow.Sql/README.md)** — SQL Builder capabilities
-- **[Vali-Flow.Core](https://github.com/UBF21/vali-flow-core)** — Expression builder predicates
-
----
-
-## License
-
-Licensed under the [MIT License](LICENSE).  
-Copyright © 2025 Felipe Rafael Montenegro Morriberon. All rights reserved.
+- **[Guía completa de funcionalidades](docs/FEATURES.md)** — Ejemplos detallados de cada paquete
+- **[Guía de arquitectura](docs/ARCHITECTURE.md)** — Patrones de diseño y justificación de decisiones
+- **[Referencia de dialectos SQL](Vali-Flow.Sql/README.md)** — Capacidades del SQL Builder
+- **[Vali-Flow.Core](https://github.com/UBF21/vali-flow-core)** — Predicados del constructor de expresiones
 
 ---
 
-## Support
+## Licencia
 
-- **Issues & Feature Requests:** [GitHub Issues](https://github.com/UBF21/vali-flow/issues)
-- **Discussions:** [GitHub Discussions](https://github.com/UBF21/vali-flow/discussions)
+Distribuido bajo la [Licencia MIT](LICENSE).  
+Copyright © 2025 Felipe Rafael Montenegro Morriberon. Todos los derechos reservados.
 
-### Contribute
+---
 
-Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+## Soporte
 
-If this project helps you, consider supporting its development:
-- **Latin America** — [MercadoPago](https://link.mercadopago.com.pe/felipermm)
-- **International** — [PayPal](https://paypal.me/felipeRMM?country.x=PE&locale.x=es_XC)
+- **Issues y solicitudes de funcionalidades:** [GitHub Issues](https://github.com/UBF21/vali-flow/issues)
+- **Discusiones:** [GitHub Discussions](https://github.com/UBF21/vali-flow/discussions)
+
+### Contribuir
+
+¡Las contribuciones son bienvenidas! Consulta [CONTRIBUTING.md](CONTRIBUTING.md) para las pautas.
+
+Si este proyecto te resulta útil, considera apoyar su desarrollo:
+- **Latinoamérica** — [MercadoPago](https://link.mercadopago.com.pe/felipermm)
+- **Internacional** — [PayPal](https://paypal.me/felipeRMM?country.x=PE&locale.x=es_XC)
