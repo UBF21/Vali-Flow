@@ -101,7 +101,11 @@ jobs:
           # Vali-Flow.[0-9]* matches only the main package (not Vali-Flow.InMemory.*, Vali-Flow.Sql.*,
           # or Vali-Flow.NoSql.* — those have a literal "." before a letter, not a digit).
           for pattern in 'Vali-Flow.[0-9]*' 'Vali-Flow.InMemory.[0-9]*' 'Vali-Flow.Sql.[0-9]*' 'Vali-Flow.NoSql.[0-9]*'; do
-            dotnet nuget push "artifacts/$pattern.nupkg" --source "$NUGET_SOURCE" --api-key "$NUGET_API_KEY" --skip-duplicate
+            # Unquoted so bash expands the glob against the real filenames in artifacts/ --
+            # quoting it (as a prior version of this step did) passes the literal bracket
+            # expression to `dotnet nuget push`, which doesn't glob-expand it itself and
+            # fails with "File does not exist".
+            dotnet nuget push artifacts/$pattern.nupkg --source "$NUGET_SOURCE" --api-key "$NUGET_API_KEY" --skip-duplicate
           done
 
       - name: 'Wave 2: wait until NuGet.org lists Vali-Flow.NoSql'
