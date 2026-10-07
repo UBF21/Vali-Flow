@@ -36,8 +36,6 @@
         <PublishRepositoryUrl>true</PublishRepositoryUrl>
         <EmbedUntrackedSources>true</EmbedUntrackedSources>
         <DebugType>embedded</DebugType>
-        <IncludeSymbols>true</IncludeSymbols>
-        <SymbolPackageFormat>snupkg</SymbolPackageFormat>
 
         <Description>Vali-Flow is a .NET library that simplifies data access in Entity Framework Core applications via a fluent specification API. Provides ValiFlowEvaluator for querying and writing data, QuerySpecification and BasicSpecification for defining query criteria, and bulk operation support via EFCore.BulkExtensions.</Description>
         <PackageReleaseNotes>v1.4.0 — Add GenericRepository&lt;T,TKey&gt; (GetById/GetAll/GetPaged/Add/Update/Delete/SaveChanges, wraps ValiFlowEvaluator&lt;T&gt;). Instrument read/write evaluator methods with ValiFlowDiagnostics Activity tracing. Fix UpsertRangeAsync duplicate-key bug and a PK-overwrite bug in upsert-by-business-key scenarios. Serialize concurrent BulkInsertOrUpdateAsync/BulkUpdateAsync calls per entity type with a generic transient-failure retry (SQL Server/PostgreSQL/MySQL/SQLite). No breaking changes.

@@ -20,8 +20,6 @@
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <EmbedUntrackedSources>true</EmbedUntrackedSources>
     <DebugType>embedded</DebugType>
-    <IncludeSymbols>true</IncludeSymbols>
-    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
     <PackageReleaseNotes>v1.1.1 — Fix: x.Field == nullVariable (a closure-captured null) now translates to NullNode like the x.Field == null literal path instead of throwing ArgumentNullException. No breaking changes.</PackageReleaseNotes>
   </PropertyGroup>
 

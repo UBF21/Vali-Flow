@@ -33,8 +33,6 @@
         <PublishRepositoryUrl>true</PublishRepositoryUrl>
         <EmbedUntrackedSources>true</EmbedUntrackedSources>
         <DebugType>embedded</DebugType>
-        <IncludeSymbols>true</IncludeSymbols>
-        <SymbolPackageFormat>snupkg</SymbolPackageFormat>
 
         <Description>Synchronous in-memory evaluator for Vali-Flow.Core — filter, page, aggregate and write in-memory collections using the same fluent ValiFlow&lt;T&gt; specification API. Ideal for unit testing and caching layers without a database dependency.</Description>
         <PackageReleaseNotes>v1.2.0 — Fix Update(entity, externalList) leaking into the internal store on a later bare SaveChanges() call. Split ValiFlowEvaluator&lt;T,TProperty&gt; into partial files (Bridge/Read/Write/Grouped). Add an optional tag parameter across read/write/grouped methods, wired to ValiFlowDiagnostics Activity tracing. No breaking changes.

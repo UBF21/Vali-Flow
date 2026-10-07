@@ -26,8 +26,6 @@
         <PublishRepositoryUrl>true</PublishRepositoryUrl>
         <EmbedUntrackedSources>true</EmbedUntrackedSources>
         <DebugType>embedded</DebugType>
-        <IncludeSymbols>true</IncludeSymbols>
-        <SymbolPackageFormat>snupkg</SymbolPackageFormat>
 
         <PackageReleaseNotes>v1.2.0 — Add ValiFlowDiagnostics: a shared ActivitySource-based observability helper (StartActivity/RecordException) used across every Vali-Flow package for Activity-based tracing. No breaking changes.
 
