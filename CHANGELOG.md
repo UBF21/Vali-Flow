@@ -1,5 +1,7 @@
 # Changelog
 
+**English** | [Español](CHANGELOG.es.md)
+
 All notable changes to the Vali-Flow ecosystem are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
@@ -8,34 +10,155 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) and 
 
 ## [Unreleased]
 
+---
+
+## Vali-Flow.Abstractions — 1.2.0
+
 ### Added
 
-- **`Vali-Flow.NoSql.Couchbase`, `Vali-Flow.NoSql.CosmosDb`, `Vali-Flow.NoSql.Firestore`** — three new NoSQL translator packages, same pattern as the existing MongoDB/DynamoDB/Elasticsearch/Redis adapters (pure `ValiFlow<T>` expression tree → native query/filter translators, no connection or execution concerns).
-- **`GenericRepository<T, TKey>`** (`Vali-Flow`) — a thin repository wrapping `ValiFlowEvaluator<T>` with `GetById`/`GetAll`/`GetPaged`/`Add`/`Update`/`Delete`/`SaveChanges`, for consumers who want a conventional repository surface instead of calling the evaluator directly.
-- **`ValiFlowDiagnostics`** (`Vali-Flow.Abstractions`) — shared `ActivitySource`-based `StartActivity`/`RecordException` helper for OpenTelemetry-compatible tracing, now wired through the EF Core evaluator, `Vali-Flow.InMemory`, `Vali-Flow.Sql`'s six builders, and the Mongo/DynamoDB/Elasticsearch/Redis translators.
+- **`ValiFlowDiagnostics`** — shared `ActivitySource`-based `StartActivity`/`RecordException` helper for OpenTelemetry-compatible tracing, now wired through the EF Core evaluator, `Vali-Flow.InMemory`, `Vali-Flow.Sql`'s six builders, and the Mongo/DynamoDB/Elasticsearch/Redis translators.
+
+---
+
+## Vali-Flow — 1.4.0
+
+### Added
+
+- **`GenericRepository<T, TKey>`** — a thin repository wrapping `ValiFlowEvaluator<T>` with `GetById`/`GetAll`/`GetPaged`/`Add`/`Update`/`Delete`/`SaveChanges`, for consumers who want a conventional repository surface instead of calling the evaluator directly.
 - EF Core benchmark using the `EFCore.InMemory` provider (`Vali-Flow.Benchmarks`).
-- `SqlInsertBuilder`/`SqlUpdateBuilder.SetAllFrom(entity, exclude...)` — reflection-based bulk column mapper.
+- `ValiFlowDiagnostics` tracing wired into the evaluator's read/write paths.
 
 ### Fixed
 
-- **Security — SQL identifier injection**: `Vali-Flow.Sql`'s builders interpolated table/schema/type names directly; added `SqlIdentifierGuard` (regex whitelist) validating all identifiers before interpolation.
-- **Security — RediSearch query injection**: `Vali-Flow.NoSql.Redis` didn't escape RediSearch query-syntax special characters (e.g. `)`/`|`) in `LIKE` patterns before wrapping them in wildcards, allowing query-structure injection. Now escaped before wildcarding.
-- **`Vali-Flow.NoSql` (Mongo/Elasticsearch)**: closure-captured `null` values in a `ValiFlow<T>` condition weren't translated to the same `NullNode` as a literal `null`, producing inconsistent filters between `.EqualTo(x => x.Prop, someNullVariable)` and `.EqualTo(x => x.Prop, null)`.
-- **`Vali-Flow.NoSql.Redis`**: `customConverter` wasn't applied in `VisitComparison`/numeric `VisitIn`, silently ignoring custom type mappings for comparison and `IN` conditions.
-- **`Vali-Flow.NoSql.Elasticsearch`**: swallowed inner exception in `ToDouble` conversion — failures surfaced as a generic error with no root cause.
-- **`Vali-Flow.NoSql` (Mongo/Elasticsearch)**: unbounded `IN` value lists could exceed the engine's own limits; added `MaxInValues` caps (Mongo 10,000; Elasticsearch 65,536, matching `index.max_terms_count`).
-- **`Vali-Flow.NoSql.Couchbase`**: `decimal` values were bound as N1QL string literals instead of native numbers.
-- **`Vali-Flow.Sql`**: `OrIgnore`/`OrReplace` dialect guard bug, `Set()`-after-`SelectFrom()` silent data loss, `Where()` double-call silently overwriting the first condition instead of combining — all fixed. Added `AllowDeleteUnmatched()` guard required before `WhenNotMatchedBySourceDelete` in `SqlMergeBuilder` (prevents accidental unguarded deletes in a MERGE).
-- **`Vali-Flow` (EF Core evaluator)**: `UpsertRangeAsync` dropped entries on duplicate keys (list accumulator instead of dictionary) — fixed to a dictionary accumulator. `UpsertRangeAsync.PartitionUpsertRange` could discard a tracked entity's primary key — now preserved. `BulkInsertOrUpdateAsync` could race under concurrent calls for the same entity type + key columns — calls are now serialized per that combination.
-- **`Vali-Flow` (EF Core evaluator) — bulk upsert contention under concurrency**: replaced the ad-hoc retry with a generic transient-retry policy (`BulkUpsertRetryPolicy`) covering SQL Server, PostgreSQL, MySQL, and SQLite, gated per table (not per `UpdateByProperties` key set) to avoid serializing unrelated upserts against each other. Retry budget raised in two steps (4 → 7 → 12 attempts) based on observed contention under load.
-- **`Vali-Flow.InMemory`**: `Update(entity, externalList)` could leak the updated entity into the internal store on a later bare `SaveChanges()` call.
+- `UpsertRangeAsync` dropped entries on duplicate keys (list accumulator instead of dictionary) — fixed to a dictionary accumulator.
+- `UpsertRangeAsync.PartitionUpsertRange` could discard a tracked entity's primary key — now preserved.
+- `BulkInsertOrUpdateAsync` could race under concurrent calls for the same entity type + key columns — calls are now serialized per that combination.
+- **Bulk upsert contention under concurrency**: replaced the ad-hoc retry with a generic transient-retry policy (`BulkUpsertRetryPolicy`) covering SQL Server, PostgreSQL, MySQL, and SQLite, gated per table (not per `UpdateByProperties` key set) to avoid serializing unrelated upserts against each other. Retry budget raised in two steps (4 → 7 → 12 attempts) based on observed contention under load.
+- Eliminated a flaky `Activity`-capture test (timing-dependent assertion replaced with deterministic capture).
 
 ### Changed
 
-- **`Vali-Flow.InMemory`**: `ValiFlowEvaluator<T, TProperty>` (904 lines) split into `Bridge`/`Read`/`Write`/`Grouped` partial files; no public API change.
-- **`Vali-Flow` (EF Core evaluator)**: query-construction logic extracted from `ValiFlowEvaluator` into a dedicated `QuerySpecificationBuilder` (single-responsibility split, no public API change).
-- EF Core evaluator test coverage raised from 74.37% to 97.42%.
-- Eliminated flaky `Activity`-capture tests across the `Sql`/EF-Core/`InMemory` test assemblies (timing-dependent assertions replaced with deterministic capture).
+- Query-construction logic extracted from `ValiFlowEvaluator` into a dedicated `QuerySpecificationBuilder` (single-responsibility split, no public API change).
+- Test coverage raised from 74.37% to 97.42%.
+
+---
+
+## Vali-Flow.InMemory — 1.2.0
+
+### Added
+
+- `ValiFlowDiagnostics` tracing wired into the evaluator's read/write paths.
+
+### Fixed
+
+- `Update(entity, externalList)` could leak the updated entity into the internal store on a later bare `SaveChanges()` call.
+- Eliminated a flaky `Activity`-capture test (timing-dependent assertion replaced with deterministic capture).
+
+### Changed
+
+- `ValiFlowEvaluator<T, TProperty>` (904 lines) split into `Bridge`/`Read`/`Write`/`Grouped` partial files; no public API change.
+
+---
+
+## Vali-Flow.Sql — 1.2.0
+
+### Added
+
+- `SqlInsertBuilder`/`SqlUpdateBuilder.SetAllFrom(entity, exclude...)` — reflection-based bulk column mapper.
+- `ValiFlowDiagnostics` tracing wired into all six builders.
+
+### Fixed
+
+- **Security — SQL identifier injection**: the builders interpolated table/schema/type names directly; added `SqlIdentifierGuard` (regex whitelist) validating all identifiers before interpolation.
+- `OrIgnore`/`OrReplace` dialect guard bug, `Set()`-after-`SelectFrom()` silent data loss, `Where()` double-call silently overwriting the first condition instead of combining — all fixed.
+- Added `AllowDeleteUnmatched()` guard required before `WhenNotMatchedBySourceDelete` in `SqlMergeBuilder` (prevents accidental unguarded deletes in a MERGE).
+- Eliminated a flaky `Activity`-capture test (timing-dependent assertion replaced with deterministic capture).
+
+---
+
+## Vali-Flow.NoSql — 1.1.1
+
+### Added
+
+- `ValiFlowDiagnostics` tracing wired into the shared translator base used by the Mongo and Elasticsearch providers.
+
+### Fixed
+
+- Closure-captured `null` values in a `ValiFlow<T>` condition weren't translated to the same `NullNode` as a literal `null`, producing inconsistent filters between `.EqualTo(x => x.Prop, someNullVariable)` and `.EqualTo(x => x.Prop, null)`.
+- Unbounded `IN` value lists could exceed the engine's own limits; added `MaxInValues` caps (Mongo 10,000; Elasticsearch 65,536, matching `index.max_terms_count`).
+
+---
+
+## Vali-Flow.NoSql.MongoDB — 1.2.0
+
+### Added
+
+- `ValiFlowDiagnostics` tracing wired into `MongoFilterTranslator`.
+
+---
+
+## Vali-Flow.NoSql.Elasticsearch — 1.2.0
+
+### Added
+
+- `ValiFlowDiagnostics` tracing wired into `ElasticsearchFilterTranslator`.
+
+### Fixed
+
+- Swallowed inner exception in `ToDouble` conversion — failures surfaced as a generic error with no root cause.
+
+---
+
+## Vali-Flow.NoSql.Redis — 1.2.0
+
+### Added
+
+- `ValiFlowDiagnostics` tracing wired into `RedisSearchFilterTranslator`.
+
+### Fixed
+
+- **Security — RediSearch query injection**: special query-syntax characters (e.g. `)`/`|`) weren't escaped in `LIKE` patterns before wrapping them in wildcards, allowing query-structure injection. Now escaped before wildcarding.
+- `customConverter` wasn't applied in `VisitComparison`/numeric `VisitIn`, silently ignoring custom type mappings for comparison and `IN` conditions.
+
+---
+
+## Vali-Flow.NoSql.DynamoDB — 1.2.0
+
+### Added
+
+- `ValiFlowDiagnostics` tracing wired into `DynamoFilterTranslator`.
+
+---
+
+## Vali-Flow.NoSql.Couchbase — 1.1.0 *(initial release)*
+
+### Added
+
+- `CouchbaseFilterTranslator` — translates `ValiFlow<T>` IR nodes to a N1QL/SQL++ WHERE fragment, returned as `CouchbaseFilterExpression { WhereClause, Parameters }` — no Couchbase SDK dependency, the consumer applies the fragment with their own client.
+- `ValiFlowCouchbaseExtensions` — extension method on `ValiFlow<T>`.
+
+### Fixed
+
+- `decimal` values were bound as N1QL string literals instead of native numbers.
+
+---
+
+## Vali-Flow.NoSql.CosmosDb — 1.1.0 *(initial release)*
+
+### Added
+
+- `CosmosFilterTranslator` — translates `ValiFlow<T>` IR nodes to an Azure Cosmos DB SQL API WHERE fragment, returned as `CosmosFilterExpression { WhereClause, Parameters }` — no `Microsoft.Azure.Cosmos` dependency, the consumer applies the fragment with their own client.
+- `ValiFlowCosmosExtensions` — extension method on `ValiFlow<T>`.
+
+---
+
+## Vali-Flow.NoSql.Firestore — 1.1.0 *(initial release)*
+
+### Added
+
+- `FirestoreFilterTranslator` — translates `ValiFlow<T>` IR nodes to a native Google Cloud Firestore `Filter`, depending on the official `Google.Cloud.Firestore` SDK.
+- `ValiFlowFirestoreExtensions` — extension method on `ValiFlow<T>`.
+- Note: `LikeNode` (all 3 ops) and the generic `NotNode` throw `NotSupportedException` — the Firestore SDK has no pattern-matching query and no NOT over an arbitrary sub-filter, only field-level negation (`EqualNode.IsNegated` → `NotEqualTo`/`NotInArray`).
 
 ---
 
